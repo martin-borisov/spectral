@@ -21,6 +21,7 @@ import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
 import javafx.scene.text.Text;
+import mb.spectrum.UiUtils;
 import mb.spectrum.Utils;
 
 /**
@@ -335,20 +336,11 @@ public class SpectrumAreaGridView extends MixedChannelView {
 	}
 	
 	private Line createLine(double startX, double startY, double endX, double endY, List<Line> list) {
-		Line line = new Line(startX, startY, endX, endY);
-		line.setStroke(Color.web("#fd4a11"));
-		line.getStrokeDashArray().addAll(2d);
-		line.setCache(true);
-		list.add(line);
-		return line;
+		return UiUtils.createGridLine(startX, startY, endX, endY, Color.web("#fd4a11"), list);
 	}
 	
 	private Text createLabel(double x, double y, String text, List<Text> list) {
-		Text label = new Text(x, y, text);
-		label.setStroke(Color.web("#fd4a11"));
-		label.setCache(true);
-		list.add(label);
-		return label;
+		return UiUtils.createLabel(x, y, text, Color.web("#fd4a11"), list);
 	}
 	
 	protected double coordX(double x) {

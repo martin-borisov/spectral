@@ -13,4 +13,29 @@ public class Utils {
 		}
 		return valueDb;
 	}
+	
+	public static double toDB(double value) {
+		return 20 * ( (float) Math.log10(value) );
+	}
+	
+	public static float rmsLevel(float[] samples) {
+		float level = 0.0F;
+		for (int i = 0; i < samples.length; i++) {
+			level += samples[i] * samples[i];
+		}
+		level /= samples.length;
+		level = (float) Math.sqrt(level);
+		return level;
+	}
+	
+	public static final float peakLevel(float[] samples) {
+		float max = 0;
+		for (int i = 0; i < samples.length; i++) {
+			float sample = Math.abs(samples[i]);
+			if(sample > max) {
+				max = sample;
+			}
+		}
+		return max;
+	}
 }
