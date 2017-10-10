@@ -10,6 +10,7 @@ import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.SceneAntialiasing;
+import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
 import javafx.scene.text.Text;
@@ -44,9 +45,15 @@ public class SpectrumBarGridView extends MixedChannelView {
 		hLabels = new ArrayList<>();
 		setupBands();
 	}
+	
+	@Override
+	public String getName() {
+		return "Spectrum Analizer - Bars";
+	}
+
 
 	@Override
-	public Scene getScene() {
+	public Pane getRoot() {
 		
 		/*
 		ImageView image = new ImageView(
@@ -74,7 +81,8 @@ public class SpectrumBarGridView extends MixedChannelView {
 				onSceneHeightChange(oldValue, newValue);
 			}
 		});
-        return scene;
+        //return scene;
+        return new Pane();
 	}
 
 	@Override
@@ -253,4 +261,15 @@ public class SpectrumBarGridView extends MixedChannelView {
 		return label;
 	}
 
+	@Override
+	public void onShow() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void onHide() {
+		// TODO Auto-generated method stub
+		
+	}
 }

@@ -5,51 +5,53 @@ import java.util.List;
 
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import javafx.scene.Group;
 import javafx.scene.Node;
-import javafx.scene.Scene;
-import javafx.scene.SceneAntialiasing;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundFill;
+import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 
 public abstract class AbstractView implements View {
 	
-	private static final int INIT_SCENE_WIDTH = 800;
-	private static final int INIT_SCENE_HEIGHT = 600;
-	private static final int SCENE_MARGIN = 45;
+	private static final int SCENE_MARGIN_PX = 45;
+	private static final Color BACKGROUND_COLOR = Color.BLACK;
 	
-	private GraphSceneWrapper sw;
+	private GraphLayoutWrapper sw;
 	
 	public AbstractView() {
+		sw = new GraphLayoutWrapper(SCENE_MARGIN_PX);
 		createScene();
 		setupScene();
 	}
 
 	@Override
-	public Scene getScene() {
-		return sw.getScene();
+	public Pane getRoot() {
+		return sw.getPane();
 	}
 	
 	private void createScene() {
-        Scene scene = new Scene(new Group(), 
-        		INIT_SCENE_WIDTH, INIT_SCENE_HEIGHT, false, SceneAntialiasing.DISABLED);
-        scene.setFill(Color.BLACK);
-        scene.widthProperty().addListener(new ChangeListener<Number>() {
+		
+        //Scene scene = new Scene(new Group(), 
+        //		INIT_SCENE_WIDTH, INIT_SCENE_HEIGHT, false, SceneAntialiasing.DISABLED);
+		
+		Pane pane = sw.getPane();
+		pane.setBackground(new Background(new BackgroundFill(BACKGROUND_COLOR, null, null)));
+		pane.widthProperty().addListener(new ChangeListener<Number>() {
 			public void changed(ObservableValue<? extends Number> observable, 
 					Number oldValue, Number newValue) {
 				onSceneWidthChange(oldValue, newValue);
 			}
 		});
-        scene.heightProperty().addListener(new ChangeListener<Number>() {
+		pane.heightProperty().addListener(new ChangeListener<Number>() {
 			public void changed(ObservableValue<? extends Number> observable, 
 					Number oldValue, Number newValue) {
 				onSceneHeightChange(oldValue, newValue);
 			}
 		});
-        sw = new GraphSceneWrapper(scene, SCENE_MARGIN);
 	}
 	
 	private void setupScene() {
-		((Group) sw.getScene().getRoot()).getChildren().addAll(collectNodes());
+		sw.getPane().getChildren().addAll(collectNodes());
 	}
 	
 	protected void onSceneWidthChange(Number oldValue, Number newValue) {
@@ -70,11 +72,11 @@ public abstract class AbstractView implements View {
 		return sw.coordY(y);
 	}
 
-	protected double sceneWidth() {
-		return sw.getSceneWidth();
+	protected double areaWidth() {
+		return sw.getLayoutWidth();
 	}
 
-	protected double sceneHeight() {
-		return sw.getSceneHeight();
+	protected double areaHeight() {
+		return sw.getLayoutHeight();
 	}
 }

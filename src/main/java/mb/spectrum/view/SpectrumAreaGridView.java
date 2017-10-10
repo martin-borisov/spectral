@@ -11,10 +11,10 @@ import java.util.TimerTask;
 import ddf.minim.analysis.FFT;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import javafx.scene.Group;
 import javafx.scene.Node;
-import javafx.scene.Scene;
-import javafx.scene.SceneAntialiasing;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundFill;
+import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.LineTo;
@@ -30,9 +30,8 @@ import mb.spectrum.Utils;
  */
 public class SpectrumAreaGridView extends MixedChannelView {
 	
-	private static final int INIT_SCENE_WIDTH = 800;
-	private static final int INIT_SCENE_HEIGHT = 600;
-	private static final int SCENE_MARGIN = 45;
+	private static final int SCENE_MARGIN_PX = 45;
+	private static final Color BACKGROUND_COLOR = Color.BLACK;
 	private static final int FREQ_LINE_PER_BAR_COUNT = 5;
 	private static final int DB_LINES_COUNT = 4;
 	private static final int BAND_DROP_RATE_DB = 2;
@@ -43,7 +42,7 @@ public class SpectrumAreaGridView extends MixedChannelView {
 	// flicker of the graph caused by very low audio levels
 	private static final int MIN_DB_VALUE = -165;
 	
-	private GraphSceneWrapper sw;
+	private GraphLayoutWrapper sw;
 	private Path curvePath, trailPath;
 	private List<Line> vLines, hLines;
 	private List<Text> vLabels, hLabels;
@@ -59,6 +58,7 @@ public class SpectrumAreaGridView extends MixedChannelView {
 		hLines = new ArrayList<>();
 		vLabels = new ArrayList<>();
 		hLabels = new ArrayList<>();
+		sw = new GraphLayoutWrapper(SCENE_MARGIN_PX);
 		createScene();
 		createNodes();
 		setupScene();
@@ -66,8 +66,13 @@ public class SpectrumAreaGridView extends MixedChannelView {
 	}
 
 	@Override
-	public Scene getScene() {
-        return sw.getScene();
+	public String getName() {
+		return "Spectrum Analizer - Area";
+	}
+
+	@Override
+	public Pane getRoot() {
+        return sw.getPane();
 	}
 
 	@Override
@@ -97,10 +102,10 @@ public class SpectrumAreaGridView extends MixedChannelView {
 	public void nextFrame() {
 		for (int i = 0; i < bandValuesDB.length; i++) {
 			LineTo curveLine = (LineTo) curvePath.getElements().get(i + 1);
-			curveLine.setY(coordY(map(bandValuesDB[i], MIN_DB_VALUE, 0, 0, sw.getSceneHeight())));
+			curveLine.setY(coordY(map(bandValuesDB[i], MIN_DB_VALUE, 0, 0, sw.getLayoutHeight())));
 			
 			LineTo trailLine = (LineTo) trailPath.getElements().get(i + 1);
-			trailLine.setY(coordY(map(trailValuesDB[i], MIN_DB_VALUE, 0, 0, sw.getSceneHeight())));
+			trailLine.setY(coordY(map(trailValuesDB[i], MIN_DB_VALUE, 0, 0, sw.getLayoutHeight())));
 			
 			// Curve drop
 			if(bandValuesDB[i] > MIN_DB_VALUE) {
@@ -147,8 +152,8 @@ public class SpectrumAreaGridView extends MixedChannelView {
 		trailValuesDB = new double[bandCount];
 		Arrays.fill(trailValuesDB, MIN_DB_VALUE);
 		trailPauseCounters = new int[bandCount];
-		maxBandHeight = sw.getSceneHeight();
-		double barWidth = sw.getSceneWidth() / bandCount;
+		maxBandHeight = sw.getLayoutHeight();
+		double barWidth = sw.getLayoutWidth() / bandCount;
 		int x = 0;
 		
 		// Bands and freq. lines and labels
@@ -175,67 +180,66 @@ public class SpectrumAreaGridView extends MixedChannelView {
 			
 			// Create grid lines and labels
 			if(i % FREQ_LINE_PER_BAR_COUNT == 0) {
-				createLine(coordX(x), coordY(0 - Bar.DEFAULT_BAR_HEIGHT), coordX(x), coordY(sw.getSceneHeight()), vLines);			
-				createLabel(coordX(x), sw.getSceneHeight() - Bar.DEFAULT_BAR_HEIGHT, 
+				createLine(coordX(x), coordY(0 - Bar.DEFAULT_BAR_HEIGHT), coordX(x), coordY(sw.getLayoutHeight()), vLines);			
+				createLabel(coordX(x), sw.getLayoutHeight() - Bar.DEFAULT_BAR_HEIGHT, 
 						String.valueOf(Math.round(fft.getAverageCenterFrequency(i) - fft.getAverageBandWidth(i) / 2)) + "Hz", vLabels);
 			} else if(i == bandCount - 1) {
-				createLine(x + barWidth, SCENE_MARGIN, x + barWidth, 
-						INIT_SCENE_HEIGHT - SCENE_MARGIN + Bar.DEFAULT_BAR_HEIGHT, vLines) ;
-				createLabel(x + barWidth, INIT_SCENE_HEIGHT - SCENE_MARGIN + Bar.DEFAULT_BAR_HEIGHT, 
+				createLine(x + barWidth, SCENE_MARGIN_PX, x + barWidth, 
+						sw.getPane().getHeight() - SCENE_MARGIN_PX + Bar.DEFAULT_BAR_HEIGHT, vLines) ;
+				createLabel(x + barWidth, sw.getPane().getHeight() - SCENE_MARGIN_PX + Bar.DEFAULT_BAR_HEIGHT, 
 						String.valueOf(Math.round(fft.getAverageCenterFrequency(i) + fft.getAverageBandWidth(i) / 2)) + "Hz", vLabels);
 			}
 			
 			x += barWidth;
 		}
 		LineTo curveLine = new LineTo();
-		curveLine.setX(coordX(sw.getSceneWidth()));
+		curveLine.setX(coordX(sw.getLayoutWidth()));
 		curveLine.setY(coordY(0));
 		curvePath.getElements().add(curveLine);
 		
 		LineTo trailLine = new LineTo();
-		trailLine.setX(coordX(sw.getSceneWidth()));
+		trailLine.setX(coordX(sw.getLayoutWidth()));
 		trailLine.setY(coordY(0));
 		trailPath.getElements().add(trailLine);
 		
 		// DB lines and labels
 		for (int i = 0; i < DB_LINES_COUNT; i++) {
 			double dbVal = Utils.map(i, 0, DB_LINES_COUNT, 0, -165);
-			double yValue = Utils.map(dbVal, 0, -165, SCENE_MARGIN, maxBandHeight + SCENE_MARGIN);
-			createLine(SCENE_MARGIN - Bar.DEFAULT_BAR_HEIGHT, yValue, 
-					INIT_SCENE_WIDTH - SCENE_MARGIN + Bar.DEFAULT_BAR_HEIGHT, yValue, hLines);
-			Text label = createLabel(SCENE_MARGIN - Bar.DEFAULT_BAR_HEIGHT, yValue, String.valueOf(Math.round(dbVal)), hLabels);
-			label.setX(SCENE_MARGIN - Bar.DEFAULT_BAR_HEIGHT * 2 - label.getLayoutBounds().getWidth());
+			double yValue = Utils.map(dbVal, 0, -165, SCENE_MARGIN_PX, maxBandHeight + SCENE_MARGIN_PX);
+			createLine(SCENE_MARGIN_PX - Bar.DEFAULT_BAR_HEIGHT, yValue, 
+					sw.getPane().getWidth() - SCENE_MARGIN_PX + Bar.DEFAULT_BAR_HEIGHT, yValue, hLines);
+			Text label = createLabel(SCENE_MARGIN_PX - Bar.DEFAULT_BAR_HEIGHT, yValue, String.valueOf(Math.round(dbVal)), hLabels);
+			label.setX(SCENE_MARGIN_PX - Bar.DEFAULT_BAR_HEIGHT * 2 - label.getLayoutBounds().getWidth());
 			label.setY(yValue + label.getLayoutBounds().getHeight() / 2);
 		}
 	}
 	
 	private void createScene() {
-        Scene scene = new Scene(new Group(), 
-        		INIT_SCENE_WIDTH, INIT_SCENE_HEIGHT, false, SceneAntialiasing.DISABLED);
-        scene.setFill(Color.BLACK);
-        scene.widthProperty().addListener(new ChangeListener<Number>() {
+
+		Pane pane = sw.getPane();
+		pane.setBackground(new Background(new BackgroundFill(BACKGROUND_COLOR, null, null)));
+        pane.widthProperty().addListener(new ChangeListener<Number>() {
 			public void changed(ObservableValue<? extends Number> observable, 
 					Number oldValue, Number newValue) {
 				onSceneWidthChange(oldValue, newValue);
 			}
 		});
-        scene.heightProperty().addListener(new ChangeListener<Number>() {
+        pane.heightProperty().addListener(new ChangeListener<Number>() {
 			public void changed(ObservableValue<? extends Number> observable, 
 					Number oldValue, Number newValue) {
 				onSceneHeightChange(oldValue, newValue);
 			}
 		});
-        sw = new GraphSceneWrapper(scene, SCENE_MARGIN);
 	}
 	
 	private void setupScene() {
-		((Group) sw.getScene().getRoot()).getChildren().addAll(collectAllShapes());
+		sw.getPane().getChildren().addAll(collectAllShapes());
 	}
 	
 	private void onSceneWidthChange(Number oldValue, Number newValue) {
 		
 		// Recalculate bar and line properties
-		double barWidth = sw.getSceneWidth() / bandCount;
+		double barWidth = sw.getLayoutWidth() / bandCount;
 		double x = 0;
 		
 		int j = 0;
@@ -267,14 +271,14 @@ public class SpectrumAreaGridView extends MixedChannelView {
 			x += barWidth;
 		}
 		LineTo curveLine = (LineTo) curvePath.getElements().get(curvePath.getElements().size() - 1);
-		curveLine.setX(coordX(sw.getSceneWidth()));
+		curveLine.setX(coordX(sw.getLayoutWidth()));
 		
 		LineTo trailLine = (LineTo) trailPath.getElements().get(trailPath.getElements().size() - 1);
-		trailLine.setX(coordX(sw.getSceneWidth()));
+		trailLine.setX(coordX(sw.getLayoutWidth()));
 		
 		// Update DB lines
 		for (Line line : hLines) {
-			line.setEndX(newValue.doubleValue() - SCENE_MARGIN);
+			line.setEndX(newValue.doubleValue() - SCENE_MARGIN_PX);
 		}
 	}
 	
@@ -282,20 +286,20 @@ public class SpectrumAreaGridView extends MixedChannelView {
 		
 		// Curve
 		MoveTo curveMove = (MoveTo) curvePath.getElements().get(0);
-		curveMove.setY(getScene().getHeight() - SCENE_MARGIN);
+		curveMove.setY(getRoot().getHeight() - SCENE_MARGIN_PX);
 		for (int i = 1; i < curvePath.getElements().size() - 1; i++) {
 			LineTo line = (LineTo) curvePath.getElements().get(i);
-			line.setY(map(line.getY(), 0, oldValue.doubleValue(), 0, getScene().getHeight()));
+			line.setY(map(line.getY(), 0, oldValue.doubleValue(), 0, getRoot().getHeight()));
 		}
 		LineTo curveLastLine = (LineTo) curvePath.getElements().get(curvePath.getElements().size() - 1);
 		curveLastLine.setY(sw.coordY(0));
 		
 		// Trail
 		MoveTo trailMove = (MoveTo) trailPath.getElements().get(0);
-		trailMove.setY(getScene().getHeight() - SCENE_MARGIN);
+		trailMove.setY(getRoot().getHeight() - SCENE_MARGIN_PX);
 		for (int i = 1; i < trailPath.getElements().size() - 1; i++) {
 			LineTo line = (LineTo) trailPath.getElements().get(i);
-			line.setY(map(line.getY(), 0, oldValue.doubleValue(), 0, getScene().getHeight()));
+			line.setY(map(line.getY(), 0, oldValue.doubleValue(), 0, getRoot().getHeight()));
 		}
 		LineTo trailLastLine = (LineTo) trailPath.getElements().get(trailPath.getElements().size() - 1);
 		trailLastLine.setY(sw.coordY(0));
@@ -303,17 +307,17 @@ public class SpectrumAreaGridView extends MixedChannelView {
 		// Freq. lines and labels
 		for (Line line : vLines) {
 			line.setStartY(sw.coordY(0));
-			line.setEndY(sw.coordY(sw.getSceneHeight()));
+			line.setEndY(sw.coordY(sw.getLayoutHeight()));
 		}
 		for (Text label : vLabels) {
-			label.setY(newValue.intValue() - SCENE_MARGIN + Bar.DEFAULT_BAR_HEIGHT + label.getLayoutBounds().getHeight());
+			label.setY(newValue.intValue() - SCENE_MARGIN_PX + Bar.DEFAULT_BAR_HEIGHT + label.getLayoutBounds().getHeight());
 		}
-		maxBandHeight = newValue.intValue() - SCENE_MARGIN * 2;
+		maxBandHeight = newValue.intValue() - SCENE_MARGIN_PX * 2;
 		
 		// DB lines and labels
 		for (int i = 0; i < hLines.size(); i++) {
 			double dbVal = Utils.map(i, 0, hLines.size(), 0, -165);
-			double yValue = Utils.map(dbVal, 0, -165, SCENE_MARGIN, maxBandHeight + SCENE_MARGIN);
+			double yValue = Utils.map(dbVal, 0, -165, SCENE_MARGIN_PX, maxBandHeight + SCENE_MARGIN_PX);
 			
 			Line line = hLines.get(i);
 			line.setStartY(yValue);
@@ -349,5 +353,17 @@ public class SpectrumAreaGridView extends MixedChannelView {
 
 	protected double coordY(double y) {
 		return sw.coordY(y);
+	}
+
+	@Override
+	public void onShow() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void onHide() {
+		// TODO Auto-generated method stub
+		
 	}
 }
