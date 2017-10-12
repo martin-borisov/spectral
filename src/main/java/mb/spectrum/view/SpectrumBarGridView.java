@@ -1,9 +1,11 @@
 package mb.spectrum.view;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import ddf.minim.analysis.FFT;
+import javafx.beans.property.ObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Group;
@@ -50,7 +52,10 @@ public class SpectrumBarGridView extends MixedChannelView {
 	public String getName() {
 		return "Spectrum Analizer - Bars";
 	}
-
+	
+	public List<ObjectProperty<? extends Object>> getProperties() {
+		return Collections.emptyList();
+	}
 
 	@Override
 	public Pane getRoot() {

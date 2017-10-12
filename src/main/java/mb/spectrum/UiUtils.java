@@ -8,6 +8,9 @@ import javafx.animation.Transition;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
+import javafx.scene.control.ColorPicker;
+import javafx.scene.control.Spinner;
+import javafx.scene.control.SpinnerValueFactory.DoubleSpinnerValueFactory;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
 import javafx.scene.text.Text;
@@ -32,7 +35,7 @@ public class UiUtils {
 		return label;
 	}
 	
-	public static Transition createTextFadeInOutTransition(Node node, double fadeInMs, 
+	public static Transition createNodeFadeInOutTransition(Node node, double fadeInMs, 
 			double lingerMs, double fadeOutMs, EventHandler<ActionEvent> handler) {
 		
 		FadeTransition fadeIn = new FadeTransition(Duration.millis(fadeInMs), node);
@@ -52,4 +55,13 @@ public class UiUtils {
 		trans.setOnFinished(handler);
 		return trans;
 	}
+	
+	public static Spinner<Double> createDoubleSpinner(double min, double max, double initValue, double step) {
+		return new Spinner<Double>(new DoubleSpinnerValueFactory(min, max, initValue, step));
+	}
+	
+	public static ColorPicker createColorPicker(Color color) {
+		return new ColorPicker(color);
+	}
+	
 }

@@ -4,11 +4,13 @@ import static mb.spectrum.Utils.map;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
 import ddf.minim.analysis.FFT;
+import javafx.beans.property.ObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
@@ -73,6 +75,10 @@ public class SpectrumAreaGridView extends MixedChannelView {
 	@Override
 	public Pane getRoot() {
         return sw.getPane();
+	}
+	
+	public List<ObjectProperty<? extends Object>> getProperties() {
+		return Collections.emptyList();
 	}
 
 	@Override

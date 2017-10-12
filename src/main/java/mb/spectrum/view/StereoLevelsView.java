@@ -6,8 +6,13 @@ import static mb.spectrum.Utils.peakLevel;
 import static mb.spectrum.Utils.rmsLevel;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
@@ -33,10 +38,14 @@ public class StereoLevelsView extends AbstractView implements EventHandler<Event
 	private static final double BAR_MARGIN_PROPORTION = 0.05;
 	private static final int LABEL_MARGIN_PX = 5;
 	
-	private static final Color GRID_COLOR = Color.web("#fd4a11");
-	private static final Color BAR_COLOR_NORMAL = Color.LAWNGREEN;
-	private static final Color BAR_COLOR_CLIP = Color.RED;
-	private static final float BAR_OPACITY = 0.9f;
+	private static final SimpleObjectProperty<Color> propBarColorNormal = 
+			new SimpleObjectProperty<>(Color.LAWNGREEN);
+	private static final SimpleObjectProperty<Color> propBarColorClip = 
+			new SimpleObjectProperty<>(Color.RED);
+	private static final SimpleObjectProperty<Double> propBarOpacity = 
+			new SimpleObjectProperty<>(0.9);
+	private static final SimpleObjectProperty<Color> propGridColor = 
+			new SimpleObjectProperty<Color>(Color.web("#fd4a11"));
 	
 	private enum Mode {
 		RMS, PEAK;
@@ -51,6 +60,7 @@ public class StereoLevelsView extends AbstractView implements EventHandler<Event
 	
 	public StereoLevelsView() {
 		mode = Mode.PEAK;
+		createPropertyListeners();
 	}
 	
 	@Override
@@ -58,7 +68,10 @@ public class StereoLevelsView extends AbstractView implements EventHandler<Event
 		return "Peak/RMS Meter";
 	}
 
-
+	@Override
+	public List<ObjectProperty<? extends Object>> getProperties() {
+		return Arrays.asList(propGridColor, propBarOpacity, propBarColorNormal, propBarColorClip);
+	}
 
 	@Override
 	protected List<Node> collectNodes() {
@@ -69,27 +82,29 @@ public class StereoLevelsView extends AbstractView implements EventHandler<Event
 		for (int i = 0; i < DB_LINES_COUNT; i++) {
 			double dbVal = Utils.map(i, 0, DB_LINES_COUNT, MIN_DB_VALUE, 0);
 			double x = Utils.map(dbVal, MIN_DB_VALUE, 0, coordX(0), coordX(0) + areaWidth());
-			createGridLine(x, coordY(0), x, coordY(0) - areaHeight(), GRID_COLOR, lines);
+			createGridLine(x, coordY(0), x, coordY(0) - areaHeight(), propGridColor.getValue(), lines)
+				.strokeProperty().bind(propGridColor);
 			Text label = createLabel(x, coordY(0) - areaHeight() - LABEL_MARGIN_PX, 
-					Math.round(dbVal) + " db", GRID_COLOR, labels);
+					Math.round(dbVal) + " db", propGridColor.getValue(), labels);
 			label.setX(label.getX() - label.getLayoutBounds().getWidth() / 2);
+			label.strokeProperty().bind(propGridColor);
 		}
 		createGridLine(coordX(0) + areaWidth(), coordY(0), 
-				coordX(0) + areaWidth(), coordY(0) - areaHeight(), GRID_COLOR, lines);
+				coordX(0) + areaWidth(), coordY(0) - areaHeight(), propGridColor.getValue(), lines)
+			.strokeProperty().bind(propGridColor);
 		Text label = createLabel(coordX(0) + areaWidth(), 
-				coordY(0) - areaHeight() - LABEL_MARGIN_PX, "0 db", GRID_COLOR, labels);
+				coordY(0) - areaHeight() - LABEL_MARGIN_PX, "0 db", propGridColor.getValue(), labels);
 		label.setX(label.getX() - label.getLayoutBounds().getWidth() / 2);
+		label.strokeProperty().bind(propGridColor);
 		
 		// Create bars
 		leftBar = new Rectangle(coordX(0), coordY(areaHeight() - barMargin()), 5, barHeight());
-		leftBar.setFill(createHorizontalGradient(
-				0, areaWidth(), areaHeight() - barMargin() - barHeight() / 2));
-		leftBar.setOpacity(BAR_OPACITY);
+		leftBar.opacityProperty().bind(propBarOpacity);
 		
 		rightBar = new Rectangle(coordX(0), coordY(0 + barMargin() + barHeight()), 5, barHeight());
-		leftBar.setFill(createHorizontalGradient(
-				0, areaWidth(), barMargin() + barHeight() / 2));
-		rightBar.setOpacity(BAR_OPACITY);
+		rightBar.opacityProperty().bind(propBarOpacity);
+		
+		updateBarColors();
 		
 		// ###
 		/*
@@ -114,6 +129,26 @@ public class StereoLevelsView extends AbstractView implements EventHandler<Event
 		nodes.add(leftBar);
 		nodes.add(rightBar);
 		return nodes;
+	}
+	
+	private void createPropertyListeners() {
+		propBarColorNormal.addListener(new ChangeListener<Color>() {
+			public void changed(ObservableValue<? extends Color> observable, Color oldValue, Color newValue) {
+				updateBarColors();
+			}
+		});
+		propBarColorClip.addListener(new ChangeListener<Color>() {
+			public void changed(ObservableValue<? extends Color> observable, Color oldValue, Color newValue) {
+				updateBarColors();
+			}
+		});
+	}
+	
+	private void updateBarColors() {
+		leftBar.setFill(createHorizontalGradient(
+				0, areaWidth(), areaHeight() - barMargin() - barHeight() / 2));
+		rightBar.setFill(createHorizontalGradient(
+				0, areaWidth(), barMargin() + barHeight() / 2));
 	}
 	
 	/* Handlers */
@@ -228,9 +263,9 @@ public class StereoLevelsView extends AbstractView implements EventHandler<Event
 				coordX(toX), coordY(y), 
 				false, CycleMethod.NO_CYCLE, 
 				new Stop[]{
-						new Stop(0, BAR_COLOR_NORMAL), 
-						new Stop(0.8, BAR_COLOR_NORMAL), 
-						new Stop(0.9, BAR_COLOR_CLIP)});
+						new Stop(0, propBarColorNormal.getValue()), 
+						new Stop(0.8, propBarColorNormal.getValue()), 
+						new Stop(0.9, propBarColorClip.getValue())});
 		return gr;
 	}
 
