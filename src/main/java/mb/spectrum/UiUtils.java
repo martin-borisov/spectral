@@ -35,7 +35,7 @@ public class UiUtils {
 		return label;
 	}
 	
-	public static Transition createNodeFadeInOutTransition(Node node, double fadeInMs, 
+	public static Transition createFadeInOutTransition(Node node, double fadeInMs, 
 			double lingerMs, double fadeOutMs, EventHandler<ActionEvent> handler) {
 		
 		FadeTransition fadeIn = new FadeTransition(Duration.millis(fadeInMs), node);
@@ -54,6 +54,28 @@ public class UiUtils {
 		SequentialTransition trans = new SequentialTransition(fadeIn, fadeOut);
 		trans.setOnFinished(handler);
 		return trans;
+	}
+	
+	public static Transition createFadeInTransition(Node node, double fadeInMs, 
+			EventHandler<ActionEvent> handler) {
+		FadeTransition fadeIn = new FadeTransition(Duration.millis(fadeInMs), node);
+		fadeIn.setFromValue(0.0f);
+		fadeIn.setToValue(node.getOpacity());
+		fadeIn.setCycleCount(1);
+		fadeIn.setAutoReverse(false);
+		fadeIn.setOnFinished(handler);
+		return fadeIn;
+	}
+	
+	public static Transition createFadeOutTransition(Node node, double fadeInMs, 
+			EventHandler<ActionEvent> handler) {
+		FadeTransition fadeOut = new FadeTransition(Duration.millis(fadeInMs), node);
+		fadeOut.setFromValue(node.getOpacity());
+		fadeOut.setToValue(0.0f);
+		fadeOut.setCycleCount(1);
+		fadeOut.setAutoReverse(false);
+		fadeOut.setOnFinished(handler);
+		return fadeOut;
 	}
 	
 	public static Spinner<Double> createDoubleSpinner(double min, double max, double initValue, double step) {

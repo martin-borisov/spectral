@@ -9,19 +9,16 @@ import ddf.minim.javasound.JSMinim;
 import javafx.animation.AnimationTimer;
 import javafx.animation.Transition;
 import javafx.application.Application;
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.Property;
-import javafx.beans.property.SimpleDoubleProperty;
-import javafx.beans.property.SimpleFloatProperty;
-import javafx.beans.property.SimpleObjectProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.SceneAntialiasing;
 import javafx.scene.control.ColorPicker;
+import javafx.scene.control.Label;
 import javafx.scene.control.Spinner;
-import javafx.scene.control.SpinnerValueFactory.DoubleSpinnerValueFactory;
 import javafx.scene.control.TitledPane;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -30,8 +27,6 @@ import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
-import javafx.scene.text.Font;
-import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import mb.spectrum.view.SpectrumAreaGridView;
 import mb.spectrum.view.StereoLevelsView;
@@ -44,8 +39,7 @@ public class Spectrum extends Application {
 	
 	private static final int INIT_SCENE_WIDTH = 800;
 	private static final int INIT_SCENE_HEIGHT = 600;
-	private static final Color VIEW_LABEL_COLOR = Color.CYAN;
-	private static final int SCENE_WIDTH_TO_VIEW_LABEL_FONT_SIZE_RATIO = 20;
+	private static final String VIEW_LABEL_COLOR = "#00FFFF";
 	private static final double VIEW_LABEL_FADE_IN_MS = 1000;
 	private static final double VIEW_LABEL_LINGER_MS = 1000;
 	private static final double VIEW_LABEL_FADE_OUT_MS = 1000;
@@ -173,6 +167,9 @@ public class Spectrum extends Application {
 		}
 	}
 	
+	/**
+	 * Switch to the next view from the list.
+	 */
 	private void nextView() {
 		int idx = currentViewIdx + 1;
 		if(idx > views.length - 1) {
@@ -181,6 +178,9 @@ public class Spectrum extends Application {
 		switchView(idx);
 	}
 	
+	/**
+	 * Switch to the previous view from the list.
+	 */
 	private void prevView() {
 		int idx = currentViewIdx - 1;
 		if(idx < 0) {
@@ -193,6 +193,9 @@ public class Spectrum extends Application {
 		if(idx != currentViewIdx) {
 			currentViewIdx = idx;
 			
+			// Reset properties
+			togglePropertiesOff();
+			
 			// Trigger "hide" of current view
 			currentView.onHide();
 			
@@ -203,24 +206,25 @@ public class Spectrum extends Application {
 			currentView.onShow();
 			
 			// Show view label with animation
-			Text name = new Text(currentView.getName());
-			name.setFill(VIEW_LABEL_COLOR);
-			name.setFont(Font.font(scene.getWidth() / SCENE_WIDTH_TO_VIEW_LABEL_FONT_SIZE_RATIO));
-			name.setX(scene.getWidth() / 2 - name.getLayoutBounds().getWidth() / 2);
-			name.setY(scene.getHeight() / 2 + name.getLayoutBounds().getHeight() / 2);
-			currentView.getRoot().getChildren().add(name);
+			Pane parent = currentView.getRoot();
+			Label name = new Label(currentView.getName());
+			name.styleProperty().bind(Bindings.concat(
+					"-fx-font-size: ", parent.widthProperty().divide(40), ";", 
+					"-fx-padding: ", parent.widthProperty().divide(50), ";",
+					"-fx-text-fill: ", VIEW_LABEL_COLOR, ";"));
+			name.layoutXProperty().bind(parent.widthProperty().subtract(name.widthProperty()).divide(2));
+			name.layoutYProperty().bind(parent.heightProperty().subtract(name.heightProperty()).divide(2));
+			parent.getChildren().add(name);
 			
-			Transition trans = UiUtils.createNodeFadeInOutTransition(
+			Transition trans = UiUtils.createFadeInOutTransition(
 					name, VIEW_LABEL_FADE_IN_MS, VIEW_LABEL_LINGER_MS, VIEW_LABEL_FADE_OUT_MS, 
 					new EventHandler<ActionEvent>() {
 				public void handle(ActionEvent event) {
-					currentView.getRoot().getChildren().remove(name);
+					parent.getChildren().remove(name);
 				}
 			});
 			trans.play();
 		}
-		
-		// TODO Cleanup all property management values
 	}
 	
 	private void nextProperty() {
@@ -249,47 +253,68 @@ public class Spectrum extends Application {
 		showProperty(currentPropIdx);
 	}
 	
+	@SuppressWarnings("unchecked")
 	private boolean showProperty(int idx) {
 		
 		// TODO Implement:
-		// * Property rotation
-		// * Transitions
 		// * Persistence
 		List<ObjectProperty<? extends Object>> props = currentView.getProperties();
 		if(!props.isEmpty()) {
 			ObjectProperty<? extends Object> prop = props.get(idx);
+			Node node = null;
 			if(prop.getValue() instanceof Color) {
 				ObjectProperty<Color> p = (ObjectProperty<Color>) prop;
 				ColorPicker picker = UiUtils.createColorPicker(p.getValue());
 				p.bind(picker.valueProperty());
-				currentView.getRoot().getChildren().add(
-						currentPropertyNode = createPropertyPane(prop.getName(), picker));
-				
+				node = picker;
 			} else if(prop.getValue() instanceof Double) {
 				ObjectProperty<Double> p = (ObjectProperty<Double>) prop;
 				Spinner<Double> spinner = UiUtils.createDoubleSpinner(0.0, 1.0, p.getValue(), 0.1);
 				p.bind(spinner.valueProperty());
-				currentView.getRoot().getChildren().add(
-						currentPropertyNode = createPropertyPane(prop.getName(), spinner));
+				node = spinner;
 			}
+			
+			// TODO Make sure all property types are handled
+			currentView.getRoot().getChildren().add(
+					currentPropertyNode = createPropertyPane(prop.getName(), node));
+			UiUtils.createFadeInTransition(currentPropertyNode, 1000, null).play();
 		}
 		return !props.isEmpty();
 	}
 	
 	private void hideProperty(TitledPane node) {
 		currentView.getProperties().get(currentPropIdx).unbind();
-		currentView.getRoot().getChildren().remove(node);
-		node.setContent(null);
+		UiUtils.createFadeOutTransition(node, 1000, new EventHandler<ActionEvent>() {
+			public void handle(ActionEvent event) {
+				currentView.getRoot().getChildren().remove(node);
+				node.setContent(null);
+			}
+		}).play();
 	}
 	
 	private TitledPane createPropertyPane(String name, Node component) {
-		TitledPane pane = new TitledPane(name, component);
-		pane.setPrefSize(200, 200);
+		Pane parent = currentView.getRoot();
+
+		TitledPane pane = new TitledPane(null, component);
+		pane.prefWidthProperty().bind(parent.widthProperty().divide(2));
+		pane.prefHeightProperty().bind(parent.heightProperty().divide(2));
+		pane.layoutXProperty().bind(parent.widthProperty().subtract(pane.widthProperty()).divide(2));
+		pane.layoutYProperty().bind(parent.heightProperty().subtract(pane.heightProperty()).divide(2));
+		
+		// TODO This is just a sample. Remove later.
+		pane.setStyle("-fx-color: -fx-focus-color;");
 		pane.setCollapsible(false);
-		pane.setBackground(new Background(new BackgroundFill(Color.GRAY, new CornerRadii(5), null)));
+		
+		// TODO This does not work. Revisit.
+		pane.setBackground(new Background(new BackgroundFill(Color.BLUE, new CornerRadii(5), null)));
 		pane.setOpacity(0.8);
-		pane.setLayoutX(scene.getWidth() / 2 - pane.getLayoutBounds().getWidth() / 2);
-		pane.setLayoutY(scene.getHeight() / 2 + pane.getLayoutBounds().getHeight() / 2);
+		
+		Label label = new Label(name);
+		label.styleProperty().bind(Bindings.concat(
+				"-fx-font-size: ", parent.widthProperty().divide(40), ";", 
+				"-fx-padding: ", parent.widthProperty().divide(50), ";"));
+		pane.setGraphic(label);
+		
 		return pane;
 	}
 	
