@@ -39,13 +39,13 @@ public class StereoLevelsView extends AbstractView implements EventHandler<Event
 	private static final int LABEL_MARGIN_PX = 5;
 	
 	private static final SimpleObjectProperty<Color> propBarColorNormal = 
-			new SimpleObjectProperty<>(Color.LAWNGREEN);
+			new SimpleObjectProperty<>(null, "Normal Level Color", Color.LAWNGREEN);
 	private static final SimpleObjectProperty<Color> propBarColorClip = 
-			new SimpleObjectProperty<>(Color.RED);
+			new SimpleObjectProperty<>(null, "Clip Level Color", Color.RED);
 	private static final SimpleObjectProperty<Double> propBarOpacity = 
-			new SimpleObjectProperty<>(0.9);
+			new SimpleObjectProperty<>(null, "Bar Opacity", 0.9);
 	private static final SimpleObjectProperty<Color> propGridColor = 
-			new SimpleObjectProperty<Color>(Color.web("#fd4a11"));
+			new SimpleObjectProperty<Color>(null, "Grid Color", Color.web("#fd4a11"));
 	
 	private enum Mode {
 		RMS, PEAK;

@@ -22,8 +22,13 @@ import javafx.scene.SceneAntialiasing;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory.DoubleSpinnerValueFactory;
+import javafx.scene.control.TitledPane;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundFill;
+import javafx.scene.layout.CornerRadii;
+import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
@@ -45,7 +50,6 @@ public class Spectrum extends Application {
 	private static final double VIEW_LABEL_LINGER_MS = 1000;
 	private static final double VIEW_LABEL_FADE_OUT_MS = 1000;
 	
-	
 	private Scene scene;
 	private Minim minim;
 	private AudioInput in;
@@ -60,7 +64,7 @@ public class Spectrum extends Application {
 	/* Property management */
 	private boolean propertiesVisible;
 	private int currentPropIdx;
-	private Node currentPropertyNode;
+	private TitledPane currentPropertyNode;
 	
 	public Spectrum() {
 		currentViewIdx = 0;
@@ -143,11 +147,29 @@ public class Spectrum extends Application {
 				prevView();
 			}
 		} else if(KeyCode.SPACE == event.getCode()) {
-			if(!propertiesVisible) {
-				togglePropertiesOn();
-			} else {
-				togglePropertiesOff();
-			}
+			togglePropertiesOn();
+		} else if(KeyCode.ESCAPE == event.getCode()) {
+			togglePropertiesOff();
+		}
+	}
+	
+	/**
+	 * Resets the property index and shows first property of current view
+	 */
+	private void togglePropertiesOn() {
+		if(!propertiesVisible) {
+			currentPropIdx = 0;
+			propertiesVisible = showProperty(currentPropIdx);
+		}
+	}
+	
+	/**
+	 * If properties are currently shown, hides the current property
+	 */
+	private void togglePropertiesOff() {
+		if(propertiesVisible) {
+			hideProperty(currentPropertyNode);
+			propertiesVisible = false;
 		}
 	}
 	
@@ -201,15 +223,6 @@ public class Spectrum extends Application {
 		// TODO Cleanup all property management values
 	}
 	
-	private void togglePropertiesOn() {
-		propertiesVisible = showProperty(currentPropIdx = 0);
-	}
-	
-	private void togglePropertiesOff() {
-		hideProperty(currentPropertyNode);
-		propertiesVisible = false;
-	}
-	
 	private void nextProperty() {
 		if(currentPropertyNode != null) {
 			hideProperty(currentPropertyNode);
@@ -249,26 +262,35 @@ public class Spectrum extends Application {
 				ObjectProperty<Color> p = (ObjectProperty<Color>) prop;
 				ColorPicker picker = UiUtils.createColorPicker(p.getValue());
 				p.bind(picker.valueProperty());
-				picker.setLayoutX(scene.getWidth() / 2 - picker.getLayoutBounds().getWidth() / 2);
-				picker.setLayoutY(scene.getHeight() / 2 + picker.getLayoutBounds().getHeight() / 2);
-				currentView.getRoot().getChildren().add(picker);
-				currentPropertyNode = picker;
+				currentView.getRoot().getChildren().add(
+						currentPropertyNode = createPropertyPane(prop.getName(), picker));
 				
 			} else if(prop.getValue() instanceof Double) {
 				ObjectProperty<Double> p = (ObjectProperty<Double>) prop;
 				Spinner<Double> spinner = UiUtils.createDoubleSpinner(0.0, 1.0, p.getValue(), 0.1);
 				p.bind(spinner.valueProperty());
-				spinner.setLayoutX(scene.getWidth() / 2 - spinner.getLayoutBounds().getWidth() / 2);
-				spinner.setLayoutY(scene.getHeight() / 2 + spinner.getLayoutBounds().getHeight() / 2);
-				currentView.getRoot().getChildren().add(spinner);
-				currentPropertyNode = spinner;
+				currentView.getRoot().getChildren().add(
+						currentPropertyNode = createPropertyPane(prop.getName(), spinner));
 			}
 		}
 		return !props.isEmpty();
 	}
 	
-	private void hideProperty(Node node) {
+	private void hideProperty(TitledPane node) {
+		currentView.getProperties().get(currentPropIdx).unbind();
 		currentView.getRoot().getChildren().remove(node);
+		node.setContent(null);
+	}
+	
+	private TitledPane createPropertyPane(String name, Node component) {
+		TitledPane pane = new TitledPane(name, component);
+		pane.setPrefSize(200, 200);
+		pane.setCollapsible(false);
+		pane.setBackground(new Background(new BackgroundFill(Color.GRAY, new CornerRadii(5), null)));
+		pane.setOpacity(0.8);
+		pane.setLayoutX(scene.getWidth() / 2 - pane.getLayoutBounds().getWidth() / 2);
+		pane.setLayoutY(scene.getHeight() / 2 + pane.getLayoutBounds().getHeight() / 2);
+		return pane;
 	}
 	
 	public static void main(String[] args) {
