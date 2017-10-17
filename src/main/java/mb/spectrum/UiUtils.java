@@ -8,11 +8,13 @@ import javafx.animation.Transition;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory.DoubleSpinnerValueFactory;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
+import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.text.Text;
 import javafx.util.Duration;
 
@@ -84,6 +86,21 @@ public class UiUtils {
 	
 	public static ColorPicker createColorPicker(Color color) {
 		return new ColorPicker(color);
+	}
+	
+	public static CheckBox createCheckBox(Boolean value, String label) {
+		CheckBox box = new CheckBox(label);
+		box.setSelected(value);
+		return box;
+	}
+	
+	public static Line createThickRoundedLine(Color color) {
+		Line line = new Line();
+		line.setStroke(color);
+		line.setStrokeWidth(4);
+		line.setStrokeLineCap(StrokeLineCap.ROUND);
+		return line;
+		
 	}
 	
 }

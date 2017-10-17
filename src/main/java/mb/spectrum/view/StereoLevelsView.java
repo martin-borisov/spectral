@@ -13,11 +13,7 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import javafx.event.Event;
-import javafx.event.EventHandler;
 import javafx.scene.Node;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.LinearGradient;
@@ -25,9 +21,10 @@ import javafx.scene.paint.Stop;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
+import mb.spectrum.UiUtils;
 import mb.spectrum.Utils;
 
-public class StereoLevelsView extends AbstractView implements EventHandler<Event> {
+public class StereoLevelsView extends AbstractView {
 	
 	// NB: The minimum DB value is empirical and it acts as a threshold in order to avoid
 	// flicker of the graph caused by very low audio levels
@@ -36,6 +33,8 @@ public class StereoLevelsView extends AbstractView implements EventHandler<Event
 	private static final int DB_LINES_COUNT = 5;
 	private static final double BAR_HEIGHT_PROPORTION = 0.4;
 	private static final double BAR_MARGIN_PROPORTION = 0.05;
+	private static final double DR_BAR_HEIGHT_PROPORTION = 0.42;
+	private static final double DR_BAR_MARGIN_PROPORTION = 0.04;
 	private static final int LABEL_MARGIN_PX = 5;
 	
 	private static final SimpleObjectProperty<Color> propBarColorNormal = 
@@ -44,22 +43,27 @@ public class StereoLevelsView extends AbstractView implements EventHandler<Event
 			new SimpleObjectProperty<>(null, "Clip Level Color", Color.RED);
 	private static final SimpleObjectProperty<Double> propBarOpacity = 
 			new SimpleObjectProperty<>(null, "Bar Opacity", 0.9);
+	private static final SimpleObjectProperty<Color> propDrBarColor = 
+			new SimpleObjectProperty<>(null, "DR Range Color", Color.ORANGE);
+	private static final SimpleObjectProperty<Double> propDrBarOpacity = 
+			new SimpleObjectProperty<>(null, "DR Range Opacity", 0.2);
 	private static final SimpleObjectProperty<Color> propGridColor = 
 			new SimpleObjectProperty<Color>(null, "Grid Color", Color.web("#fd4a11"));
+	private static final SimpleObjectProperty<Boolean> propShowDr = 
+			new SimpleObjectProperty<Boolean>(null, "Show Dynamic Range", true);
+	private static final SimpleObjectProperty<Boolean> propRms = 
+			new SimpleObjectProperty<Boolean>(null, "RMS Mode", false);
 	
-	private enum Mode {
-		RMS, PEAK;
-	}
-	
-	private Mode mode;
 	private List<Line> lines;
 	private List<Text> labels;
-	private Rectangle leftBar, rightBar;
+	private Rectangle leftBar, rightBar, leftDrBar, rightDrBar;
+	private Line leftMinLevel, leftMaxLevel, rightMinLevel, rightMaxLevel;
 	
-	private double currentDbLeft, currentDbRight;
+	private double currentDbL, currentDbR, 
+		minLevelL = 0, minLevelR = 0, 
+		maxLevelL = MIN_DB_VALUE, maxLevelR = MIN_DB_VALUE;
 	
 	public StereoLevelsView() {
-		mode = Mode.PEAK;
 		createPropertyListeners();
 	}
 	
@@ -70,7 +74,8 @@ public class StereoLevelsView extends AbstractView implements EventHandler<Event
 
 	@Override
 	public List<ObjectProperty<? extends Object>> getProperties() {
-		return Arrays.asList(propGridColor, propBarOpacity, propBarColorNormal, propBarColorClip);
+		return Arrays.asList(propGridColor, propBarOpacity, propBarColorNormal, 
+				propBarColorClip, propRms, propDrBarColor, propDrBarOpacity, propShowDr);
 	}
 
 	@Override
@@ -97,7 +102,7 @@ public class StereoLevelsView extends AbstractView implements EventHandler<Event
 		label.setX(label.getX() - label.getLayoutBounds().getWidth() / 2);
 		label.strokeProperty().bind(propGridColor);
 		
-		// Create bars
+		// Level bars
 		leftBar = new Rectangle(coordX(0), coordY(areaHeight() - barMargin()), 5, barHeight());
 		leftBar.opacityProperty().bind(propBarOpacity);
 		
@@ -105,6 +110,41 @@ public class StereoLevelsView extends AbstractView implements EventHandler<Event
 		rightBar.opacityProperty().bind(propBarOpacity);
 		
 		updateBarColors();
+		
+		// DR bars
+		leftDrBar = new Rectangle(coordX(0), coordY(areaHeight() - drBarMargin()), 5, drBarHeight());
+		leftDrBar.fillProperty().bind(propDrBarColor);
+		leftDrBar.opacityProperty().bind(propDrBarOpacity);
+		
+		rightDrBar = new Rectangle(coordX(0), coordY(0 + drBarMargin() + drBarHeight()), 5, drBarHeight());
+		rightDrBar.fillProperty().bind(propDrBarColor);
+		rightDrBar.opacityProperty().bind(propDrBarOpacity);
+		
+		// DR indicators
+		leftMinLevel = UiUtils.createThickRoundedLine(Color.BLUE);
+		leftMinLevel.startXProperty().bind(leftDrBar.xProperty());
+		leftMinLevel.endXProperty().bind(leftDrBar.xProperty());
+		leftMinLevel.startYProperty().bind(leftDrBar.yProperty());
+		leftMinLevel.endYProperty().bind(leftDrBar.yProperty().add(leftDrBar.heightProperty()));
+		
+		leftMaxLevel = UiUtils.createThickRoundedLine(Color.ORANGE);
+		leftMaxLevel.startXProperty().bind(leftDrBar.xProperty().add(leftDrBar.widthProperty()));
+		leftMaxLevel.endXProperty().bind(leftDrBar.xProperty().add(leftDrBar.widthProperty()));
+		leftMaxLevel.startYProperty().bind(leftDrBar.yProperty());
+		leftMaxLevel.endYProperty().bind(leftDrBar.yProperty().add(leftDrBar.heightProperty()));
+		
+		rightMinLevel = UiUtils.createThickRoundedLine(Color.BLUE);
+		rightMinLevel.startXProperty().bind(rightDrBar.xProperty());
+		rightMinLevel.endXProperty().bind(rightDrBar.xProperty());
+		rightMinLevel.startYProperty().bind(rightDrBar.yProperty());
+		rightMinLevel.endYProperty().bind(rightDrBar.yProperty().add(rightDrBar.heightProperty()));
+		
+		rightMaxLevel = UiUtils.createThickRoundedLine(Color.ORANGE);
+		rightMaxLevel.startXProperty().bind(rightDrBar.xProperty().add(rightDrBar.widthProperty()));
+		rightMaxLevel.endXProperty().bind(rightDrBar.xProperty().add(rightDrBar.widthProperty()));
+		rightMaxLevel.startYProperty().bind(rightDrBar.yProperty());
+		rightMaxLevel.endYProperty().bind(rightDrBar.yProperty().add(rightDrBar.heightProperty()));
+		
 		
 		// ###
 		/*
@@ -126,8 +166,9 @@ public class StereoLevelsView extends AbstractView implements EventHandler<Event
 		//nodes.add(region);
 		nodes.addAll(lines);
 		nodes.addAll(labels);
-		nodes.add(leftBar);
-		nodes.add(rightBar);
+		nodes.addAll(Arrays.asList(
+				leftBar, rightBar, leftDrBar, rightDrBar, 
+				leftMinLevel, leftMaxLevel, rightMinLevel, rightMaxLevel));
 		return nodes;
 	}
 	
@@ -140,6 +181,11 @@ public class StereoLevelsView extends AbstractView implements EventHandler<Event
 		propBarColorClip.addListener(new ChangeListener<Color>() {
 			public void changed(ObservableValue<? extends Color> observable, Color oldValue, Color newValue) {
 				updateBarColors();
+			}
+		});
+		propShowDr.addListener(new ChangeListener<Boolean>() {
+			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+				toggleDrVisibility(newValue);
 			}
 		});
 	}
@@ -157,7 +203,7 @@ public class StereoLevelsView extends AbstractView implements EventHandler<Event
 	public void dataAvailable(float[] left, float[] right) {
 		
 		float levelLeft = 0, levelRight = 0;
-		if(Mode.RMS == mode) {
+		if(propRms.getValue()) {
 			levelLeft = rmsLevel(left);
 			levelRight = rmsLevel(right);
 		} else {
@@ -165,14 +211,23 @@ public class StereoLevelsView extends AbstractView implements EventHandler<Event
 			levelRight = peakLevel(right);
 		}
 		
-		currentDbLeft = Utils.toDB(levelLeft);
-		currentDbRight = Utils.toDB(levelRight);
+		currentDbL = Utils.toDB(levelLeft);
+		currentDbR = Utils.toDB(levelRight);
+		
+		minLevelL = Math.min(minLevelL, currentDbL);
+		minLevelR = Math.min(minLevelR, currentDbR);
+		maxLevelL = Math.max(maxLevelL, currentDbL);
+		maxLevelR = Math.max(maxLevelR, currentDbR);
 	}
 
 	@Override
 	public void nextFrame() {
-		leftBar.setWidth(Utils.map(currentDbLeft, MIN_DB_VALUE, 0, 0, areaWidth()));
-		rightBar.setWidth(Utils.map(currentDbRight, MIN_DB_VALUE, 0, 0, areaWidth()));
+		leftBar.setWidth(Utils.map(currentDbL, MIN_DB_VALUE, 0, 0, areaWidth()));
+		rightBar.setWidth(Utils.map(currentDbR, MIN_DB_VALUE, 0, 0, areaWidth()));
+		leftDrBar.setX(coordX(Utils.map(minLevelL, MIN_DB_VALUE, 0, 0, areaWidth())));
+		leftDrBar.setWidth(coordX(Utils.map(maxLevelL, MIN_DB_VALUE, 0, 0, areaWidth())) - leftDrBar.getX());
+		rightDrBar.setX(coordX(Utils.map(minLevelR, MIN_DB_VALUE, 0, 0, areaWidth())));
+		rightDrBar.setWidth(coordX(Utils.map(maxLevelR, MIN_DB_VALUE, 0, 0, areaWidth())) - rightDrBar.getX());
 	}
 	
 	@Override
@@ -219,34 +274,19 @@ public class StereoLevelsView extends AbstractView implements EventHandler<Event
 		rightBar.setHeight(barHeight());
 		rightBar.setFill(createHorizontalGradient(
 				0, areaWidth(), barMargin() + barHeight() / 2));
+		
+		leftDrBar.setY(coordY(areaHeight() - drBarMargin()));
+		leftDrBar.setHeight(drBarHeight());
+		rightDrBar.setY(coordY(0 + drBarMargin() + drBarHeight()));
+		rightDrBar.setHeight(drBarHeight());
 	}
 
 	@Override
 	public void onShow() {
-		getRoot().getScene().addEventHandler(KeyEvent.KEY_RELEASED, this);
 	}
 
 	@Override
 	public void onHide() {
-		getRoot().getScene().removeEventHandler(KeyEvent.KEY_RELEASED, this);
-	}
-	
-	@Override
-	public void handle(Event event) {
-		if(KeyEvent.KEY_RELEASED == event.getEventType()) {
-			KeyEvent evt = (KeyEvent) event;
-			if(KeyCode.UP == evt.getCode() || KeyCode.DOWN == evt.getCode()) {
-				onChangeMode();
-			}
-		}
-	}
-
-	private void onChangeMode() {
-		if(Mode.RMS == mode) {
-			mode = Mode.PEAK;
-		} else {
-			mode = Mode.RMS;
-		}
 	}
 
 	private double barHeight() {
@@ -255,6 +295,14 @@ public class StereoLevelsView extends AbstractView implements EventHandler<Event
 	
 	private double barMargin() {
 		return areaHeight() * BAR_MARGIN_PROPORTION;
+	}
+	
+	private double drBarHeight() {
+		return areaHeight() * DR_BAR_HEIGHT_PROPORTION;
+	}
+	
+	private double drBarMargin() {
+		return areaHeight() * DR_BAR_MARGIN_PROPORTION;
 	}
 	
 	private LinearGradient createHorizontalGradient(double fromX, double toX, double y) {
@@ -267,6 +315,15 @@ public class StereoLevelsView extends AbstractView implements EventHandler<Event
 						new Stop(0.8, propBarColorNormal.getValue()), 
 						new Stop(0.9, propBarColorClip.getValue())});
 		return gr;
+	}
+	
+	private void toggleDrVisibility(boolean visible) {
+		leftDrBar.setVisible(visible);
+		rightDrBar.setVisible(visible);
+		leftMinLevel.setVisible(visible);
+		leftMaxLevel.setVisible(visible);
+		rightMinLevel.setVisible(visible);
+		rightMaxLevel.setVisible(visible);
 	}
 
 }

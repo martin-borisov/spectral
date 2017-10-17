@@ -13,10 +13,11 @@ import javafx.beans.binding.Bindings;
 import javafx.beans.property.ObjectProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
-import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.SceneAntialiasing;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ColorPicker;
+import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.TitledPane;
@@ -209,8 +210,7 @@ public class Spectrum extends Application {
 			Pane parent = currentView.getRoot();
 			Label name = new Label(currentView.getName());
 			name.styleProperty().bind(Bindings.concat(
-					"-fx-font-size: ", parent.widthProperty().divide(40), ";", 
-					"-fx-padding: ", parent.widthProperty().divide(50), ";",
+					"-fx-font-size: ", parent.widthProperty().divide(20), ";", 
 					"-fx-text-fill: ", VIEW_LABEL_COLOR, ";"));
 			name.layoutXProperty().bind(parent.widthProperty().subtract(name.widthProperty()).divide(2));
 			name.layoutYProperty().bind(parent.heightProperty().subtract(name.heightProperty()).divide(2));
@@ -261,22 +261,27 @@ public class Spectrum extends Application {
 		List<ObjectProperty<? extends Object>> props = currentView.getProperties();
 		if(!props.isEmpty()) {
 			ObjectProperty<? extends Object> prop = props.get(idx);
-			Node node = null;
+			Control control = null;
 			if(prop.getValue() instanceof Color) {
 				ObjectProperty<Color> p = (ObjectProperty<Color>) prop;
 				ColorPicker picker = UiUtils.createColorPicker(p.getValue());
 				p.bind(picker.valueProperty());
-				node = picker;
+				control = picker;
 			} else if(prop.getValue() instanceof Double) {
 				ObjectProperty<Double> p = (ObjectProperty<Double>) prop;
 				Spinner<Double> spinner = UiUtils.createDoubleSpinner(0.0, 1.0, p.getValue(), 0.1);
 				p.bind(spinner.valueProperty());
-				node = spinner;
+				control = spinner;
+			} else if(prop.getValue() instanceof Boolean) {
+				ObjectProperty<Boolean> p = (ObjectProperty<Boolean>) prop;
+				CheckBox box = UiUtils.createCheckBox(p.getValue(), prop.getName());
+				p.bind(box.selectedProperty());
+				control = box;
 			}
 			
 			// TODO Make sure all property types are handled
 			currentView.getRoot().getChildren().add(
-					currentPropertyNode = createPropertyPane(prop.getName(), node));
+					currentPropertyNode = createPropertyPane(prop.getName(), control));
 			UiUtils.createFadeInTransition(currentPropertyNode, 1000, null).play();
 		}
 		return !props.isEmpty();
@@ -292,17 +297,20 @@ public class Spectrum extends Application {
 		}).play();
 	}
 	
-	private TitledPane createPropertyPane(String name, Node component) {
+	private TitledPane createPropertyPane(String name, Control control) {
 		Pane parent = currentView.getRoot();
 
-		TitledPane pane = new TitledPane(null, component);
+		TitledPane pane = new TitledPane(null, control);
+		
+		// Automatically resize pane based on the scene size
 		pane.prefWidthProperty().bind(parent.widthProperty().divide(2));
 		pane.prefHeightProperty().bind(parent.heightProperty().divide(2));
 		pane.layoutXProperty().bind(parent.widthProperty().subtract(pane.widthProperty()).divide(2));
 		pane.layoutYProperty().bind(parent.heightProperty().subtract(pane.heightProperty()).divide(2));
 		
 		// TODO This is just a sample. Remove later.
-		pane.setStyle("-fx-color: -fx-focus-color;");
+		//pane.setStyle("-fx-color: -fx-focus-color;");
+		
 		pane.setCollapsible(false);
 		
 		// TODO This does not work. Revisit.
@@ -314,6 +322,10 @@ public class Spectrum extends Application {
 				"-fx-font-size: ", parent.widthProperty().divide(40), ";", 
 				"-fx-padding: ", parent.widthProperty().divide(50), ";"));
 		pane.setGraphic(label);
+		
+		// Automatically resize the contained property control based on the pane size
+		control.prefWidthProperty().bind(pane.widthProperty().divide(2));
+		control.prefHeightProperty().bind(pane.heightProperty().divide(4));
 		
 		return pane;
 	}
