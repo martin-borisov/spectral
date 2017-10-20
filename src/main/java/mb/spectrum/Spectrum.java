@@ -258,6 +258,7 @@ public class Spectrum extends Application {
 		
 		// TODO Implement:
 		// * Persistence
+		// * Make sure all property types are handled
 		List<ObjectProperty<? extends Object>> props = currentView.getProperties();
 		if(!props.isEmpty()) {
 			ObjectProperty<? extends Object> prop = props.get(idx);
@@ -279,7 +280,6 @@ public class Spectrum extends Application {
 				control = box;
 			}
 			
-			// TODO Make sure all property types are handled
 			currentView.getRoot().getChildren().add(
 					currentPropertyNode = createPropertyPane(prop.getName(), control));
 			UiUtils.createFadeInTransition(currentPropertyNode, 1000, null).play();

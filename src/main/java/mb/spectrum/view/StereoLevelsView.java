@@ -1,7 +1,7 @@
 package mb.spectrum.view;
 
-import static mb.spectrum.UiUtils.createGridLine;
 import static mb.spectrum.UiUtils.createLabel;
+import static mb.spectrum.Utils.map;
 import static mb.spectrum.Utils.peakLevel;
 import static mb.spectrum.Utils.rmsLevel;
 
@@ -9,18 +9,19 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import javafx.beans.binding.Bindings;
+import javafx.beans.binding.DoubleBinding;
+import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyDoubleProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
+import javafx.scene.control.Label;
 import javafx.scene.paint.Color;
-import javafx.scene.paint.CycleMethod;
-import javafx.scene.paint.LinearGradient;
-import javafx.scene.paint.Stop;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
-import javafx.scene.text.Text;
+import javafx.scene.shape.StrokeLineCap;
 import mb.spectrum.UiUtils;
 import mb.spectrum.Utils;
 
@@ -30,52 +31,77 @@ public class StereoLevelsView extends AbstractView {
 	// flicker of the graph caused by very low audio levels
 	private static final int MIN_DB_VALUE = -100;
 	
-	private static final int DB_LINES_COUNT = 5;
-	private static final double BAR_HEIGHT_PROPORTION = 0.4;
+	private static final int DB_LINES_COUNT = 8;
+	private static final double BAR_HEIGHT_PROPORTION = 0.35;
 	private static final double BAR_MARGIN_PROPORTION = 0.05;
-	private static final double DR_BAR_HEIGHT_PROPORTION = 0.42;
+	private static final double DR_BAR_HEIGHT_PROPORTION = 0.37;
 	private static final double DR_BAR_MARGIN_PROPORTION = 0.04;
-	private static final int LABEL_MARGIN_PX = 5;
+	private static final double GRID_MARGIN_RATIO = 0.07;
+	private static final double LINGER_STAY_FACTOR = 0.01;
+	private static final double LINGER_ACCELARATION_FACTOR = 1.08;
 	
-	private static final SimpleObjectProperty<Color> propBarColorNormal = 
-			new SimpleObjectProperty<>(null, "Normal Level Color", Color.LAWNGREEN);
-	private static final SimpleObjectProperty<Color> propBarColorClip = 
-			new SimpleObjectProperty<>(null, "Clip Level Color", Color.RED);
-	private static final SimpleObjectProperty<Double> propBarOpacity = 
-			new SimpleObjectProperty<>(null, "Bar Opacity", 0.9);
-	private static final SimpleObjectProperty<Color> propDrBarColor = 
-			new SimpleObjectProperty<>(null, "DR Range Color", Color.ORANGE);
-	private static final SimpleObjectProperty<Double> propDrBarOpacity = 
-			new SimpleObjectProperty<>(null, "DR Range Opacity", 0.2);
-	private static final SimpleObjectProperty<Color> propGridColor = 
-			new SimpleObjectProperty<Color>(null, "Grid Color", Color.web("#fd4a11"));
-	private static final SimpleObjectProperty<Boolean> propShowDr = 
-			new SimpleObjectProperty<Boolean>(null, "Show Dynamic Range", true);
-	private static final SimpleObjectProperty<Boolean> propRms = 
-			new SimpleObjectProperty<Boolean>(null, "RMS Mode", false);
+	private SimpleObjectProperty<Color> propGridColor;
+	private SimpleObjectProperty<Color> propBarColorNormal;
+	private SimpleObjectProperty<Color> propBarColorMid;
+	private SimpleObjectProperty<Color> propBarColorClip;
+	private SimpleObjectProperty<Color> propLingerIndicatorColor;
+	private SimpleObjectProperty<Double> propBarOpacity;
+	private SimpleObjectProperty<Color> propDrBarColor;
+	private SimpleObjectProperty<Double> propDrBarOpacity;
+	private SimpleObjectProperty<Boolean> propShowDr;
+	private SimpleObjectProperty<Boolean> propRms;
 	
 	private List<Line> lines;
-	private List<Text> labels;
+	private List<Label> labels;
 	private Rectangle leftBar, rightBar, leftDrBar, rightDrBar;
-	private Line leftMinLevel, leftMaxLevel, rightMinLevel, rightMaxLevel;
+	private Line leftMinLevel, leftMaxLevel, rightMinLevel, rightMaxLevel, leftLingerLevel, rightLingerLevel; 
 	
 	private double currentDbL, currentDbR, 
 		minLevelL = 0, minLevelR = 0, 
 		maxLevelL = MIN_DB_VALUE, maxLevelR = MIN_DB_VALUE;
 	
-	public StereoLevelsView() {
-		createPropertyListeners();
-	}
+	private double lingerLevelL = MIN_DB_VALUE, lingerLevelR = MIN_DB_VALUE, 
+			lingerOpValL = LINGER_STAY_FACTOR, lingerOpValR = LINGER_STAY_FACTOR;
+	
+	private DoubleProperty currLevelLProp, currLevelRProp, minLevelLProp, 
+		maxLevelLProp, minLevelRProp, maxLevelRProp, leftLingerLevelProp, rightLingerLevelProp;
 	
 	@Override
 	public String getName() {
-		return "Peak/RMS Meter";
+		return "Stereo Peak/RMS Meters";
+	}
+	
+	@Override
+	protected void initProperties() {
+		
+		// Configuration properties
+		propGridColor = new SimpleObjectProperty<>(null, "Grid Color", Color.web("#fd4a11"));
+		propBarColorNormal = new SimpleObjectProperty<>(null, "Normal Level Color", Color.DARKGREEN);
+		propBarColorMid = new SimpleObjectProperty<>(null, "Middle Level Color", Color.LAWNGREEN);
+		propBarColorClip = new SimpleObjectProperty<>(null, "Clip Level Color", Color.RED);
+		propLingerIndicatorColor = new SimpleObjectProperty<>(null, "Linger Level Color", Color.LIGHTGREEN);
+		propBarOpacity = new SimpleObjectProperty<>(null, "Bar Opacity", 0.9);
+		propDrBarColor = new SimpleObjectProperty<>(null, "DR Range Color", Color.ORANGE);
+		propDrBarOpacity = new SimpleObjectProperty<>(null, "DR Range Opacity", 0.2);
+		propShowDr = new SimpleObjectProperty<>(null, "Show Dynamic Range", true);
+		propRms = new SimpleObjectProperty<>(null, "RMS Mode", false);
+		
+		// Operational properties
+		currLevelLProp = new SimpleDoubleProperty();
+		currLevelRProp = new SimpleDoubleProperty();
+		minLevelLProp = new SimpleDoubleProperty();
+		maxLevelLProp = new SimpleDoubleProperty();
+		minLevelRProp = new SimpleDoubleProperty();
+		maxLevelRProp = new SimpleDoubleProperty();
+		leftLingerLevelProp = new SimpleDoubleProperty();
+		rightLingerLevelProp = new SimpleDoubleProperty();
 	}
 
 	@Override
 	public List<ObjectProperty<? extends Object>> getProperties() {
 		return Arrays.asList(propGridColor, propBarOpacity, propBarColorNormal, 
-				propBarColorClip, propRms, propDrBarColor, propDrBarOpacity, propShowDr);
+				propBarColorMid, propLingerIndicatorColor, propBarColorClip, propRms, 
+				propDrBarColor, propDrBarOpacity, propShowDr);
 	}
 
 	@Override
@@ -84,69 +110,49 @@ public class StereoLevelsView extends AbstractView {
 		// Create grid and labels
 		lines = new ArrayList<>();
 		labels = new ArrayList<>();
-		for (int i = 0; i < DB_LINES_COUNT; i++) {
-			double dbVal = Utils.map(i, 0, DB_LINES_COUNT, MIN_DB_VALUE, 0);
-			double x = Utils.map(dbVal, MIN_DB_VALUE, 0, coordX(0), coordX(0) + areaWidth());
-			createGridLine(x, coordY(0), x, coordY(0) - areaHeight(), propGridColor.getValue(), lines)
-				.strokeProperty().bind(propGridColor);
-			Text label = createLabel(x, coordY(0) - areaHeight() - LABEL_MARGIN_PX, 
-					Math.round(dbVal) + " db", propGridColor.getValue(), labels);
-			label.setX(label.getX() - label.getLayoutBounds().getWidth() / 2);
-			label.strokeProperty().bind(propGridColor);
+		for (int i = 0; i <= DB_LINES_COUNT; i++) {
+			createGridLineAndLabel(i);
 		}
-		createGridLine(coordX(0) + areaWidth(), coordY(0), 
-				coordX(0) + areaWidth(), coordY(0) - areaHeight(), propGridColor.getValue(), lines)
-			.strokeProperty().bind(propGridColor);
-		Text label = createLabel(coordX(0) + areaWidth(), 
-				coordY(0) - areaHeight() - LABEL_MARGIN_PX, "0 db", propGridColor.getValue(), labels);
-		label.setX(label.getX() - label.getLayoutBounds().getWidth() / 2);
-		label.strokeProperty().bind(propGridColor);
 		
 		// Level bars
-		leftBar = new Rectangle(coordX(0), coordY(areaHeight() - barMargin()), 5, barHeight());
-		leftBar.opacityProperty().bind(propBarOpacity);
+		leftBar = createLevelBar(
+				getRoot().heightProperty().multiply(SCENE_MARGIN_RATIO + BAR_MARGIN_PROPORTION), 
+				currLevelLProp);
 		
-		rightBar = new Rectangle(coordX(0), coordY(0 + barMargin() + barHeight()), 5, barHeight());
-		rightBar.opacityProperty().bind(propBarOpacity);
+		rightBar = createLevelBar(
+				getRoot().heightProperty().subtract(
+						getRoot().heightProperty().multiply(
+								SCENE_MARGIN_RATIO + BAR_MARGIN_PROPORTION + BAR_HEIGHT_PROPORTION)), 
+				currLevelRProp);
 		
-		updateBarColors();
+		// RMS indicators
+		leftLingerLevel = createLingerIndicator(leftLingerLevelProp, leftBar);
+		rightLingerLevel = createLingerIndicator(rightLingerLevelProp, rightBar);
 		
 		// DR bars
-		leftDrBar = new Rectangle(coordX(0), coordY(areaHeight() - drBarMargin()), 5, drBarHeight());
-		leftDrBar.fillProperty().bind(propDrBarColor);
-		leftDrBar.opacityProperty().bind(propDrBarOpacity);
+		leftDrBar = createDrBar(
+				getRoot().heightProperty().multiply(SCENE_MARGIN_RATIO + DR_BAR_MARGIN_PROPORTION), 
+				minLevelLProp, maxLevelLProp);
 		
-		rightDrBar = new Rectangle(coordX(0), coordY(0 + drBarMargin() + drBarHeight()), 5, drBarHeight());
-		rightDrBar.fillProperty().bind(propDrBarColor);
-		rightDrBar.opacityProperty().bind(propDrBarOpacity);
+		rightDrBar = createDrBar(getRoot().heightProperty().subtract(
+				getRoot().heightProperty().multiply(
+						SCENE_MARGIN_RATIO + DR_BAR_MARGIN_PROPORTION + DR_BAR_HEIGHT_PROPORTION)), 
+				minLevelRProp, maxLevelRProp);
 		
 		// DR indicators
-		leftMinLevel = UiUtils.createThickRoundedLine(Color.BLUE);
-		leftMinLevel.startXProperty().bind(leftDrBar.xProperty());
-		leftMinLevel.endXProperty().bind(leftDrBar.xProperty());
-		leftMinLevel.startYProperty().bind(leftDrBar.yProperty());
-		leftMinLevel.endYProperty().bind(leftDrBar.yProperty().add(leftDrBar.heightProperty()));
+		leftMinLevel = createMinDrLine(leftDrBar);
+		leftMaxLevel = createMaxDrLine(leftDrBar);
+		rightMinLevel = createMinDrLine(rightDrBar);
+		rightMaxLevel = createMaxDrLine(rightDrBar);
 		
-		leftMaxLevel = UiUtils.createThickRoundedLine(Color.ORANGE);
-		leftMaxLevel.startXProperty().bind(leftDrBar.xProperty().add(leftDrBar.widthProperty()));
-		leftMaxLevel.endXProperty().bind(leftDrBar.xProperty().add(leftDrBar.widthProperty()));
-		leftMaxLevel.startYProperty().bind(leftDrBar.yProperty());
-		leftMaxLevel.endYProperty().bind(leftDrBar.yProperty().add(leftDrBar.heightProperty()));
+		// Collect and return all nodes
+		List<Node> nodes = new ArrayList<>();
+		nodes.addAll(lines);
+		nodes.addAll(labels);
+		nodes.addAll(Arrays.asList(
+				leftDrBar, rightDrBar, leftBar, rightBar, leftLingerLevel, rightLingerLevel, 
+				leftMinLevel, leftMaxLevel, rightMinLevel, rightMaxLevel));
 		
-		rightMinLevel = UiUtils.createThickRoundedLine(Color.BLUE);
-		rightMinLevel.startXProperty().bind(rightDrBar.xProperty());
-		rightMinLevel.endXProperty().bind(rightDrBar.xProperty());
-		rightMinLevel.startYProperty().bind(rightDrBar.yProperty());
-		rightMinLevel.endYProperty().bind(rightDrBar.yProperty().add(rightDrBar.heightProperty()));
-		
-		rightMaxLevel = UiUtils.createThickRoundedLine(Color.ORANGE);
-		rightMaxLevel.startXProperty().bind(rightDrBar.xProperty().add(rightDrBar.widthProperty()));
-		rightMaxLevel.endXProperty().bind(rightDrBar.xProperty().add(rightDrBar.widthProperty()));
-		rightMaxLevel.startYProperty().bind(rightDrBar.yProperty());
-		rightMaxLevel.endYProperty().bind(rightDrBar.yProperty().add(rightDrBar.heightProperty()));
-		
-		
-		// ###
 		/*
 		Image image = new Image(getClass().getResourceAsStream("/resources/page-bg-2.jpg"));
 		
@@ -158,43 +164,117 @@ public class StereoLevelsView extends AbstractView {
 		region.setBackground(new Background(myBI));
 		region.prefWidthProperty().bind(getRoot().widthProperty());
 		region.prefHeightProperty().bind(getRoot().heightProperty());
+		nodes.add(region);
 		*/
-		// ###
 		
-		// Collect and return all shapes
-		List<Node> nodes = new ArrayList<>();
-		//nodes.add(region);
-		nodes.addAll(lines);
-		nodes.addAll(labels);
-		nodes.addAll(Arrays.asList(
-				leftBar, rightBar, leftDrBar, rightDrBar, 
-				leftMinLevel, leftMaxLevel, rightMinLevel, rightMaxLevel));
 		return nodes;
 	}
 	
-	private void createPropertyListeners() {
-		propBarColorNormal.addListener(new ChangeListener<Color>() {
-			public void changed(ObservableValue<? extends Color> observable, Color oldValue, Color newValue) {
-				updateBarColors();
-			}
-		});
-		propBarColorClip.addListener(new ChangeListener<Color>() {
-			public void changed(ObservableValue<? extends Color> observable, Color oldValue, Color newValue) {
-				updateBarColors();
-			}
-		});
-		propShowDr.addListener(new ChangeListener<Boolean>() {
-			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-				toggleDrVisibility(newValue);
-			}
-		});
+	private void createGridLineAndLabel(int idx) {
+		
+		double dBVal = map(idx, 0, DB_LINES_COUNT, MIN_DB_VALUE, 0);
+		
+		// Create line
+		Line line = new Line();
+		line.startXProperty().bind(
+				Bindings.createDoubleBinding(() -> {
+					double parentWidth = getRoot().widthProperty().get();
+					return map(dBVal, MIN_DB_VALUE, 0, 
+						parentWidth * SCENE_MARGIN_RATIO, 
+						parentWidth - parentWidth * SCENE_MARGIN_RATIO);
+					}, 
+					getRoot().widthProperty()));
+		line.endXProperty().bind(line.startXProperty());
+		line.startYProperty().bind(getRoot().heightProperty().multiply(GRID_MARGIN_RATIO));
+		line.endYProperty().bind(getRoot().heightProperty().subtract(
+				getRoot().heightProperty().multiply(GRID_MARGIN_RATIO)));
+		line.strokeProperty().bind(propGridColor);
+		line.getStrokeDashArray().addAll(2d);
+		lines.add(line);
+		
+		// Create label
+		Label label = createLabel(Math.round(dBVal) + "dB", labels);
+		label.layoutXProperty().bind(line.startXProperty().subtract(label.widthProperty().divide(2)));
+		label.layoutYProperty().bind(line.startYProperty().subtract(label.heightProperty()));
+		label.textFillProperty().bind(propGridColor);
+		label.styleProperty().bind(Bindings.concat(
+				"-fx-font-size: ", Bindings.createDoubleBinding(
+						() -> Math.sqrt(getRoot().widthProperty().get() / 3), 
+						getRoot().widthProperty())));
 	}
 	
-	private void updateBarColors() {
-		leftBar.setFill(createHorizontalGradient(
-				0, areaWidth(), areaHeight() - barMargin() - barHeight() / 2));
-		rightBar.setFill(createHorizontalGradient(
-				0, areaWidth(), barMargin() + barHeight() / 2));
+	private Rectangle createLevelBar(DoubleBinding yBinding, DoubleProperty levelProp) {
+		Rectangle bar = new Rectangle();
+		bar.xProperty().bind(lines.get(0).startXProperty());
+		bar.yProperty().bind(yBinding);
+		bar.heightProperty().bind(getRoot().heightProperty().multiply(BAR_HEIGHT_PROPORTION));
+		bar.opacityProperty().bind(propBarOpacity);
+		createLevelBarExprBinding(bar, levelProp);
+		
+		ReadOnlyDoubleProperty rootWidthProp = getRoot().widthProperty();
+		bar.styleProperty().bind(
+				Bindings.concat(
+						"-fx-fill: ", 
+							"linear-gradient(from ", bar.xProperty(), "px ", bar.yProperty(), "px to ", 
+								Bindings.createDoubleBinding(
+										() -> (rootWidthProp.get() - rootWidthProp.get() * SCENE_MARGIN_RATIO), rootWidthProp), 
+								"px ", bar.yProperty(), ",", 
+								Bindings.createStringBinding(() -> (UiUtils.colorToHex(propBarColorNormal.get())), propBarColorNormal), " 0%, ", 
+								Bindings.createStringBinding(() -> (UiUtils.colorToHex(propBarColorMid.get())), propBarColorMid), " 80%, ", 
+								Bindings.createStringBinding(() -> (UiUtils.colorToHex(propBarColorClip.get())), propBarColorClip), " 90%)"
+				));
+		return bar;
+	}
+	
+	private Line createLingerIndicator(DoubleProperty lingerLevelProp, Rectangle levelBar) {
+		Line line = new Line();
+		line.startXProperty().bind(Bindings.createDoubleBinding(
+				() -> {
+					double parentWidth = getRoot().widthProperty().get();
+					return map(lingerLevelProp.get(), MIN_DB_VALUE, 0, 
+							parentWidth * SCENE_MARGIN_RATIO, parentWidth - parentWidth * SCENE_MARGIN_RATIO);
+				}, 
+				lingerLevelProp, getRoot().widthProperty()));
+		line.endXProperty().bind(line.startXProperty());
+		line.startYProperty().bind(levelBar.yProperty());
+		line.endYProperty().bind(levelBar.yProperty().add(levelBar.heightProperty()));
+		
+		line.strokeProperty().bind(propLingerIndicatorColor);
+		line.setStrokeLineCap(StrokeLineCap.ROUND);
+		line.setStrokeWidth(4);
+		line.opacityProperty().bind(propBarOpacity);
+		return line;
+	}
+	
+	private Rectangle createDrBar(DoubleBinding yBinding, DoubleProperty minLevelProp, DoubleProperty maxLevelProp) {
+		Rectangle bar = new Rectangle();
+		bar.yProperty().bind(yBinding);
+		bar.heightProperty().bind(getRoot().heightProperty().multiply(DR_BAR_HEIGHT_PROPORTION));
+		bar.fillProperty().bind(propDrBarColor);
+		bar.opacityProperty().bind(propDrBarOpacity);
+		bar.visibleProperty().bind(propShowDr);
+		createDrBarExprBinding(bar, minLevelProp, maxLevelProp);
+		return bar;
+	}
+	
+	private Line createMinDrLine(Rectangle drBar) {
+		Line line = UiUtils.createThickRoundedLine(Color.BLUE);
+		line.startXProperty().bind(drBar.xProperty());
+		line.endXProperty().bind(drBar.xProperty());
+		line.startYProperty().bind(drBar.yProperty());
+		line.endYProperty().bind(drBar.yProperty().add(drBar.heightProperty()));
+		line.visibleProperty().bind(propShowDr);
+		return line;
+	}
+	
+	private Line createMaxDrLine(Rectangle drBar) {
+		Line line = UiUtils.createThickRoundedLine(Color.ORANGE);
+		line.startXProperty().bind(drBar.xProperty().add(drBar.widthProperty()));
+		line.endXProperty().bind(drBar.xProperty().add(drBar.widthProperty()));
+		line.startYProperty().bind(drBar.yProperty());
+		line.endYProperty().bind(drBar.yProperty().add(drBar.heightProperty()));
+		line.visibleProperty().bind(propShowDr);
+		return line;
 	}
 	
 	/* Handlers */
@@ -215,70 +295,52 @@ public class StereoLevelsView extends AbstractView {
 		currentDbR = Utils.toDB(levelRight);
 		
 		minLevelL = Math.min(minLevelL, currentDbL);
-		minLevelR = Math.min(minLevelR, currentDbR);
 		maxLevelL = Math.max(maxLevelL, currentDbL);
+		minLevelR = Math.min(minLevelR, currentDbR);
 		maxLevelR = Math.max(maxLevelR, currentDbR);
 	}
 
 	@Override
 	public void nextFrame() {
-		leftBar.setWidth(Utils.map(currentDbL, MIN_DB_VALUE, 0, 0, areaWidth()));
-		rightBar.setWidth(Utils.map(currentDbR, MIN_DB_VALUE, 0, 0, areaWidth()));
-		leftDrBar.setX(coordX(Utils.map(minLevelL, MIN_DB_VALUE, 0, 0, areaWidth())));
-		leftDrBar.setWidth(coordX(Utils.map(maxLevelL, MIN_DB_VALUE, 0, 0, areaWidth())) - leftDrBar.getX());
-		rightDrBar.setX(coordX(Utils.map(minLevelR, MIN_DB_VALUE, 0, 0, areaWidth())));
-		rightDrBar.setWidth(coordX(Utils.map(maxLevelR, MIN_DB_VALUE, 0, 0, areaWidth())) - rightDrBar.getX());
+		
+		// Update operational properties from UI thread
+		currLevelLProp.set(currentDbL);
+		currLevelRProp.set(currentDbR);
+		minLevelLProp.set(minLevelL);
+		maxLevelLProp.set(maxLevelL);
+		minLevelRProp.set(minLevelR);
+		maxLevelRProp.set(maxLevelR);
+		
+		// Update linger levels
+		lingerLevelL = lingerLevelL - lingerOpValL;
+		lingerOpValL = lingerOpValL * LINGER_ACCELARATION_FACTOR;
+		
+		if(currentDbL > lingerLevelL) {
+			lingerLevelL = currentDbL;
+			lingerOpValL = LINGER_STAY_FACTOR;
+		}
+		if(lingerLevelL < MIN_DB_VALUE) {
+			lingerLevelL = MIN_DB_VALUE;
+		}
+		leftLingerLevelProp.set(lingerLevelL);
+		
+		
+		lingerLevelR = lingerLevelR - lingerOpValR;
+		lingerOpValR = lingerOpValR * LINGER_ACCELARATION_FACTOR;
+		
+		if(currentDbR > lingerLevelR) {
+			lingerLevelR = currentDbR;
+			lingerOpValR = LINGER_STAY_FACTOR;
+		}
+		if(lingerLevelR < MIN_DB_VALUE) {
+			lingerLevelR = MIN_DB_VALUE;
+		}
+		rightLingerLevelProp.set(lingerLevelR);
 	}
+	
 	
 	@Override
 	protected void onSceneWidthChange(Number oldValue, Number newValue) {
-		
-		// Update grid
-		for (int i = 0; i < DB_LINES_COUNT; i++) {
-			double dbVal = Utils.map(i, 0, DB_LINES_COUNT, MIN_DB_VALUE, 0);
-			double x = Utils.map(dbVal, MIN_DB_VALUE, 0, coordX(0), coordX(0) + areaWidth());
-			lines.get(i).setStartX(x);
-			lines.get(i).setEndX(x);
-			
-			Text label = labels.get(i);
-			label.setX(x - label.getLayoutBounds().getWidth() / 2);
-		}
-		lines.get(lines.size() - 1).setStartX(coordX(0) + areaWidth());
-		lines.get(lines.size() - 1).setEndX(coordX(0) + areaWidth());
-		
-		Text label = labels.get(labels.size() - 1);
-		label.setX(coordX(0) + areaWidth() - label.getLayoutBounds().getWidth() / 2);
-		
-		// Update bars
-		leftBar.setFill(createHorizontalGradient(
-				0, areaWidth(), areaHeight() - barMargin() - barHeight() / 2));
-		rightBar.setFill(createHorizontalGradient(
-				0, areaWidth(), barMargin() + barHeight() / 2));
-	}
-
-	@Override
-	protected void onSceneHeightChange(Number oldValue, Number newValue) {
-		
-		// Update grid
-		for (Line line : lines) {
-			line.setStartY(coordY(0));
-		}
-		
-		// Update bars
-		leftBar.setY(coordY(areaHeight() - barMargin()));
-		leftBar.setHeight(barHeight());
-		leftBar.setFill(createHorizontalGradient(
-				0, areaWidth(), areaHeight() - barMargin() - barHeight() / 2));
-		
-		rightBar.setY(coordY(0 + barMargin() + barHeight()));
-		rightBar.setHeight(barHeight());
-		rightBar.setFill(createHorizontalGradient(
-				0, areaWidth(), barMargin() + barHeight() / 2));
-		
-		leftDrBar.setY(coordY(areaHeight() - drBarMargin()));
-		leftDrBar.setHeight(drBarHeight());
-		rightDrBar.setY(coordY(0 + drBarMargin() + drBarHeight()));
-		rightDrBar.setHeight(drBarHeight());
 	}
 
 	@Override
@@ -288,42 +350,38 @@ public class StereoLevelsView extends AbstractView {
 	@Override
 	public void onHide() {
 	}
+	
+	/* Binding Logic */
 
-	private double barHeight() {
-		return areaHeight() * BAR_HEIGHT_PROPORTION;
+	private void createLevelBarExprBinding(Rectangle bar, DoubleProperty prop) {
+		
+		bar.widthProperty().bind(Bindings.createDoubleBinding(
+				() -> {
+					double parentWidth = getRoot().widthProperty().get();
+					return map(prop.get(), MIN_DB_VALUE, 0, 
+							0, parentWidth - parentWidth * SCENE_MARGIN_RATIO * 2);
+				}, 
+				prop, getRoot().widthProperty()));
 	}
 	
-	private double barMargin() {
-		return areaHeight() * BAR_MARGIN_PROPORTION;
-	}
-	
-	private double drBarHeight() {
-		return areaHeight() * DR_BAR_HEIGHT_PROPORTION;
-	}
-	
-	private double drBarMargin() {
-		return areaHeight() * DR_BAR_MARGIN_PROPORTION;
-	}
-	
-	private LinearGradient createHorizontalGradient(double fromX, double toX, double y) {
-		LinearGradient gr = new LinearGradient(
-				coordX(fromX), coordY(y), 
-				coordX(toX), coordY(y), 
-				false, CycleMethod.NO_CYCLE, 
-				new Stop[]{
-						new Stop(0, propBarColorNormal.getValue()), 
-						new Stop(0.8, propBarColorNormal.getValue()), 
-						new Stop(0.9, propBarColorClip.getValue())});
-		return gr;
-	}
-	
-	private void toggleDrVisibility(boolean visible) {
-		leftDrBar.setVisible(visible);
-		rightDrBar.setVisible(visible);
-		leftMinLevel.setVisible(visible);
-		leftMaxLevel.setVisible(visible);
-		rightMinLevel.setVisible(visible);
-		rightMaxLevel.setVisible(visible);
+	private void createDrBarExprBinding(Rectangle bar, 
+			DoubleProperty minLevelProp, DoubleProperty maxLevelProp) {
+		
+		bar.xProperty().bind(Bindings.createDoubleBinding(
+				() -> {
+					double parentWidth = getRoot().widthProperty().get();
+					return map(minLevelProp.get(), MIN_DB_VALUE, 0,
+							parentWidth * SCENE_MARGIN_RATIO, parentWidth - parentWidth * SCENE_MARGIN_RATIO);
+				}, 
+				minLevelProp, getRoot().widthProperty()));
+		
+		bar.widthProperty().bind(Bindings.createDoubleBinding(
+				() -> {
+					double parentWidth = getRoot().widthProperty().get();
+					return map(maxLevelProp.get(), MIN_DB_VALUE, 0,
+							parentWidth * SCENE_MARGIN_RATIO, parentWidth - parentWidth * SCENE_MARGIN_RATIO) - bar.xProperty().get();
+				}, 
+				maxLevelProp, getRoot().widthProperty(), bar.xProperty()));
 	}
 
 }

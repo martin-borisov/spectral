@@ -14,6 +14,7 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
+import javafx.scene.control.Label;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.Pane;
@@ -22,7 +23,6 @@ import javafx.scene.shape.Line;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
-import javafx.scene.text.Text;
 import mb.spectrum.UiUtils;
 import mb.spectrum.Utils;
 
@@ -47,7 +47,7 @@ public class SpectrumAreaGridView extends MixedChannelView {
 	private GraphLayoutWrapper sw;
 	private Path curvePath, trailPath;
 	private List<Line> vLines, hLines;
-	private List<Text> vLabels, hLabels;
+	private List<Label> vLabels, hLabels;
 	private int bufferSize, samplingRate, bandCount;
 	private double maxBandHeight;
 	private double[] bandValuesDB, trailValuesDB;
@@ -214,9 +214,9 @@ public class SpectrumAreaGridView extends MixedChannelView {
 			double yValue = Utils.map(dbVal, 0, -165, SCENE_MARGIN_PX, maxBandHeight + SCENE_MARGIN_PX);
 			createLine(SCENE_MARGIN_PX - Bar.DEFAULT_BAR_HEIGHT, yValue, 
 					sw.getPane().getWidth() - SCENE_MARGIN_PX + Bar.DEFAULT_BAR_HEIGHT, yValue, hLines);
-			Text label = createLabel(SCENE_MARGIN_PX - Bar.DEFAULT_BAR_HEIGHT, yValue, String.valueOf(Math.round(dbVal)), hLabels);
-			label.setX(SCENE_MARGIN_PX - Bar.DEFAULT_BAR_HEIGHT * 2 - label.getLayoutBounds().getWidth());
-			label.setY(yValue + label.getLayoutBounds().getHeight() / 2);
+			Label label = createLabel(SCENE_MARGIN_PX - Bar.DEFAULT_BAR_HEIGHT, yValue, String.valueOf(Math.round(dbVal)), hLabels);
+			label.setLayoutX(SCENE_MARGIN_PX - Bar.DEFAULT_BAR_HEIGHT * 2 - label.getLayoutBounds().getWidth());
+			label.setLayoutY(yValue + label.getLayoutBounds().getHeight() / 2);
 		}
 	}
 	
@@ -264,15 +264,15 @@ public class SpectrumAreaGridView extends MixedChannelView {
 				line.setStartX(coordX(x));
 				line.setEndX(coordX(x));
 				
-				Text label = vLabels.get(j++);
-				label.setX(coordX(x - label.getLayoutBounds().getWidth() / 2));
+				Label label = vLabels.get(j++);
+				label.setLayoutX(coordX(x - label.getLayoutBounds().getWidth() / 2));
 			} else if(i == bandCount - 1) {
 				Line line = vLines.get(j);
 				line.setStartX(coordX(x + barWidth));
 				line.setEndX(coordX(x + barWidth));
 				
-				Text label = vLabels.get(j++);
-				label.setX(coordX(x + barWidth - label.getLayoutBounds().getWidth() / 2));
+				Label label = vLabels.get(j++);
+				label.setLayoutX(coordX(x + barWidth - label.getLayoutBounds().getWidth() / 2));
 			}
 			x += barWidth;
 		}
@@ -315,8 +315,8 @@ public class SpectrumAreaGridView extends MixedChannelView {
 			line.setStartY(sw.coordY(0));
 			line.setEndY(sw.coordY(sw.getLayoutHeight()));
 		}
-		for (Text label : vLabels) {
-			label.setY(newValue.intValue() - SCENE_MARGIN_PX + Bar.DEFAULT_BAR_HEIGHT + label.getLayoutBounds().getHeight());
+		for (Label label : vLabels) {
+			label.setLayoutY(newValue.intValue() - SCENE_MARGIN_PX + Bar.DEFAULT_BAR_HEIGHT + label.getLayoutBounds().getHeight());
 		}
 		maxBandHeight = newValue.intValue() - SCENE_MARGIN_PX * 2;
 		
@@ -329,8 +329,8 @@ public class SpectrumAreaGridView extends MixedChannelView {
 			line.setStartY(yValue);
 			line.setEndY(yValue);
 			
-			Text label = hLabels.get(i);
-			label.setY(yValue + label.getLayoutBounds().getHeight() / 3);
+			Label label = hLabels.get(i);
+			label.setLayoutY(yValue + label.getLayoutBounds().getHeight() / 3);
 		}
 	}
 	
@@ -349,8 +349,12 @@ public class SpectrumAreaGridView extends MixedChannelView {
 		return UiUtils.createGridLine(startX, startY, endX, endY, Color.web("#fd4a11"), list);
 	}
 	
-	private Text createLabel(double x, double y, String text, List<Text> list) {
-		return UiUtils.createLabel(x, y, text, Color.web("#fd4a11"), list);
+	private Label createLabel(double x, double y, String text, List<Label> list) {
+		Label label = UiUtils.createLabel(text, list);
+		label.setLayoutX(y);
+		label.setLayoutY(y);
+		label.setTextFill(Color.web("#fd4a11"));
+		return label;
 	}
 	
 	protected double coordX(double x) {

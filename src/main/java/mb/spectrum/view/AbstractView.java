@@ -1,6 +1,5 @@
 package mb.spectrum.view;
 
-import java.util.Collections;
 import java.util.List;
 
 import javafx.beans.value.ChangeListener;
@@ -15,18 +14,25 @@ public abstract class AbstractView implements View {
 	
 	private static final int SCENE_MARGIN_PX = 45;
 	private static final Color BACKGROUND_COLOR = Color.BLACK;
+	protected static final double SCENE_MARGIN_RATIO = 0.05;
 	
 	private GraphLayoutWrapper sw;
 	
 	public AbstractView() {
 		sw = new GraphLayoutWrapper(SCENE_MARGIN_PX);
+		initProperties();
 		createScene();
 		setupScene();
 	}
+	
+	protected abstract List<Node> collectNodes();
 
 	@Override
 	public Pane getRoot() {
 		return sw.getPane();
+	}
+	
+	protected void initProperties() {
 	}
 	
 	private void createScene() {
@@ -58,10 +64,6 @@ public abstract class AbstractView implements View {
 	}
 	
 	protected void onSceneHeightChange(Number oldValue, Number newValue) {
-	}
-	
-	protected List<Node> collectNodes() {
-		return Collections.emptyList();
 	}
 	
 	protected double coordX(double x) {
