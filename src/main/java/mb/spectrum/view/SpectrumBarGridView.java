@@ -23,7 +23,7 @@ import mb.spectrum.Utils;
  * does not extend {@link AbstractView}, but it will be a good idea 
  * if it does at some point in time.
  */
-public class SpectrumBarGridView extends MixedChannelView {
+public class SpectrumBarGridView extends AbstractMixedChannelView {
 	
 	private static final int INIT_SCENE_WIDTH = 800;
 	private static final int INIT_SCENE_HEIGHT = 600;

@@ -190,6 +190,7 @@ public class StereoLevelsView extends AbstractView {
 				getRoot().heightProperty().multiply(GRID_MARGIN_RATIO)));
 		line.strokeProperty().bind(propGridColor);
 		line.getStrokeDashArray().addAll(2d);
+		line.setCache(true);
 		lines.add(line);
 		
 		// Create label
@@ -323,7 +324,6 @@ public class StereoLevelsView extends AbstractView {
 			lingerLevelL = MIN_DB_VALUE;
 		}
 		leftLingerLevelProp.set(lingerLevelL);
-		
 		
 		lingerLevelR = lingerLevelR - lingerOpValR;
 		lingerOpValR = lingerOpValR * LINGER_ACCELARATION_FACTOR;

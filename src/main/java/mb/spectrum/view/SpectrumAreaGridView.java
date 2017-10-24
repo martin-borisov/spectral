@@ -4,36 +4,29 @@ import static mb.spectrum.Utils.map;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
 
 import ddf.minim.analysis.FFT;
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
+import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
-import javafx.scene.layout.Background;
-import javafx.scene.layout.BackgroundFill;
-import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
+import mb.spectrum.ConfigService;
 import mb.spectrum.UiUtils;
 import mb.spectrum.Utils;
 
 /**
- * TODO: Check if the DB lines show real values and refactor the grid drawing code to use coordX() and coordY().
- * TODO: This class should extend {@link AbstractView}
+ * TODO: Check if the DB lines show real values
  */
-public class SpectrumAreaGridView extends MixedChannelView {
+public class SpectrumAreaGridView extends AbstractMixedChannelView {
 	
-	private static final int SCENE_MARGIN_PX = 45;
-	private static final Color BACKGROUND_COLOR = Color.BLACK;
 	private static final int FREQ_LINE_PER_BAR_COUNT = 5;
 	private static final int DB_LINES_COUNT = 4;
 	private static final int BAND_DROP_RATE_DB = 2;
@@ -43,50 +36,46 @@ public class SpectrumAreaGridView extends MixedChannelView {
 	// NB: The value of -165 is empirical and it acts as a threshold in order to avoid
 	// flicker of the graph caused by very low audio levels
 	private static final int MIN_DB_VALUE = -165;
+	private static final double GRID_LABELS_MARGIN_RATIO = 0.1;
 	
-	private GraphLayoutWrapper sw;
+	private static final int SAMPLING_RATE = Integer.valueOf(
+			ConfigService.getInstance().getProperty("mb.spectrum.sampling-rate"));
+	private static final int BUFFER_SIZE = Integer.valueOf(
+			ConfigService.getInstance().getProperty("mb.spectrum.buffer-size"));
+	
+	private SimpleObjectProperty<Color> propGridColor;
+	private List<SimpleDoubleProperty> bandValues;
+	private List<SimpleDoubleProperty> trailValues;
+	
 	private Path curvePath, trailPath;
 	private List<Line> vLines, hLines;
 	private List<Label> vLabels, hLabels;
-	private int bufferSize, samplingRate, bandCount;
-	private double maxBandHeight;
+	private int bandCount;
 	private double[] bandValuesDB, trailValuesDB;
 	private int[] trailPauseCounters;
-
-	public SpectrumAreaGridView(int samplingRate, int bufferSize) {
-		this.samplingRate = samplingRate;
-		this.bufferSize = bufferSize;
-		vLines = new ArrayList<>();
-		hLines = new ArrayList<>();
-		vLabels = new ArrayList<>();
-		hLabels = new ArrayList<>();
-		sw = new GraphLayoutWrapper(SCENE_MARGIN_PX);
-		createScene();
-		createNodes();
-		setupScene();
-//		createTimer();
-	}
+	
+	private FFT fft;
 
 	@Override
 	public String getName() {
 		return "Spectrum Analizer - Area";
 	}
-
-	@Override
-	public Pane getRoot() {
-        return sw.getPane();
-	}
 	
+	@Override
+	protected void initProperties() {
+		propGridColor = new SimpleObjectProperty<>(null, "Grid Color", Color.web("#fd4a11"));
+		bandValues = new ArrayList<>();
+		trailValues = new ArrayList<>();
+	}
+
 	public List<ObjectProperty<? extends Object>> getProperties() {
-		return Collections.emptyList();
+		return Arrays.asList(propGridColor);
 	}
 
 	@Override
 	public void dataAvailable(float[] data) {
 		
 		// Perform forward FFT
-		FFT fft = new FFT(bufferSize, samplingRate);
-		fft.logAverages(22, 3);
 		fft.forward(data);
 		
 		// Update band values
@@ -107,11 +96,9 @@ public class SpectrumAreaGridView extends MixedChannelView {
 	@Override
 	public void nextFrame() {
 		for (int i = 0; i < bandValuesDB.length; i++) {
-			LineTo curveLine = (LineTo) curvePath.getElements().get(i + 1);
-			curveLine.setY(coordY(map(bandValuesDB[i], MIN_DB_VALUE, 0, 0, sw.getLayoutHeight())));
-			
-			LineTo trailLine = (LineTo) trailPath.getElements().get(i + 1);
-			trailLine.setY(coordY(map(trailValuesDB[i], MIN_DB_VALUE, 0, 0, sw.getLayoutHeight())));
+
+			bandValues.get(i).set(bandValuesDB[i]);
+			trailValues.get(i).set(trailValuesDB[i]);
 			
 			// Curve drop
 			if(bandValuesDB[i] > MIN_DB_VALUE) {
@@ -131,210 +118,209 @@ public class SpectrumAreaGridView extends MixedChannelView {
 		}
 	}
 	
-	private void createTimer() {
-		new Timer().schedule(new TimerTask() {
-			public void run() {
-				for (int i = 0; i < bandValuesDB.length; i++) {
-					if(bandValuesDB[i] > MIN_DB_VALUE) {
-						if (bandValuesDB[i] > MIN_DB_VALUE) {
-							bandValuesDB[i] -= 2;
-							bandValuesDB[i] = bandValuesDB[i] < MIN_DB_VALUE ? MIN_DB_VALUE : bandValuesDB[i];
-						}
-					}
-				}
-			}
-		}, 0, 10);
-	}
-	
 	private void createNodes() {
 		
+		vLines = new ArrayList<>();
+		hLines = new ArrayList<>();
+		vLabels = new ArrayList<>();
+		hLabels = new ArrayList<>();
+		
 		// Get number of bands
-		FFT fft = new FFT(bufferSize, samplingRate);
+		fft = new FFT(BUFFER_SIZE, SAMPLING_RATE);
 		fft.logAverages(22, 3);
 		
 		bandCount = fft.avgSize();
+		
 		bandValuesDB = new double[bandCount];
 		Arrays.fill(bandValuesDB, MIN_DB_VALUE);
+		for (int i = 0; i < bandCount; i++) {
+			bandValues.add(new SimpleDoubleProperty(MIN_DB_VALUE));
+		}
+		
 		trailValuesDB = new double[bandCount];
 		Arrays.fill(trailValuesDB, MIN_DB_VALUE);
+		for (int i = 0; i < bandCount; i++) {
+			trailValues.add(new SimpleDoubleProperty(MIN_DB_VALUE));
+		}
+		
 		trailPauseCounters = new int[bandCount];
-		maxBandHeight = sw.getLayoutHeight();
-		double barWidth = sw.getLayoutWidth() / bandCount;
-		int x = 0;
 		
 		// Bands and freq. lines and labels
 		curvePath = new Path();
 		curvePath.setStroke(Color.LAWNGREEN);
 		curvePath.setFill(Color.web("#7CFC00", 0.5));
-		curvePath.getElements().add(new MoveTo(coordX(0), coordY(0)));
+		createStartingPoint(curvePath);
+		
+		// Trail
 		trailPath = new Path();
 		trailPath.setStroke(Color.DARKGREEN);
 		trailPath.setStrokeWidth(2);
-		trailPath.getElements().add(new MoveTo(coordX(0), coordY(0)));
+		createStartingPoint(trailPath);
+		
 		for (int i = 0; i < bandCount; i++) {
 			
 			// Create line segments
-			LineTo curveLine = new LineTo();
-			curveLine.setX(coordX(x + barWidth / 2));
-			curveLine.setY(coordY(0));
-			curvePath.getElements().add(curveLine);
-			
-			LineTo trailLine = new LineTo();
-			trailLine.setX(coordX(x + barWidth / 2));
-			trailLine.setY(coordY(0));
-			trailPath.getElements().add(trailLine);
+			createFreqLineToSegment(i);
+			createTrailLineToSegment(i);
 			
 			// Create grid lines and labels
 			if(i % FREQ_LINE_PER_BAR_COUNT == 0) {
-				createLine(coordX(x), coordY(0 - Bar.DEFAULT_BAR_HEIGHT), coordX(x), coordY(sw.getLayoutHeight()), vLines);			
-				createLabel(coordX(x), sw.getLayoutHeight() - Bar.DEFAULT_BAR_HEIGHT, 
-						String.valueOf(Math.round(fft.getAverageCenterFrequency(i) - fft.getAverageBandWidth(i) / 2)) + "Hz", vLabels);
+				createHzLineAndLabel(i, Math.round(fft.getAverageCenterFrequency(i) - fft.getAverageBandWidth(i) / 2));
 			} else if(i == bandCount - 1) {
-				createLine(x + barWidth, SCENE_MARGIN_PX, x + barWidth, 
-						sw.getPane().getHeight() - SCENE_MARGIN_PX + Bar.DEFAULT_BAR_HEIGHT, vLines) ;
-				createLabel(x + barWidth, sw.getPane().getHeight() - SCENE_MARGIN_PX + Bar.DEFAULT_BAR_HEIGHT, 
-						String.valueOf(Math.round(fft.getAverageCenterFrequency(i) + fft.getAverageBandWidth(i) / 2)) + "Hz", vLabels);
+				createHzLineAndLabel(i + 1, Math.round(fft.getAverageCenterFrequency(i) - fft.getAverageBandWidth(i) / 2));
 			}
-			
-			x += barWidth;
 		}
-		LineTo curveLine = new LineTo();
-		curveLine.setX(coordX(sw.getLayoutWidth()));
-		curveLine.setY(coordY(0));
-		curvePath.getElements().add(curveLine);
+		createLastLine(curvePath);
+		createLastLine(trailPath);
 		
-		LineTo trailLine = new LineTo();
-		trailLine.setX(coordX(sw.getLayoutWidth()));
-		trailLine.setY(coordY(0));
-		trailPath.getElements().add(trailLine);
-		
-		// DB lines and labels
-		for (int i = 0; i < DB_LINES_COUNT; i++) {
-			double dbVal = Utils.map(i, 0, DB_LINES_COUNT, 0, -165);
-			double yValue = Utils.map(dbVal, 0, -165, SCENE_MARGIN_PX, maxBandHeight + SCENE_MARGIN_PX);
-			createLine(SCENE_MARGIN_PX - Bar.DEFAULT_BAR_HEIGHT, yValue, 
-					sw.getPane().getWidth() - SCENE_MARGIN_PX + Bar.DEFAULT_BAR_HEIGHT, yValue, hLines);
-			Label label = createLabel(SCENE_MARGIN_PX - Bar.DEFAULT_BAR_HEIGHT, yValue, String.valueOf(Math.round(dbVal)), hLabels);
-			label.setLayoutX(SCENE_MARGIN_PX - Bar.DEFAULT_BAR_HEIGHT * 2 - label.getLayoutBounds().getWidth());
-			label.setLayoutY(yValue + label.getLayoutBounds().getHeight() / 2);
+		// DB lines and labels (horizontal)
+		for (int i = 0; i <= DB_LINES_COUNT; i++) {
+			createDbGridLineAndLabel(i);
 		}
 	}
 	
-	private void createScene() {
+	private void createStartingPoint(Path path) {
+		MoveTo moveTo = new MoveTo();
+		moveTo.xProperty().bind(getRoot().widthProperty().multiply(SCENE_MARGIN_RATIO));
+		moveTo.yProperty().bind(getRoot().heightProperty().subtract(
+				getRoot().heightProperty().multiply(SCENE_MARGIN_RATIO)));
+		path.getElements().add(moveTo);
+	}
+	
+	private void createLastLine(Path path) {
+		LineTo lineTo = new LineTo();
+		lineTo.xProperty().bind(getRoot().widthProperty().subtract(
+				getRoot().widthProperty().multiply(SCENE_MARGIN_RATIO)));
+		lineTo.yProperty().bind(getRoot().heightProperty().subtract(
+				getRoot().heightProperty().multiply(SCENE_MARGIN_RATIO)));
+		path.getElements().add(lineTo);
+	}
+	
+	private void createTrailLineToSegment(int idx) {
+		LineTo lineTo = new LineTo();
+		lineTo.xProperty().bind(Bindings.createDoubleBinding(
+				() -> {
+					double parentWidth = getRoot().widthProperty().get();
+					double barW = (parentWidth - parentWidth * SCENE_MARGIN_RATIO * 2) / bandCount;
+					return parentWidth * SCENE_MARGIN_RATIO + idx * barW + barW / 2;
+				}, 
+				getRoot().widthProperty()));
+		
+		lineTo.yProperty().bind(Bindings.createDoubleBinding(
+				() -> {
+					double parentHeight = getRoot().heightProperty().get();
+					return map(trailValues.get(idx).get(), MIN_DB_VALUE, 0, 
+							parentHeight - parentHeight * SCENE_MARGIN_RATIO, 0);
+				}, 
+				getRoot().heightProperty(), trailValues.get(idx))
+				);
+		
+		trailPath.getElements().add(lineTo);
+	}
+	
+	private void createFreqLineToSegment(int idx) {
+		LineTo lineTo = new LineTo();
+		lineTo.xProperty().bind(Bindings.createDoubleBinding(
+				() -> {
+					double parentWidth = getRoot().widthProperty().get();
+					double barW = (parentWidth - parentWidth * SCENE_MARGIN_RATIO * 2) / bandCount;
+					return parentWidth * SCENE_MARGIN_RATIO + idx * barW + barW / 2;
+				}, 
+				getRoot().widthProperty()));
+		
+		lineTo.yProperty().bind(Bindings.createDoubleBinding(
+				() -> {
+					double parentHeight = getRoot().heightProperty().get();
+					return map(bandValues.get(idx).get(), MIN_DB_VALUE, 0, 
+							parentHeight - parentHeight * SCENE_MARGIN_RATIO, 0);
+				}, 
+				getRoot().heightProperty(), bandValues.get(idx))
+				);
+		
+		curvePath.getElements().add(lineTo);
+	}
+	
+	private void createDbGridLineAndLabel(int idx) {
+		
+		double dBVal = map(idx, 0, DB_LINES_COUNT, MIN_DB_VALUE, 0);
+		
+		// Create line
+		Line line = new Line();
+		line.startXProperty().bind(getRoot().widthProperty().multiply(SCENE_MARGIN_RATIO));
+		line.endXProperty().bind(getRoot().widthProperty().subtract(
+				getRoot().widthProperty().multiply(SCENE_MARGIN_RATIO)));
+		line.startYProperty().bind(
+				Bindings.createDoubleBinding(() -> {
+					double parentHeigth = getRoot().heightProperty().get();
+					return map(dBVal, MIN_DB_VALUE, 0,  
+							parentHeigth - parentHeigth * SCENE_MARGIN_RATIO,
+							parentHeigth * SCENE_MARGIN_RATIO);
+				}, 
+				getRoot().heightProperty()));
+		line.endYProperty().bind(line.startYProperty());
+		line.strokeProperty().bind(propGridColor);
+		line.getStrokeDashArray().addAll(2d);
+		line.setCache(true);
+		hLines.add(line);
+		
+		// Create label
+		Label label = UiUtils.createLabel(Math.round(dBVal) + "dB", hLabels);
+		label.layoutXProperty().bind(
+				line.startXProperty().subtract(
+						label.widthProperty().add(
+								label.widthProperty().multiply(GRID_LABELS_MARGIN_RATIO))));
+		label.layoutYProperty().bind(line.startYProperty().subtract(label.heightProperty().divide(2)));
+		label.textFillProperty().bind(propGridColor);
+		label.styleProperty().bind(Bindings.concat(
+				"-fx-font-size: ", Bindings.createDoubleBinding(
+						() -> (getRoot().widthProperty().get() * SCENE_MARGIN_RATIO) / 4,
+						getRoot().widthProperty())));
+	}
+	
+	private void createHzLineAndLabel(int barIdx, int hz) {
+		
+		// Create line
+		Line line = new Line();
+		line.startXProperty().bind(Bindings.createDoubleBinding(
+				() -> {
+					double parentWidth = getRoot().widthProperty().get();
+					double barW = (parentWidth - parentWidth * SCENE_MARGIN_RATIO * 2) / bandCount;
+					return parentWidth * SCENE_MARGIN_RATIO + barIdx * barW;
+				}, 
+				getRoot().widthProperty()));
+		line.endXProperty().bind(line.startXProperty());
+		line.startYProperty().bind(getRoot().heightProperty().multiply(SCENE_MARGIN_RATIO));
+		line.endYProperty().bind(getRoot().heightProperty().subtract(
+				getRoot().heightProperty().multiply(SCENE_MARGIN_RATIO)));
+		line.strokeProperty().bind(propGridColor);
+		line.getStrokeDashArray().addAll(2d);
+		line.setCache(true);
+		vLines.add(line);
+		
+		// Create label
+		Label label = UiUtils.createLabel(hz + "Hz", vLabels);
+		label.layoutXProperty().bind(
+				line.startXProperty().subtract(
+						label.widthProperty().divide(2)));
+		label.layoutYProperty().bind(line.endYProperty().add(label.heightProperty().multiply(GRID_LABELS_MARGIN_RATIO)));
+		label.textFillProperty().bind(propGridColor);
+		label.styleProperty().bind(Bindings.concat(
+				"-fx-font-size: ", Bindings.createDoubleBinding(
+						() -> (getRoot().widthProperty().get() * SCENE_MARGIN_RATIO) / 4,
+						getRoot().widthProperty())));
+	}
 
-		Pane pane = sw.getPane();
-		pane.setBackground(new Background(new BackgroundFill(BACKGROUND_COLOR, null, null)));
-        pane.widthProperty().addListener(new ChangeListener<Number>() {
-			public void changed(ObservableValue<? extends Number> observable, 
-					Number oldValue, Number newValue) {
-				onSceneWidthChange(oldValue, newValue);
-			}
-		});
-        pane.heightProperty().addListener(new ChangeListener<Number>() {
-			public void changed(ObservableValue<? extends Number> observable, 
-					Number oldValue, Number newValue) {
-				onSceneHeightChange(oldValue, newValue);
-			}
-		});
+	@Override
+	public void onShow() {
 	}
-	
-	private void setupScene() {
-		sw.getPane().getChildren().addAll(collectAllShapes());
+
+	@Override
+	public void onHide() {
 	}
-	
-	private void onSceneWidthChange(Number oldValue, Number newValue) {
-		
-		// Recalculate bar and line properties
-		double barWidth = sw.getLayoutWidth() / bandCount;
-		double x = 0;
-		
-		int j = 0;
-		for (int i = 0; i < bandCount; i++) {
-			
-			// Update band
-			LineTo curveLine = (LineTo) curvePath.getElements().get(i + 1);
-			curveLine.setX(coordX(x + barWidth / 2));
-			
-			LineTo trailLine = (LineTo) trailPath.getElements().get(i + 1);
-			trailLine.setX(coordX(x + barWidth / 2));
-			
-			// Update grid line and label
-			if(i % FREQ_LINE_PER_BAR_COUNT == 0) {
-				Line line = vLines.get(j);
-				line.setStartX(coordX(x));
-				line.setEndX(coordX(x));
-				
-				Label label = vLabels.get(j++);
-				label.setLayoutX(coordX(x - label.getLayoutBounds().getWidth() / 2));
-			} else if(i == bandCount - 1) {
-				Line line = vLines.get(j);
-				line.setStartX(coordX(x + barWidth));
-				line.setEndX(coordX(x + barWidth));
-				
-				Label label = vLabels.get(j++);
-				label.setLayoutX(coordX(x + barWidth - label.getLayoutBounds().getWidth() / 2));
-			}
-			x += barWidth;
-		}
-		LineTo curveLine = (LineTo) curvePath.getElements().get(curvePath.getElements().size() - 1);
-		curveLine.setX(coordX(sw.getLayoutWidth()));
-		
-		LineTo trailLine = (LineTo) trailPath.getElements().get(trailPath.getElements().size() - 1);
-		trailLine.setX(coordX(sw.getLayoutWidth()));
-		
-		// Update DB lines
-		for (Line line : hLines) {
-			line.setEndX(newValue.doubleValue() - SCENE_MARGIN_PX);
-		}
-	}
-	
-	private void onSceneHeightChange(Number oldValue, Number newValue) {
-		
-		// Curve
-		MoveTo curveMove = (MoveTo) curvePath.getElements().get(0);
-		curveMove.setY(getRoot().getHeight() - SCENE_MARGIN_PX);
-		for (int i = 1; i < curvePath.getElements().size() - 1; i++) {
-			LineTo line = (LineTo) curvePath.getElements().get(i);
-			line.setY(map(line.getY(), 0, oldValue.doubleValue(), 0, getRoot().getHeight()));
-		}
-		LineTo curveLastLine = (LineTo) curvePath.getElements().get(curvePath.getElements().size() - 1);
-		curveLastLine.setY(sw.coordY(0));
-		
-		// Trail
-		MoveTo trailMove = (MoveTo) trailPath.getElements().get(0);
-		trailMove.setY(getRoot().getHeight() - SCENE_MARGIN_PX);
-		for (int i = 1; i < trailPath.getElements().size() - 1; i++) {
-			LineTo line = (LineTo) trailPath.getElements().get(i);
-			line.setY(map(line.getY(), 0, oldValue.doubleValue(), 0, getRoot().getHeight()));
-		}
-		LineTo trailLastLine = (LineTo) trailPath.getElements().get(trailPath.getElements().size() - 1);
-		trailLastLine.setY(sw.coordY(0));
-		
-		// Freq. lines and labels
-		for (Line line : vLines) {
-			line.setStartY(sw.coordY(0));
-			line.setEndY(sw.coordY(sw.getLayoutHeight()));
-		}
-		for (Label label : vLabels) {
-			label.setLayoutY(newValue.intValue() - SCENE_MARGIN_PX + Bar.DEFAULT_BAR_HEIGHT + label.getLayoutBounds().getHeight());
-		}
-		maxBandHeight = newValue.intValue() - SCENE_MARGIN_PX * 2;
-		
-		// DB lines and labels
-		for (int i = 0; i < hLines.size(); i++) {
-			double dbVal = Utils.map(i, 0, hLines.size(), 0, -165);
-			double yValue = Utils.map(dbVal, 0, -165, SCENE_MARGIN_PX, maxBandHeight + SCENE_MARGIN_PX);
-			
-			Line line = hLines.get(i);
-			line.setStartY(yValue);
-			line.setEndY(yValue);
-			
-			Label label = hLabels.get(i);
-			label.setLayoutY(yValue + label.getLayoutBounds().getHeight() / 3);
-		}
-	}
-	
-	private List<Node> collectAllShapes() {
+
+	@Override
+	protected List<Node> collectNodes() {
+		createNodes();
 		List<Node> shapes = new ArrayList<>();
 		shapes.addAll(vLines);
 		shapes.addAll(vLabels);
@@ -343,37 +329,5 @@ public class SpectrumAreaGridView extends MixedChannelView {
 		shapes.add(curvePath);
 		shapes.add(trailPath);
 		return shapes;
-	}
-	
-	private Line createLine(double startX, double startY, double endX, double endY, List<Line> list) {
-		return UiUtils.createGridLine(startX, startY, endX, endY, Color.web("#fd4a11"), list);
-	}
-	
-	private Label createLabel(double x, double y, String text, List<Label> list) {
-		Label label = UiUtils.createLabel(text, list);
-		label.setLayoutX(y);
-		label.setLayoutY(y);
-		label.setTextFill(Color.web("#fd4a11"));
-		return label;
-	}
-	
-	protected double coordX(double x) {
-		return sw.coordX(x);
-	}
-
-	protected double coordY(double y) {
-		return sw.coordY(y);
-	}
-
-	@Override
-	public void onShow() {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void onHide() {
-		// TODO Auto-generated method stub
-		
 	}
 }

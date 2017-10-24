@@ -49,8 +49,8 @@ public class Spectrum extends Application {
 	private Minim minim;
 	private AudioInput in;
 	private View[] views = new View[] {
+			new SpectrumAreaGridView(),
 			new StereoLevelsView(),
-			new SpectrumAreaGridView(SAMPLING_RATE, BUFFER_SIZE),
 			//new SpectrumBarGridView(SAMPLING_RATE, BUFFER_SIZE)
 			};
 	private View currentView;

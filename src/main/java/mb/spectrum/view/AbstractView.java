@@ -16,7 +16,7 @@ public abstract class AbstractView implements View {
 	private static final Color BACKGROUND_COLOR = Color.BLACK;
 	protected static final double SCENE_MARGIN_RATIO = 0.05;
 	
-	private GraphLayoutWrapper sw;
+	protected GraphLayoutWrapper sw;
 	
 	public AbstractView() {
 		sw = new GraphLayoutWrapper(SCENE_MARGIN_PX);
@@ -40,7 +40,7 @@ public abstract class AbstractView implements View {
         //Scene scene = new Scene(new Group(), 
         //		INIT_SCENE_WIDTH, INIT_SCENE_HEIGHT, false, SceneAntialiasing.DISABLED);
 		
-		Pane pane = sw.getPane();
+		Pane pane = getRoot();
 		pane.setBackground(new Background(new BackgroundFill(BACKGROUND_COLOR, null, null)));
 		pane.widthProperty().addListener(new ChangeListener<Number>() {
 			public void changed(ObservableValue<? extends Number> observable, 
