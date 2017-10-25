@@ -167,7 +167,7 @@ public class SpectrumAreaGridView extends AbstractMixedChannelView {
 			if(i % FREQ_LINE_PER_BAR_COUNT == 0) {
 				createHzLineAndLabel(i, Math.round(fft.getAverageCenterFrequency(i) - fft.getAverageBandWidth(i) / 2));
 			} else if(i == bandCount - 1) {
-				createHzLineAndLabel(i + 1, Math.round(fft.getAverageCenterFrequency(i) - fft.getAverageBandWidth(i) / 2));
+				createHzLineAndLabel(i + 1, Math.round(fft.getAverageCenterFrequency(i + 1) - fft.getAverageBandWidth(i + 1) / 2));
 			}
 		}
 		createLastLine(curvePath);
