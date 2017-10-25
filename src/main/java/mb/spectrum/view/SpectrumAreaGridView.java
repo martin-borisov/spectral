@@ -38,12 +38,18 @@ public class SpectrumAreaGridView extends AbstractMixedChannelView {
 	private static final int MIN_DB_VALUE = -165;
 	private static final double GRID_LABELS_MARGIN_RATIO = 0.1;
 	
+	// Configurable properties
 	private static final int SAMPLING_RATE = Integer.valueOf(
 			ConfigService.getInstance().getProperty("mb.spectrum.sampling-rate"));
 	private static final int BUFFER_SIZE = Integer.valueOf(
 			ConfigService.getInstance().getProperty("mb.spectrum.buffer-size"));
 	
 	private SimpleObjectProperty<Color> propGridColor;
+	private SimpleObjectProperty<Color> propAreaColor;
+	private SimpleObjectProperty<Color> propAreaStrokeColor;
+	private SimpleObjectProperty<Color> propTrailColor;
+	
+	// Operational properties
 	private List<SimpleDoubleProperty> bandValues;
 	private List<SimpleDoubleProperty> trailValues;
 	
@@ -64,12 +70,15 @@ public class SpectrumAreaGridView extends AbstractMixedChannelView {
 	@Override
 	protected void initProperties() {
 		propGridColor = new SimpleObjectProperty<>(null, "Grid Color", Color.web("#fd4a11"));
+		propAreaColor = new SimpleObjectProperty<>(null, "Spectrum Area Color", Color.web("#7CFC00", 0.5));
+		propAreaStrokeColor = new SimpleObjectProperty<>(null, "Spectrum Area Stroke Color", Color.LAWNGREEN);
+		propTrailColor = new SimpleObjectProperty<>(null, "Spectrum Trail Color", Color.DARKGREEN);
 		bandValues = new ArrayList<>();
 		trailValues = new ArrayList<>();
 	}
 
 	public List<ObjectProperty<? extends Object>> getProperties() {
-		return Arrays.asList(propGridColor);
+		return Arrays.asList(propGridColor, propAreaColor, propAreaStrokeColor, propTrailColor);
 	}
 
 	@Override
@@ -145,15 +154,15 @@ public class SpectrumAreaGridView extends AbstractMixedChannelView {
 		
 		trailPauseCounters = new int[bandCount];
 		
-		// Bands and freq. lines and labels
+		// Area
 		curvePath = new Path();
-		curvePath.setStroke(Color.LAWNGREEN);
-		curvePath.setFill(Color.web("#7CFC00", 0.5));
+		curvePath.strokeProperty().bind(propAreaStrokeColor);
+		curvePath.fillProperty().bind(propAreaColor);
 		createStartingPoint(curvePath);
 		
 		// Trail
 		trailPath = new Path();
-		trailPath.setStroke(Color.DARKGREEN);
+		trailPath.strokeProperty().bind(propTrailColor);
 		trailPath.setStrokeWidth(2);
 		createStartingPoint(trailPath);
 		
