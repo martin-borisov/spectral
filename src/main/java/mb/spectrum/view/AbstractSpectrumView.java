@@ -21,7 +21,7 @@ import mb.spectrum.Utils;
 
 public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 	
-	protected static final int MIN_DB_VALUE = -165;
+	protected static final int MIN_DB_VALUE = -100;
 	private static final int FREQ_LINE_PER_BAR_COUNT = 5;
 	private static final int DB_LINES_COUNT = 4;
 	private static final double GRID_LABELS_MARGIN_RATIO = 0.1;

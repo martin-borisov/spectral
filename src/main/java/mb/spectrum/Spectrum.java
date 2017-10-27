@@ -29,7 +29,8 @@ import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
-import mb.spectrum.view.SpectrumAreaGridView;
+import mb.spectrum.view.SpectrumAreaView;
+import mb.spectrum.view.SpectrumBarView;
 import mb.spectrum.view.StereoLevelsView;
 import mb.spectrum.view.View;
 
@@ -49,9 +50,9 @@ public class Spectrum extends Application {
 	private Minim minim;
 	private AudioInput in;
 	private View[] views = new View[] {
-			new SpectrumAreaGridView(),
+			new SpectrumBarView(),
+			new SpectrumAreaView(),
 			new StereoLevelsView(),
-			//new SpectrumBarGridView(SAMPLING_RATE, BUFFER_SIZE)
 			};
 	private View currentView;
 	private int currentViewIdx;
@@ -256,9 +257,7 @@ public class Spectrum extends Application {
 	@SuppressWarnings("unchecked")
 	private boolean showProperty(int idx) {
 		
-		// TODO Implement:
-		// * Persistence
-		// * Make sure all property types are handled
+		// TODO Make sure all property types are handled
 		List<ObjectProperty<? extends Object>> props = currentView.getProperties();
 		if(!props.isEmpty()) {
 			ObjectProperty<? extends Object> prop = props.get(idx);
@@ -270,7 +269,7 @@ public class Spectrum extends Application {
 				control = picker;
 			} else if(prop.getValue() instanceof Double) {
 				ObjectProperty<Double> p = (ObjectProperty<Double>) prop;
-				Spinner<Double> spinner = UiUtils.createDoubleSpinner(0.0, 1.0, p.getValue(), 0.1);
+				Spinner<Double> spinner = UiUtils.createDoubleSpinner(0.0, 1.0, p.getValue(), 0.05);
 				p.bind(spinner.valueProperty());
 				control = spinner;
 			} else if(prop.getValue() instanceof Boolean) {

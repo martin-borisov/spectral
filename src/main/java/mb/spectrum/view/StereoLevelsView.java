@@ -223,9 +223,9 @@ public class StereoLevelsView extends AbstractView {
 								Bindings.createDoubleBinding(
 										() -> (rootWidthProp.get() - rootWidthProp.get() * SCENE_MARGIN_RATIO), rootWidthProp), 
 								"px ", bar.yProperty(), ",", 
-								Bindings.createStringBinding(() -> (UiUtils.colorToHex(propBarColorNormal.get())), propBarColorNormal), " 0%, ", 
-								Bindings.createStringBinding(() -> (UiUtils.colorToHex(propBarColorMid.get())), propBarColorMid), " 80%, ", 
-								Bindings.createStringBinding(() -> (UiUtils.colorToHex(propBarColorClip.get())), propBarColorClip), " 90%)"
+								Bindings.createStringBinding(() -> (UiUtils.colorToWeb(propBarColorNormal.get())), propBarColorNormal), " 0%, ", 
+								Bindings.createStringBinding(() -> (UiUtils.colorToWeb(propBarColorMid.get())), propBarColorMid), " 80%, ", 
+								Bindings.createStringBinding(() -> (UiUtils.colorToWeb(propBarColorClip.get())), propBarColorClip), " 90%)"
 				));
 		return bar;
 	}

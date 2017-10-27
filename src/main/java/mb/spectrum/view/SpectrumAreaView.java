@@ -17,7 +17,7 @@ import javafx.scene.shape.Path;
 /**
  * TODO: Check if the DB lines show real values
  */
-public class SpectrumAreaGridView extends AbstractSpectrumView {
+public class SpectrumAreaView extends AbstractSpectrumView {
 	
 	private SimpleObjectProperty<Color> propAreaColor;
 	private SimpleObjectProperty<Color> propAreaStrokeColor;

@@ -1,5 +1,8 @@
 package mb.spectrum;
 
+import static mb.spectrum.Utils.map;
+
+import java.text.MessageFormat;
 import java.util.List;
 
 import javafx.animation.FadeTransition;
@@ -103,41 +106,30 @@ public class UiUtils {
 		
 	}
 	
-	public static String colorToHex(Color color) {
-	    String hex1 = Integer.toHexString(color.hashCode()).toUpperCase();
-	    String hex2;
-
-	    switch (hex1.length()) {
-	    case 2:
-	        hex2 = "000000";
-	        break;
-	    case 3:
-	        hex2 = String.format("00000%s", hex1.substring(0,1));
-	        break;
-	    case 4:
-	        hex2 = String.format("0000%s", hex1.substring(0,2));
-	        break;
-	    case 5:
-	        hex2 = String.format("000%s", hex1.substring(0,3));
-	        break;
-	    case 6:
-	        hex2 = String.format("00%s", hex1.substring(0,4));
-	        break;
-	    case 7:
-	        hex2 = String.format("0%s", hex1.substring(0,5));
-	        break;
-	    default:
-	        hex2 = hex1.substring(0, 6);
-	    }
-	    return "#" + hex2;
+	public static String colorToWeb(Color color) {
+		return MessageFormat.format("rgba({0}, {1}, {2}, {3})", 
+				map(color.getRed(), 0, 1, 0, 255),
+				map(color.getGreen(), 0, 1, 0, 255),
+				map(color.getBlue(), 0, 1, 0, 255),
+				color.getOpacity());
 	}
 	
 	public static SimpleObjectProperty<Color> createConfigurableColorProperty(String key, String name, Color defaultValue) {
 		ConfigService cs = ConfigService.getInstance();
 		SimpleObjectProperty<Color> prop = new SimpleObjectProperty<>(null, name, 
-				Color.web(cs.getOrCreateProperty(key, colorToHex(defaultValue))));
+				Color.web(cs.getOrCreateProperty(key, colorToWeb(defaultValue))));
 		prop.addListener((obs, oldVal, newVal) -> {
-			cs.setProperty(key, UiUtils.colorToHex(newVal));
+			cs.setProperty(key, colorToWeb(newVal));
+		});
+		return prop;
+	}
+	
+	public static SimpleObjectProperty<Double> createConfigurableDoubleProperty(String key, String name, Double defaultValue) {
+		ConfigService cs = ConfigService.getInstance();
+		SimpleObjectProperty<Double> prop = new SimpleObjectProperty<>(null, name, 
+				Double.valueOf(cs.getOrCreateProperty(key, String.valueOf(defaultValue))));
+		prop.addListener((obs, oldVal, newVal) -> {
+			cs.setProperty(key, String.valueOf(defaultValue));
 		});
 		return prop;
 	}
