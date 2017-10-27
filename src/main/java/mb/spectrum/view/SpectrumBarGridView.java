@@ -18,11 +18,6 @@ import javafx.scene.shape.Line;
 import javafx.scene.text.Text;
 import mb.spectrum.Utils;
 
-/**
- * This class is the initial implementation of a view and thus 
- * does not extend {@link AbstractView}, but it will be a good idea 
- * if it does at some point in time.
- */
 public class SpectrumBarGridView extends AbstractMixedChannelView {
 	
 	private static final int INIT_SCENE_WIDTH = 800;

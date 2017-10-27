@@ -5,6 +5,7 @@ import java.util.List;
 import javafx.animation.FadeTransition;
 import javafx.animation.SequentialTransition;
 import javafx.animation.Transition;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
@@ -129,6 +130,16 @@ public class UiUtils {
 	        hex2 = hex1.substring(0, 6);
 	    }
 	    return "#" + hex2;
+	}
+	
+	public static SimpleObjectProperty<Color> createConfigurableColorProperty(String key, String name, Color defaultValue) {
+		ConfigService cs = ConfigService.getInstance();
+		SimpleObjectProperty<Color> prop = new SimpleObjectProperty<>(null, name, 
+				Color.web(cs.getOrCreateProperty(key, colorToHex(defaultValue))));
+		prop.addListener((obs, oldVal, newVal) -> {
+			cs.setProperty(key, UiUtils.colorToHex(newVal));
+		});
+		return prop;
 	}
 	
 }

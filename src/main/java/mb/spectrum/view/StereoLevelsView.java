@@ -1,5 +1,6 @@
 package mb.spectrum.view;
 
+import static mb.spectrum.UiUtils.createConfigurableColorProperty;
 import static mb.spectrum.UiUtils.createLabel;
 import static mb.spectrum.Utils.map;
 import static mb.spectrum.Utils.peakLevel;
@@ -75,8 +76,10 @@ public class StereoLevelsView extends AbstractView {
 	protected void initProperties() {
 		
 		// Configuration properties
-		propGridColor = new SimpleObjectProperty<>(null, "Grid Color", Color.web("#fd4a11"));
-		propBarColorNormal = new SimpleObjectProperty<>(null, "Normal Level Color", Color.DARKGREEN);
+		propGridColor = createConfigurableColorProperty(
+				"stereoLevelsView.gridColor", "Grid Color", Color.web("#fd4a11"));
+		propBarColorNormal = createConfigurableColorProperty(
+				"stereoLevelsView.normalLevelColor", "Normal Level Color", Color.DARKGREEN);
 		propBarColorMid = new SimpleObjectProperty<>(null, "Middle Level Color", Color.LAWNGREEN);
 		propBarColorClip = new SimpleObjectProperty<>(null, "Clip Level Color", Color.RED);
 		propLingerIndicatorColor = new SimpleObjectProperty<>(null, "Linger Level Color", Color.LIGHTGREEN);
