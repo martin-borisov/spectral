@@ -26,8 +26,8 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 	private static final int DB_LINES_COUNT = 4;
 	private static final double GRID_LABELS_MARGIN_RATIO = 0.1;
 	private static final int BAND_DROP_RATE_DB = 2;
-	private static final int TRAIL_PAUSE_FRAMES = 40;
-	private static final double TRAIL_DROP_RATE_DB = 0.5;
+	private static final double LINGER_STAY_FACTOR = 0.01;
+	private static final double LINGER_ACCELARATION_FACTOR = 1.08;
 	
 	// Configurable properties
 	private static final int SAMPLING_RATE = Integer.valueOf(
@@ -47,7 +47,7 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 	
 	protected int bandCount;
 	private double[] bandValuesDB, trailValuesDB;
-	private int[] trailPauseCounters;
+	private double[] trailOpValues;
 
 	@Override
 	public List<ObjectProperty<? extends Object>> getProperties() {
@@ -87,7 +87,8 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 			trailValues.add(new SimpleDoubleProperty(MIN_DB_VALUE));
 		}
 				
-		trailPauseCounters = new int[bandCount];
+		trailOpValues = new double[bandCount];
+		Arrays.fill(trailOpValues, LINGER_STAY_FACTOR);
 		
 		for (int i = 0; i < bandCount; i++) {
 			
@@ -126,10 +127,6 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 			if(bandDB > bandValuesDB[i]) {
 				bandValuesDB[i] = bandDB;
 			}
-			if(bandDB > trailValuesDB[i]) {
-				trailValuesDB[i] = bandDB;
-				trailPauseCounters[i] = 0;
-			}
 		}
 	}
 	
@@ -138,7 +135,6 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 		for (int i = 0; i < bandValuesDB.length; i++) {
 
 			bandValues.get(i).set(bandValuesDB[i]);
-			trailValues.get(i).set(trailValuesDB[i]);
 			
 			// Curve drop
 			if(bandValuesDB[i] > MIN_DB_VALUE) {
@@ -146,15 +142,18 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 				bandValuesDB[i] = bandValuesDB[i] < MIN_DB_VALUE ? MIN_DB_VALUE : bandValuesDB[i];
 			}
 			
-			// Trail drop
-			if (trailPauseCounters[i] == TRAIL_PAUSE_FRAMES || trailPauseCounters[i] == -1) {
-				if (trailValuesDB[i] > MIN_DB_VALUE) {
-					trailValuesDB[i] -= TRAIL_DROP_RATE_DB;
-				}
-				trailPauseCounters[i] = -1;
-			} else {
-				trailPauseCounters[i]++;
+			// Trail drop			
+			trailValuesDB[i] = trailValuesDB[i] - trailOpValues[i];
+			trailOpValues[i] = trailOpValues[i] * LINGER_ACCELARATION_FACTOR;
+			
+			if(bandValuesDB[i] > trailValuesDB[i]) {
+				trailValuesDB[i] = bandValuesDB[i];
+				trailOpValues[i] = LINGER_STAY_FACTOR;
 			}
+			if(trailValuesDB[i] < MIN_DB_VALUE) {
+				trailValuesDB[i] = MIN_DB_VALUE;
+			}
+			trailValues.get(i).set(trailValuesDB[i]);
 		}
 	}
 	
