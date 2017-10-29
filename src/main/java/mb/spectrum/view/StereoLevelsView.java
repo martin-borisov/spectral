@@ -1,6 +1,8 @@
 package mb.spectrum.view;
 
+import static mb.spectrum.UiUtils.createConfigurableBooleanProperty;
 import static mb.spectrum.UiUtils.createConfigurableColorProperty;
+import static mb.spectrum.UiUtils.createConfigurableDoubleProperty;
 import static mb.spectrum.UiUtils.createLabel;
 import static mb.spectrum.Utils.map;
 import static mb.spectrum.Utils.peakLevel;
@@ -80,14 +82,22 @@ public class StereoLevelsView extends AbstractView {
 				"stereoLevelsView.gridColor", "Grid Color", Color.web("#fd4a11"));
 		propBarColorNormal = createConfigurableColorProperty(
 				"stereoLevelsView.normalLevelColor", "Normal Level Color", Color.DARKGREEN);
-		propBarColorMid = new SimpleObjectProperty<>(null, "Middle Level Color", Color.LAWNGREEN);
-		propBarColorClip = new SimpleObjectProperty<>(null, "Clip Level Color", Color.RED);
-		propLingerIndicatorColor = new SimpleObjectProperty<>(null, "Linger Level Color", Color.LIGHTGREEN);
-		propBarOpacity = new SimpleObjectProperty<>(null, "Bar Opacity", 0.9);
-		propDrBarColor = new SimpleObjectProperty<>(null, "DR Range Color", Color.ORANGE);
-		propDrBarOpacity = new SimpleObjectProperty<>(null, "DR Range Opacity", 0.2);
-		propShowDr = new SimpleObjectProperty<>(null, "Show Dynamic Range", true);
-		propRms = new SimpleObjectProperty<>(null, "RMS Mode", false);
+		propBarColorMid = createConfigurableColorProperty(
+				"stereoLevelsView.middleLevelColor", "Middle Level Color", Color.LAWNGREEN);
+		propBarColorClip = createConfigurableColorProperty(
+				"stereoLevelsView.clipLevelColor", "Clip Level Color", Color.RED);
+		propLingerIndicatorColor = createConfigurableColorProperty(
+				"stereoLevelsView.lingerIndicatorColor","Linger Level Color", Color.LIGHTGREEN);
+		propBarOpacity = createConfigurableDoubleProperty(
+				"stereoLevelsView.barOpacity", "Bar Opacity", 0.9);
+		propDrBarColor = createConfigurableColorProperty(
+				"stereoLevelsView.drBarColor", "D/R Bar Color", Color.ORANGE);
+		propDrBarOpacity = createConfigurableDoubleProperty(
+				"stereoLevelsView.drBarOpacity", "D/R Bar Opacity", 0.2);
+		propShowDr = createConfigurableBooleanProperty(
+				"stereoLevelsView.showDynamicRange", "Show Dynamic Range", true);
+		propRms = createConfigurableBooleanProperty(
+				"stereoLevelsView.enableRmsMode", "RMS Mode", false);
 		
 		// Operational properties
 		currLevelLProp = new SimpleDoubleProperty();

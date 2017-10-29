@@ -129,7 +129,17 @@ public class UiUtils {
 		SimpleObjectProperty<Double> prop = new SimpleObjectProperty<>(null, name, 
 				Double.valueOf(cs.getOrCreateProperty(key, String.valueOf(defaultValue))));
 		prop.addListener((obs, oldVal, newVal) -> {
-			cs.setProperty(key, String.valueOf(defaultValue));
+			cs.setProperty(key, String.valueOf(newVal));
+		});
+		return prop;
+	}
+	
+	public static SimpleObjectProperty<Boolean> createConfigurableBooleanProperty(String key, String name, Boolean defaultValue) {
+		ConfigService cs = ConfigService.getInstance();
+		SimpleObjectProperty<Boolean> prop = new SimpleObjectProperty<>(null, name, 
+				Boolean.valueOf(cs.getOrCreateProperty(key, String.valueOf(defaultValue))));
+		prop.addListener((obs, oldVal, newVal) -> {
+			cs.setProperty(key, String.valueOf(newVal));
 		});
 		return prop;
 	}
