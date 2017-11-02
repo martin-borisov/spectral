@@ -13,4 +13,12 @@ public abstract class AbstractMixedChannelView extends AbstractView {
 	
 	public abstract void dataAvailable(float[] data);
 	
+	@Override
+	public void onShow() {
+	}
+
+	@Override
+	public void onHide() {
+	}
+	
 }

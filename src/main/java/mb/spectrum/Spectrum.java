@@ -29,6 +29,7 @@ import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+import mb.spectrum.view.AnalogMeterView;
 import mb.spectrum.view.SpectrumAreaView;
 import mb.spectrum.view.SpectrumBarView;
 import mb.spectrum.view.StereoLevelsView;
@@ -50,6 +51,7 @@ public class Spectrum extends Application {
 	private Minim minim;
 	private AudioInput in;
 	private View[] views = new View[] {
+			new AnalogMeterView(),
 			new SpectrumBarView(),
 			new SpectrumAreaView(),
 			new StereoLevelsView(),
@@ -270,6 +272,11 @@ public class Spectrum extends Application {
 			} else if(prop.getValue() instanceof Double) {
 				ObjectProperty<Double> p = (ObjectProperty<Double>) prop;
 				Spinner<Double> spinner = UiUtils.createDoubleSpinner(0.0, 1.0, p.getValue(), 0.05);
+				p.bind(spinner.valueProperty());
+				control = spinner;
+			} else if(prop.getValue() instanceof Integer) {
+				ObjectProperty<Integer> p = (ObjectProperty<Integer>) prop;
+				Spinner<Integer> spinner = UiUtils.createIntegerSpinner(0, 100, p.getValue(), 1);
 				p.bind(spinner.valueProperty());
 				control = spinner;
 			} else if(prop.getValue() instanceof Boolean) {

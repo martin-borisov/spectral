@@ -17,6 +17,7 @@ import javafx.scene.control.ColorPicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory.DoubleSpinnerValueFactory;
+import javafx.scene.control.SpinnerValueFactory.IntegerSpinnerValueFactory;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.StrokeLineCap;
@@ -87,6 +88,10 @@ public class UiUtils {
 		return new Spinner<Double>(new DoubleSpinnerValueFactory(min, max, initValue, step));
 	}
 	
+	public static Spinner<Integer> createIntegerSpinner(int min, int max, int initValue, int step) {
+		return new Spinner<Integer>(new IntegerSpinnerValueFactory(min, max, initValue, step));
+	}
+	
 	public static ColorPicker createColorPicker(Color color) {
 		return new ColorPicker(color);
 	}
@@ -144,4 +149,13 @@ public class UiUtils {
 		return prop;
 	}
 	
+	public static SimpleObjectProperty<Integer> createConfigurableIntegerProperty(String key, String name, Integer defaultValue) {
+		ConfigService cs = ConfigService.getInstance();
+		SimpleObjectProperty<Integer> prop = new SimpleObjectProperty<>(null, name, 
+				Integer.valueOf(cs.getOrCreateProperty(key, String.valueOf(defaultValue))));
+		prop.addListener((obs, oldVal, newVal) -> {
+			cs.setProperty(key, String.valueOf(newVal));
+		});
+		return prop;
+	}
 }
