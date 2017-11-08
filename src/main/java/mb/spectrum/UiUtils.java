@@ -1,6 +1,7 @@
 package mb.spectrum;
 
 import static mb.spectrum.Utils.map;
+import static org.apache.commons.lang3.math.NumberUtils.isCreatable;
 
 import java.text.MessageFormat;
 import java.util.List;
@@ -15,9 +16,6 @@ import javafx.scene.Node;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.Label;
-import javafx.scene.control.Spinner;
-import javafx.scene.control.SpinnerValueFactory.DoubleSpinnerValueFactory;
-import javafx.scene.control.SpinnerValueFactory.IntegerSpinnerValueFactory;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.StrokeLineCap;
@@ -84,13 +82,13 @@ public class UiUtils {
 		return fadeOut;
 	}
 	
-	public static Spinner<Double> createDoubleSpinner(double min, double max, double initValue, double step) {
-		return new Spinner<Double>(new DoubleSpinnerValueFactory(min, max, initValue, step));
-	}
-	
-	public static Spinner<Integer> createIntegerSpinner(int min, int max, int initValue, int step) {
-		return new Spinner<Integer>(new IntegerSpinnerValueFactory(min, max, initValue, step));
-	}
+//	public static Spinner<Double> createDoubleSpinner(double min, double max, double initValue, double step) {
+//		return new Spinner<Double>(new DoubleSpinnerValueFactory(min, max, initValue, step));
+//	}
+//	
+//	public static Spinner<Integer> createIntegerSpinner(int min, int max, int initValue, int step) {
+//		return new Spinner<Integer>(new IntegerSpinnerValueFactory(min, max, initValue, step));
+//	}
 	
 	public static ColorPicker createColorPicker(Color color) {
 		return new ColorPicker(color);
@@ -157,5 +155,9 @@ public class UiUtils {
 			cs.setProperty(key, String.valueOf(newVal));
 		});
 		return prop;
+	}
+	
+	public static boolean isDouble(String string) {
+		return isCreatable(string) && string.contains(".");
 	}
 }

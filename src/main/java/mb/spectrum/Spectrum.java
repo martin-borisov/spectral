@@ -1,5 +1,7 @@
 package mb.spectrum;
 
+import static mb.spectrum.UiUtils.isDouble;
+
 import java.util.List;
 
 import ddf.minim.AudioInput;
@@ -19,9 +21,7 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
-import javafx.scene.control.Spinner;
 import javafx.scene.control.TitledPane;
-import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
@@ -132,22 +132,66 @@ public class Spectrum extends Application {
 	}
 	
 	private void onKey(KeyEvent event) {
-		if(KeyCode.RIGHT == event.getCode()) {
+		
+		switch (event.getCode()) {
+		case RIGHT:
 			if(propertiesVisible) {
 				nextProperty();
 			} else {
 				nextView();
 			}
-		} else if(KeyCode.LEFT == event.getCode()) {
+			break;
+			
+		case LEFT:
 			if(propertiesVisible) {
 				prevProperty();
 			} else {
 				prevView();
 			}
-		} else if(KeyCode.SPACE == event.getCode()) {
+			break;
+		
+		case SPACE:
 			togglePropertiesOn();
-		} else if(KeyCode.ESCAPE == event.getCode()) {
+			break;
+			
+		case ESCAPE:
 			togglePropertiesOff();
+			break;
+			
+		case UP:
+			
+			// TODO Find a way to set the increment per property
+			// TODO Extract into a separate method
+			if(propertiesVisible && 
+					currentPropertyNode.getContent() instanceof Label) {
+				Label label = (Label) currentPropertyNode.getContent();
+				String text = label.getText();
+				if(isDouble(text)) {
+					label.setText(String.valueOf(Double.valueOf(text) + 0.1));
+				} else {
+					label.setText(String.valueOf(Integer.valueOf(text) + 1));
+				}
+			}
+			break;
+			
+		case DOWN:
+			
+			// TODO Find a way to set the increment per property
+			// TODO Extract into a separate method
+			if(propertiesVisible && 
+					currentPropertyNode.getContent() instanceof Label) {
+				Label label = (Label) currentPropertyNode.getContent();
+				String text = label.getText();
+				if(isDouble(text)) {
+					label.setText(String.valueOf(Double.valueOf(text) - 0.1));
+				} else {
+					label.setText(String.valueOf(Integer.valueOf(text) - 1));
+				}
+			}
+			break;
+			
+		default:
+			break;
 		}
 	}
 	
@@ -269,21 +313,29 @@ public class Spectrum extends Application {
 				ColorPicker picker = UiUtils.createColorPicker(p.getValue());
 				p.bind(picker.valueProperty());
 				control = picker;
+				
 			} else if(prop.getValue() instanceof Double) {
 				ObjectProperty<Double> p = (ObjectProperty<Double>) prop;
-				Spinner<Double> spinner = UiUtils.createDoubleSpinner(0.0, 1.0, p.getValue(), 0.05);
-				p.bind(spinner.valueProperty());
-				control = spinner;
+				Label label = createPropertyLabel(String.valueOf(p.getValue()));
+				label.textProperty().addListener((obs, oldVal, newVal) -> {
+					p.set(Double.valueOf(newVal));
+				});
+				control = label;
+				
 			} else if(prop.getValue() instanceof Integer) {
 				ObjectProperty<Integer> p = (ObjectProperty<Integer>) prop;
-				Spinner<Integer> spinner = UiUtils.createIntegerSpinner(0, 100, p.getValue(), 1);
-				p.bind(spinner.valueProperty());
-				control = spinner;
+				Label label = createPropertyLabel(String.valueOf(p.getValue()));
+				label.textProperty().addListener((obs, oldVal, newVal) -> {
+					p.set(Integer.valueOf(newVal));
+				});
+				control = label;
+				
 			} else if(prop.getValue() instanceof Boolean) {
 				ObjectProperty<Boolean> p = (ObjectProperty<Boolean>) prop;
 				CheckBox box = UiUtils.createCheckBox(p.getValue(), prop.getName());
 				p.bind(box.selectedProperty());
 				control = box;
+				
 			}
 			
 			currentView.getRoot().getChildren().add(
@@ -334,6 +386,16 @@ public class Spectrum extends Application {
 		control.prefHeightProperty().bind(pane.heightProperty().divide(4));
 		
 		return pane;
+	}
+	
+	private Label createPropertyLabel(String text) {
+		Label label = new Label(text);
+		
+		// TODO Play a bit with the values below to find the best fit
+		label.styleProperty().bind(Bindings.concat(
+				"-fx-font-size: ", currentView.getRoot().widthProperty().divide(40), ";", 
+				"-fx-padding: ", currentView.getRoot().widthProperty().divide(50), ";"));
+		return label;
 	}
 	
 	public static void main(String[] args) {
