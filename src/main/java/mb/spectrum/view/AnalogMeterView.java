@@ -130,7 +130,7 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 			*/
 			
 			// TODO Accelarate, don't increase constantly
-			lingerLevelDb += 1.5;
+			lingerLevelDb += 1.8;
 			lingerOpValDb = LINGER_STAY_FACTOR;
 		} else {
 			lingerLevelDb = lingerLevelDb - lingerOpValDb;
