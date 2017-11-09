@@ -27,6 +27,10 @@ import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+import mb.spectrum.prop.ConfigurableBooleanProperty;
+import mb.spectrum.prop.ConfigurableColorProperty;
+import mb.spectrum.prop.ConfigurableDoubleProperty;
+import mb.spectrum.prop.ConfigurableIntegerProperty;
 import mb.spectrum.prop.ConfigurableProperty;
 import mb.spectrum.view.AnalogMeterView;
 import mb.spectrum.view.SpectrumAreaView;
@@ -278,41 +282,34 @@ public class Spectrum extends Application {
 	@SuppressWarnings("unchecked")
 	private boolean showProperty(int idx) {
 
-		// TODO Invert the binding or utilize double binding for components that cannot be yet controlled with just keys
 		List<ConfigurableProperty<? extends Object>> props = currentView.getProperties();
 		if(!props.isEmpty()) {
-			ObjectProperty<? extends Object> prop = props.get(idx).getProp();
+			ConfigurableProperty<? extends Object> prop = props.get(idx);
 			Control control = null;
-			if(prop.getValue() instanceof Color) {
-				ObjectProperty<Color> p = (ObjectProperty<Color>) prop;
+			if(prop instanceof ConfigurableColorProperty) {
+				
+				// TODO Create a custom color control that can be controlled with keys
+				ObjectProperty<Color> p = (ObjectProperty<Color>) prop.getProp();
 				ColorPicker picker = UiUtils.createColorPropertyColorPicker(
 						p.getValue(), currentView.getRoot());
 				p.bind(picker.valueProperty());
 				control = picker;
 				
-			} else if(prop.getValue() instanceof Double) {
-				ObjectProperty<Double> p = (ObjectProperty<Double>) prop;
+			} else if(prop instanceof ConfigurableDoubleProperty || 
+					prop instanceof ConfigurableIntegerProperty) {
 				Label label = UiUtils.createNumberPropertyLabel(
-						String.valueOf(p.getValue()), currentView.getRoot());
-				label.textProperty().addListener((obs, oldVal, newVal) -> {
-					p.set(Double.valueOf(newVal));
-				});
+						String.valueOf(prop.getProp().getValue()), currentView.getRoot());
+				label.textProperty().bind(Bindings.createStringBinding(
+						() -> {
+							return String.valueOf(prop.getProp().get());
+						}, prop.getProp()));
 				control = label;
-				
-			} else if(prop.getValue() instanceof Integer) {
-				ObjectProperty<Integer> p = (ObjectProperty<Integer>) prop;
-				Label label = UiUtils.createNumberPropertyLabel(
-						String.valueOf(p.getValue()), currentView.getRoot());
-				label.textProperty().addListener((obs, oldVal, newVal) -> {
-					p.set(Integer.valueOf(newVal));
-				});
-				control = label;
-				
-			} else if(prop.getValue() instanceof Boolean) {
-				ObjectProperty<Boolean> p = (ObjectProperty<Boolean>) prop;
+					
+			} else if(prop instanceof ConfigurableBooleanProperty) {
+				ObjectProperty<Boolean> p = (ObjectProperty<Boolean>) prop.getProp();
 				CheckBox box = UiUtils.createBooleanPropertyCheckBox(
 						p.getValue(), prop.getName(), currentView.getRoot());
-				p.bind(box.selectedProperty());
+				box.selectedProperty().bind(p);
 				control = box;
 				
 			}
@@ -367,37 +364,14 @@ public class Spectrum extends Application {
 		return pane;
 	}
 	
-	
-	// TODO The logic for changing the property values must be handled within the property classes, not here.
-	// When this is done, take care of proper unbinding when property controls are hidden/removed - hideProperty()
 	private void changeCurrentPropertyValue(boolean increment) {
 		if(propertiesVisible) {
 			ConfigurableProperty<? extends Object> prop = 
 					currentView.getProperties().get(currentPropIdx);
-			Object inc = prop.getIncrement();
-			if(inc instanceof Integer) {
-				
-				Label label = (Label) currentPropertyNode.getContent();
-				String text = label.getText();
-				if(increment) {
-					int val = Integer.valueOf(text) + (Integer) inc;
-					label.setText(String.valueOf(val));
-				} else {
-					int val = Integer.valueOf(text) - (Integer) inc;
-					label.setText(String.valueOf(val));
-				}
-				
-			} else if(inc instanceof Double) {
-				
-				Label label = (Label) currentPropertyNode.getContent();
-				String text = label.getText();
-				if(increment) {
-					double val = Double.valueOf(text) + (Double) inc;
-					label.setText(String.valueOf(val));
-				} else {
-					double val = Double.valueOf(text) - (Double) inc;
-					label.setText(String.valueOf(val));
-				}
+			if (increment) {
+				prop.increment();
+			} else {
+				prop.decrement();
 			}
 		}
 	}

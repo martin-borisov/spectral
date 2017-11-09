@@ -1,5 +1,10 @@
 package mb.spectrum.prop;
 
+import java.math.BigDecimal;
+
+/**
+ * The arithmetic in this class is done with {@link BigDecimal} to avoid {@link Double} precision errors
+ */
 public class ConfigurableDoubleProperty extends ConfigurableProperty<Double> {
 
 	public ConfigurableDoubleProperty(String name, Double minValue, Double maxValue, Double initValue,
@@ -9,7 +14,7 @@ public class ConfigurableDoubleProperty extends ConfigurableProperty<Double> {
 
 	@Override
 	public Double increment() {
-		Double val = prop.get() + increment;
+		Double val = BigDecimal.valueOf(prop.get()).add(BigDecimal.valueOf(increment)).doubleValue();
 		val = val > maxValue ? maxValue : val;
 		prop.set(val);
 		return val;
@@ -17,7 +22,7 @@ public class ConfigurableDoubleProperty extends ConfigurableProperty<Double> {
 
 	@Override
 	public Double decrement() {
-		Double val = prop.get() - increment;
+		Double val = BigDecimal.valueOf(prop.get()).subtract(BigDecimal.valueOf(increment)).doubleValue();
 		val = val < minValue ? minValue : val;
 		prop.set(val);
 		return val;

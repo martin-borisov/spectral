@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javafx.beans.binding.Bindings;
+import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.scene.Node;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
@@ -15,7 +16,8 @@ import mb.spectrum.prop.ConfigurableProperty;
 
 public class SpectrumBarView extends AbstractSpectrumView {
 	
-	private ConfigurableProperty<Color> propBarColor;
+	private ConfigurableProperty<Color> propBarColor1;
+	private ConfigurableProperty<Color> propBarColor2;
 	private ConfigurableProperty<Color> propTrailColor;
 	private ConfigurableProperty<Double> propGapBarRatio;
 	
@@ -35,8 +37,10 @@ public class SpectrumBarView extends AbstractSpectrumView {
 	@Override
 	protected void initProperties() {
 		super.initProperties();
-		propBarColor = UiUtils.createConfigurableColorProperty(
-				getBasePropertyKey() + ".barColor", "Bar Color", Color.web("#7CFC00", 0.5));
+		propBarColor1 = UiUtils.createConfigurableColorProperty(
+				getBasePropertyKey() + ".barColor1", "Bar Color 1", Color.web("#7CFC00", 0.75));
+		propBarColor2 = UiUtils.createConfigurableColorProperty(
+				getBasePropertyKey() + ".barColor1", "Bar Color 3", Color.web("#7CFC00", 0.25));
 		propTrailColor = UiUtils.createConfigurableColorProperty(
 				getBasePropertyKey() + ".trailColor", "Trail Color", Color.LAWNGREEN);
 		propGapBarRatio = UiUtils.createConfigurableDoubleProperty(
@@ -47,7 +51,8 @@ public class SpectrumBarView extends AbstractSpectrumView {
 	public List<ConfigurableProperty<? extends Object>> getProperties() {
 		List<ConfigurableProperty<? extends Object>> props = 
 				new ArrayList<>(super.getProperties());
-		props.add(propBarColor);
+		props.add(propBarColor1);
+		props.add(propBarColor2);
 		props.add(propTrailColor);
 		props.add(propGapBarRatio);
 		return props;
@@ -96,7 +101,18 @@ public class SpectrumBarView extends AbstractSpectrumView {
 					double parentHeight = getRoot().heightProperty().get();
 					return (parentHeight - parentHeight * SCENE_MARGIN_RATIO) - rect.yProperty().get();
 				}, getRoot().heightProperty(), rect.yProperty()));
-		rect.fillProperty().bind(propBarColor.getProp());
+		
+		ReadOnlyDoubleProperty rootHeightProp = getRoot().heightProperty();
+		rect.styleProperty().bind(
+				Bindings.concat(
+						"-fx-fill: ", 
+							"linear-gradient(from ", rect.xProperty(), "px ", rootHeightProp.multiply(SCENE_MARGIN_RATIO), "px to ", 
+								rect.xProperty(), "px ", rootHeightProp.subtract(rootHeightProp.multiply(SCENE_MARGIN_RATIO)), ",", 
+								Bindings.createStringBinding(() -> (UiUtils.colorToWeb(propBarColor2.getProp().get())), propBarColor2.getProp()), " 50%, ", 
+								Bindings.createStringBinding(() -> (UiUtils.colorToWeb(propBarColor1.getProp().get())), propBarColor1.getProp()), " 100%)"
+					));
+		
+		
 		bars.add(rect);
 	}
 	
