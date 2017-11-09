@@ -6,22 +6,22 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javafx.beans.binding.Bindings;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.Node;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
+import mb.spectrum.UiUtils;
+import mb.spectrum.prop.ConfigurableProperty;
 
 /**
  * TODO: Check if the DB lines show real values
  */
 public class SpectrumAreaView extends AbstractSpectrumView {
 	
-	private SimpleObjectProperty<Color> propAreaColor;
-	private SimpleObjectProperty<Color> propAreaStrokeColor;
-	private SimpleObjectProperty<Color> propTrailColor;
+	private ConfigurableProperty<Color> propAreaColor;
+	private ConfigurableProperty<Color> propAreaStrokeColor;
+	private ConfigurableProperty<Color> propTrailColor;
 	
 	private Path curvePath, trailPath;
 
@@ -31,16 +31,24 @@ public class SpectrumAreaView extends AbstractSpectrumView {
 	}
 	
 	@Override
-	protected void initProperties() {
-		super.initProperties();
-		propAreaColor = new SimpleObjectProperty<>(null, "Spectrum Area Color", Color.web("#7CFC00", 0.5));
-		propAreaStrokeColor = new SimpleObjectProperty<>(null, "Spectrum Area Stroke Color", Color.LAWNGREEN);
-		propTrailColor = new SimpleObjectProperty<>(null, "Spectrum Trail Color", Color.DARKGREEN);
+	protected String getBasePropertyKey() {
+		return "spectrumAreaView";
 	}
 	
 	@Override
-	public List<ObjectProperty<? extends Object>> getProperties() {
-		List<ObjectProperty<? extends Object>> props = 
+	protected void initProperties() {
+		super.initProperties();
+		propAreaColor = UiUtils.createConfigurableColorProperty(
+				getBasePropertyKey() + ".areaColor", "Spectrum Area Color", Color.web("#7CFC00", 0.5));
+		propAreaStrokeColor = UiUtils.createConfigurableColorProperty(
+				getBasePropertyKey() + ".areaStrokeColor", "Spectrum Area Stroke Color", Color.LAWNGREEN);
+		propTrailColor = UiUtils.createConfigurableColorProperty(
+				getBasePropertyKey() + ".areaTrailColor", "Spectrum Trail Color", Color.DARKGREEN);
+	}
+	
+	@Override
+	public List<ConfigurableProperty<? extends Object>> getProperties() {
+		List<ConfigurableProperty<? extends Object>> props = 
 				new ArrayList<>(super.getProperties());
 		props.add(propAreaColor);
 		props.add(propAreaStrokeColor);
@@ -54,13 +62,13 @@ public class SpectrumAreaView extends AbstractSpectrumView {
 		
 		// Area
 		curvePath = new Path();
-		curvePath.strokeProperty().bind(propAreaStrokeColor);
-		curvePath.fillProperty().bind(propAreaColor);
+		curvePath.strokeProperty().bind(propAreaStrokeColor.getProp());
+		curvePath.fillProperty().bind(propAreaColor.getProp());
 		createStartingPoint(curvePath);
 		
 		// Trail
 		trailPath = new Path();
-		trailPath.strokeProperty().bind(propTrailColor);
+		trailPath.strokeProperty().bind(propTrailColor.getProp());
 		trailPath.setStrokeWidth(2);
 		createStartingPoint(trailPath);
 		

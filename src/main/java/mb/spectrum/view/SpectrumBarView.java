@@ -6,19 +6,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javafx.beans.binding.Bindings;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.Node;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 import mb.spectrum.UiUtils;
+import mb.spectrum.prop.ConfigurableProperty;
 
 public class SpectrumBarView extends AbstractSpectrumView {
 	
-	private SimpleObjectProperty<Color> propBarColor;
-	private SimpleObjectProperty<Color> propTrailColor;
-	private SimpleObjectProperty<Double> propGapBarRatio;
+	private ConfigurableProperty<Color> propBarColor;
+	private ConfigurableProperty<Color> propTrailColor;
+	private ConfigurableProperty<Double> propGapBarRatio;
 	
 	private List<Rectangle> bars;
 	private List<Line> trails;
@@ -29,19 +28,24 @@ public class SpectrumBarView extends AbstractSpectrumView {
 	}
 	
 	@Override
-	protected void initProperties() {
-		super.initProperties();
-		propBarColor = UiUtils.createConfigurableColorProperty(
-				"spectrumBarView.barColor", "Bar Color", Color.web("#7CFC00", 0.5));
-		propTrailColor = UiUtils.createConfigurableColorProperty(
-				"spectrumBarView.trailColor", "Trail Color", Color.LAWNGREEN);
-		propGapBarRatio = UiUtils.createConfigurableDoubleProperty(
-				"spectrumBarView.gapBarRatio", "Gap/Bar Ratio", 0.01);
+	protected String getBasePropertyKey() {
+		return "spectrumBarView";
 	}
 	
 	@Override
-	public List<ObjectProperty<? extends Object>> getProperties() {
-		List<ObjectProperty<? extends Object>> props = 
+	protected void initProperties() {
+		super.initProperties();
+		propBarColor = UiUtils.createConfigurableColorProperty(
+				getBasePropertyKey() + ".barColor", "Bar Color", Color.web("#7CFC00", 0.5));
+		propTrailColor = UiUtils.createConfigurableColorProperty(
+				getBasePropertyKey() + ".trailColor", "Trail Color", Color.LAWNGREEN);
+		propGapBarRatio = UiUtils.createConfigurableDoubleProperty(
+				getBasePropertyKey() + ".gapBarRatio", "Gap/Bar Ratio", 0.01, 0.9, 0.01, 0.01);
+	}
+	
+	@Override
+	public List<ConfigurableProperty<? extends Object>> getProperties() {
+		List<ConfigurableProperty<? extends Object>> props = 
 				new ArrayList<>(super.getProperties());
 		props.add(propBarColor);
 		props.add(propTrailColor);
@@ -73,14 +77,14 @@ public class SpectrumBarView extends AbstractSpectrumView {
 					double parentWidth = getRoot().widthProperty().get();
 					double bandWidth = (parentWidth - parentWidth * SCENE_MARGIN_RATIO * 2) / bandCount;
 					return getRoot().widthProperty().get() * SCENE_MARGIN_RATIO + 
-							idx * bandWidth + bandWidth * propGapBarRatio.get() / 2;
-				}, getRoot().widthProperty(), propGapBarRatio));
+							idx * bandWidth + bandWidth * propGapBarRatio.getProp().get() / 2;
+				}, getRoot().widthProperty(), propGapBarRatio.getProp()));
 		rect.widthProperty().bind(Bindings.createDoubleBinding(
 				() -> {
 					double parentWidth = getRoot().widthProperty().get();
 					double bandWidth = (parentWidth - parentWidth * SCENE_MARGIN_RATIO * 2) / bandCount;
-					return bandWidth - bandWidth * propGapBarRatio.get();
-				}, getRoot().widthProperty(), propGapBarRatio));
+					return bandWidth - bandWidth * propGapBarRatio.getProp().get();
+				}, getRoot().widthProperty(), propGapBarRatio.getProp()));
 		rect.yProperty().bind(Bindings.createDoubleBinding(
 				() -> {
 					double parentHeight = getRoot().heightProperty().get();
@@ -92,7 +96,7 @@ public class SpectrumBarView extends AbstractSpectrumView {
 					double parentHeight = getRoot().heightProperty().get();
 					return (parentHeight - parentHeight * SCENE_MARGIN_RATIO) - rect.yProperty().get();
 				}, getRoot().heightProperty(), rect.yProperty()));
-		rect.fillProperty().bind(propBarColor);
+		rect.fillProperty().bind(propBarColor.getProp());
 		bars.add(rect);
 	}
 	
@@ -103,14 +107,14 @@ public class SpectrumBarView extends AbstractSpectrumView {
 					double parentWidth = getRoot().widthProperty().get();
 					double bandWidth = (parentWidth - parentWidth * SCENE_MARGIN_RATIO * 2) / bandCount;
 					return getRoot().widthProperty().get() * SCENE_MARGIN_RATIO + 
-							idx * bandWidth + bandWidth * propGapBarRatio.get() / 2;
-				}, getRoot().widthProperty(), propGapBarRatio));
+							idx * bandWidth + bandWidth * propGapBarRatio.getProp().get() / 2;
+				}, getRoot().widthProperty(), propGapBarRatio.getProp()));
 		line.endXProperty().bind(Bindings.createDoubleBinding(
 				() -> {
 					double parentWidth = getRoot().widthProperty().get();
 					double bandWidth = (parentWidth - parentWidth * SCENE_MARGIN_RATIO * 2) / bandCount;
-					return line.startXProperty().get() + bandWidth - bandWidth * propGapBarRatio.get();
-				}, getRoot().widthProperty(), line.startXProperty()));
+					return line.startXProperty().get() + bandWidth - bandWidth * propGapBarRatio.getProp().get();
+				}, getRoot().widthProperty(), line.startXProperty(), propGapBarRatio.getProp()));
 		
 		line.startYProperty().bind(Bindings.createDoubleBinding(
 				() -> {
@@ -120,7 +124,7 @@ public class SpectrumBarView extends AbstractSpectrumView {
 				}, getRoot().heightProperty(), trailValues.get(idx)));
 		line.endYProperty().bind(line.startYProperty());
 		line.visibleProperty().bind(trailValues.get(idx).greaterThan(MIN_DB_VALUE));
-		line.strokeProperty().bind(propTrailColor);
+		line.strokeProperty().bind(propTrailColor.getProp());
 		line.setStrokeWidth(2);
 		trails.add(line);
 	}

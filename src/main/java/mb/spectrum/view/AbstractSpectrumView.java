@@ -8,9 +8,7 @@ import java.util.List;
 
 import ddf.minim.analysis.FFT;
 import javafx.beans.binding.Bindings;
-import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
-import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.paint.Color;
@@ -18,6 +16,7 @@ import javafx.scene.shape.Line;
 import mb.spectrum.ConfigService;
 import mb.spectrum.UiUtils;
 import mb.spectrum.Utils;
+import mb.spectrum.prop.ConfigurableProperty;
 
 public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 	
@@ -34,7 +33,7 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 			ConfigService.getInstance().getProperty("mb.spectrum.sampling-rate"));
 	private static final int BUFFER_SIZE = Integer.valueOf(
 			ConfigService.getInstance().getProperty("mb.spectrum.buffer-size"));
-	private SimpleObjectProperty<Color> propGridColor;
+	private ConfigurableProperty<Color> propGridColor;
 	
 	private List<Line> vLines, hLines;
 	private List<Label> vLabels, hLabels;
@@ -48,15 +47,17 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 	protected int bandCount;
 	private double[] bandValuesDB, trailValuesDB;
 	private double[] trailOpValues;
+	
+	protected abstract String getBasePropertyKey();
 
 	@Override
-	public List<ObjectProperty<? extends Object>> getProperties() {
+	public List<ConfigurableProperty<? extends Object>> getProperties() {
 		return Arrays.asList(propGridColor);
 	}
 	
 	@Override
 	protected void initProperties() {
-		propGridColor = new SimpleObjectProperty<>(null, "Grid Color", Color.web("#fd4a11"));
+		propGridColor = UiUtils.createConfigurableColorProperty(getBasePropertyKey() + ".gridColor", "Grid Color", Color.web("#fd4a11"));
 		bandValues = new ArrayList<>();
 		trailValues = new ArrayList<>();
 	}
@@ -172,7 +173,7 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 		line.startYProperty().bind(getRoot().heightProperty().multiply(SCENE_MARGIN_RATIO));
 		line.endYProperty().bind(getRoot().heightProperty().subtract(
 				getRoot().heightProperty().multiply(SCENE_MARGIN_RATIO)));
-		line.strokeProperty().bind(propGridColor);
+		line.strokeProperty().bind(propGridColor.getProp());
 		line.getStrokeDashArray().addAll(2d);
 		line.setCache(true);
 		vLines.add(line);
@@ -183,7 +184,7 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 				line.startXProperty().subtract(
 						label.widthProperty().divide(2)));
 		label.layoutYProperty().bind(line.endYProperty().add(label.heightProperty().multiply(GRID_LABELS_MARGIN_RATIO)));
-		label.textFillProperty().bind(propGridColor);
+		label.textFillProperty().bind(propGridColor.getProp());
 		label.styleProperty().bind(Bindings.concat(
 				"-fx-font-size: ", Bindings.createDoubleBinding(
 						() -> (getRoot().widthProperty().get() * SCENE_MARGIN_RATIO) / 4,
@@ -208,7 +209,7 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 				}, 
 				getRoot().heightProperty()));
 		line.endYProperty().bind(line.startYProperty());
-		line.strokeProperty().bind(propGridColor);
+		line.strokeProperty().bind(propGridColor.getProp());
 		line.getStrokeDashArray().addAll(2d);
 		line.setCache(true);
 		hLines.add(line);
@@ -220,7 +221,7 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 						label.widthProperty().add(
 								label.widthProperty().multiply(GRID_LABELS_MARGIN_RATIO))));
 		label.layoutYProperty().bind(line.startYProperty().subtract(label.heightProperty().divide(2)));
-		label.textFillProperty().bind(propGridColor);
+		label.textFillProperty().bind(propGridColor.getProp());
 		label.styleProperty().bind(Bindings.concat(
 				"-fx-font-size: ", Bindings.createDoubleBinding(
 						() -> (getRoot().widthProperty().get() * SCENE_MARGIN_RATIO) / 4,

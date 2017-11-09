@@ -1,9 +1,7 @@
 package mb.spectrum.view;
 
-import static mb.spectrum.UiUtils.createConfigurableIntegerProperty;
 import static mb.spectrum.Utils.map;
 import static mb.spectrum.Utils.peakLevel;
-import static mb.spectrum.Utils.rmsLevel;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -11,17 +9,18 @@ import java.util.List;
 
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
-import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
+import mb.spectrum.UiUtils;
 import mb.spectrum.Utils;
+import mb.spectrum.prop.ConfigurableProperty;
 
 public class AnalogMeterView extends AbstractMixedChannelView {
 	
+	// TODO It will be cool to make these values configurable
 	private static final int MIN_DB_VALUE = -66; // = MIN_DBU_VALUE - MAX_DBU_VALUE = -42dBu
 	private static final int MIN_DBU_VALUE = -42; // dBu
 	private static final int MAX_DBU_VALUE = 24; // dBu
@@ -32,7 +31,7 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 	private static final double LINGER_STAY_FACTOR = 0.02;
 	private static final double LINGER_ACCELARATION_FACTOR = 1.15;
 	
-	private SimpleObjectProperty<Integer> propDivCount;
+	private ConfigurableProperty<Integer> propDivCount;
 	
 	private DoubleProperty currentDbRmsProp, currentDbPeakProp, lingerLevelDbProp;
 	
@@ -49,8 +48,8 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 		super.initProperties();
 		
 		// Configuration properties
-		propDivCount = createConfigurableIntegerProperty(
-				"analogMeterView.divisionsCount", "Divisions Count", 11);
+		propDivCount = UiUtils.createConfigurableIntegerProperty(
+				"analogMeterView.divisionsCount", "Divisions Count", 4, 20, 11, 1);
 		
 		// Operational properties
 		currentDbRmsProp = new SimpleDoubleProperty(MIN_DB_VALUE);
@@ -59,7 +58,7 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 	}
 
 	@Override
-	public List<ObjectProperty<? extends Object>> getProperties() {
+	public List<ConfigurableProperty<? extends Object>> getProperties() {
 		return Arrays.asList(propDivCount);
 	}
 	
@@ -68,7 +67,7 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 		List<Node> nodes = new ArrayList<>();
 		
 		// Grid
-		for (int i = 0; i < propDivCount.get(); i++) {
+		for (int i = 0; i < propDivCount.getProp().get(); i++) {
 			Line line = createDivisionLine(i);
 		    nodes.add(line);
 		    nodes.add(createLabel(i, line));
@@ -145,7 +144,7 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 	
 	private Line createDivisionLine(int idx) {
 		
-		double angleRad = map(idx, 0, propDivCount.get() - 1, MIN_DB_ANGLE_RAD, MAX_DB_ANGLE_RAD);
+		double angleRad = map(idx, 0, propDivCount.getProp().get() - 1, MIN_DB_ANGLE_RAD, MAX_DB_ANGLE_RAD);
 		
 	    Line line = new Line();
 	    line.startXProperty().bind(Bindings.createDoubleBinding(
@@ -181,7 +180,7 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 	
 	private Label createLabel(int idx, Line line) {
 	    Label label = new Label(String.valueOf(Math.round(
-	    		map(idx, 0, propDivCount.get() - 1, MIN_DBU_VALUE, MAX_DBU_VALUE))) + "dB");
+	    		map(idx, 0, propDivCount.getProp().get() - 1, MIN_DBU_VALUE, MAX_DBU_VALUE))) + "dB");
 	    label.layoutXProperty().bind(line.startXProperty().subtract(label.widthProperty().divide(2)));
 	    label.layoutYProperty().bind(line.startYProperty().subtract(label.heightProperty().multiply(1.5)));
 	    

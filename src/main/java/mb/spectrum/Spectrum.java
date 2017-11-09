@@ -1,7 +1,5 @@
 package mb.spectrum;
 
-import static mb.spectrum.UiUtils.isDouble;
-
 import java.util.List;
 
 import ddf.minim.AudioInput;
@@ -29,6 +27,7 @@ import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+import mb.spectrum.prop.ConfigurableProperty;
 import mb.spectrum.view.AnalogMeterView;
 import mb.spectrum.view.SpectrumAreaView;
 import mb.spectrum.view.SpectrumBarView;
@@ -159,35 +158,11 @@ public class Spectrum extends Application {
 			break;
 			
 		case UP:
-			
-			// TODO Find a way to set the increment per property
-			// TODO Extract into a separate method
-			if(propertiesVisible && 
-					currentPropertyNode.getContent() instanceof Label) {
-				Label label = (Label) currentPropertyNode.getContent();
-				String text = label.getText();
-				if(isDouble(text)) {
-					label.setText(String.valueOf(Double.valueOf(text) + 0.1));
-				} else {
-					label.setText(String.valueOf(Integer.valueOf(text) + 1));
-				}
-			}
+			changeCurrentPropertyValue(true);
 			break;
 			
 		case DOWN:
-			
-			// TODO Find a way to set the increment per property
-			// TODO Extract into a separate method
-			if(propertiesVisible && 
-					currentPropertyNode.getContent() instanceof Label) {
-				Label label = (Label) currentPropertyNode.getContent();
-				String text = label.getText();
-				if(isDouble(text)) {
-					label.setText(String.valueOf(Double.valueOf(text) - 0.1));
-				} else {
-					label.setText(String.valueOf(Integer.valueOf(text) - 1));
-				}
-			}
+			changeCurrentPropertyValue(false);
 			break;
 			
 		default:
@@ -302,21 +277,23 @@ public class Spectrum extends Application {
 	
 	@SuppressWarnings("unchecked")
 	private boolean showProperty(int idx) {
-		
-		// TODO Make sure all property types are handled
-		List<ObjectProperty<? extends Object>> props = currentView.getProperties();
+
+		// TODO Invert the binding or utilize double binding for components that cannot be yet controlled with just keys
+		List<ConfigurableProperty<? extends Object>> props = currentView.getProperties();
 		if(!props.isEmpty()) {
-			ObjectProperty<? extends Object> prop = props.get(idx);
+			ObjectProperty<? extends Object> prop = props.get(idx).getProp();
 			Control control = null;
 			if(prop.getValue() instanceof Color) {
 				ObjectProperty<Color> p = (ObjectProperty<Color>) prop;
-				ColorPicker picker = UiUtils.createColorPicker(p.getValue());
+				ColorPicker picker = UiUtils.createColorPropertyColorPicker(
+						p.getValue(), currentView.getRoot());
 				p.bind(picker.valueProperty());
 				control = picker;
 				
 			} else if(prop.getValue() instanceof Double) {
 				ObjectProperty<Double> p = (ObjectProperty<Double>) prop;
-				Label label = createPropertyLabel(String.valueOf(p.getValue()));
+				Label label = UiUtils.createNumberPropertyLabel(
+						String.valueOf(p.getValue()), currentView.getRoot());
 				label.textProperty().addListener((obs, oldVal, newVal) -> {
 					p.set(Double.valueOf(newVal));
 				});
@@ -324,7 +301,8 @@ public class Spectrum extends Application {
 				
 			} else if(prop.getValue() instanceof Integer) {
 				ObjectProperty<Integer> p = (ObjectProperty<Integer>) prop;
-				Label label = createPropertyLabel(String.valueOf(p.getValue()));
+				Label label = UiUtils.createNumberPropertyLabel(
+						String.valueOf(p.getValue()), currentView.getRoot());
 				label.textProperty().addListener((obs, oldVal, newVal) -> {
 					p.set(Integer.valueOf(newVal));
 				});
@@ -332,7 +310,8 @@ public class Spectrum extends Application {
 				
 			} else if(prop.getValue() instanceof Boolean) {
 				ObjectProperty<Boolean> p = (ObjectProperty<Boolean>) prop;
-				CheckBox box = UiUtils.createCheckBox(p.getValue(), prop.getName());
+				CheckBox box = UiUtils.createBooleanPropertyCheckBox(
+						p.getValue(), prop.getName(), currentView.getRoot());
 				p.bind(box.selectedProperty());
 				control = box;
 				
@@ -346,7 +325,7 @@ public class Spectrum extends Application {
 	}
 	
 	private void hideProperty(TitledPane node) {
-		currentView.getProperties().get(currentPropIdx).unbind();
+		currentView.getProperties().get(currentPropIdx).getProp().unbind();
 		UiUtils.createFadeOutTransition(node, 1000, new EventHandler<ActionEvent>() {
 			public void handle(ActionEvent event) {
 				currentView.getRoot().getChildren().remove(node);
@@ -388,14 +367,39 @@ public class Spectrum extends Application {
 		return pane;
 	}
 	
-	private Label createPropertyLabel(String text) {
-		Label label = new Label(text);
-		
-		// TODO Play a bit with the values below to find the best fit
-		label.styleProperty().bind(Bindings.concat(
-				"-fx-font-size: ", currentView.getRoot().widthProperty().divide(40), ";", 
-				"-fx-padding: ", currentView.getRoot().widthProperty().divide(50), ";"));
-		return label;
+	
+	// TODO The logic for changing the property values must be handled within the property classes, not here.
+	// When this is done, take care of proper unbinding when property controls are hidden/removed - hideProperty()
+	private void changeCurrentPropertyValue(boolean increment) {
+		if(propertiesVisible) {
+			ConfigurableProperty<? extends Object> prop = 
+					currentView.getProperties().get(currentPropIdx);
+			Object inc = prop.getIncrement();
+			if(inc instanceof Integer) {
+				
+				Label label = (Label) currentPropertyNode.getContent();
+				String text = label.getText();
+				if(increment) {
+					int val = Integer.valueOf(text) + (Integer) inc;
+					label.setText(String.valueOf(val));
+				} else {
+					int val = Integer.valueOf(text) - (Integer) inc;
+					label.setText(String.valueOf(val));
+				}
+				
+			} else if(inc instanceof Double) {
+				
+				Label label = (Label) currentPropertyNode.getContent();
+				String text = label.getText();
+				if(increment) {
+					double val = Double.valueOf(text) + (Double) inc;
+					label.setText(String.valueOf(val));
+				} else {
+					double val = Double.valueOf(text) - (Double) inc;
+					label.setText(String.valueOf(val));
+				}
+			}
+		}
 	}
 	
 	public static void main(String[] args) {

@@ -9,17 +9,22 @@ import java.util.List;
 import javafx.animation.FadeTransition;
 import javafx.animation.SequentialTransition;
 import javafx.animation.Transition;
-import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.binding.Bindings;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.Label;
+import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.util.Duration;
+import mb.spectrum.prop.ConfigurableBooleanProperty;
+import mb.spectrum.prop.ConfigurableColorProperty;
+import mb.spectrum.prop.ConfigurableDoubleProperty;
+import mb.spectrum.prop.ConfigurableIntegerProperty;
 
 public class UiUtils {
 	
@@ -90,14 +95,29 @@ public class UiUtils {
 //		return new Spinner<Integer>(new IntegerSpinnerValueFactory(min, max, initValue, step));
 //	}
 	
-	public static ColorPicker createColorPicker(Color color) {
-		return new ColorPicker(color);
+	public static ColorPicker createColorPropertyColorPicker(Color color, Pane parent) {
+		ColorPicker picker = new ColorPicker(color);
+		picker.styleProperty().bind(Bindings.concat(
+				"-fx-font-size: ", parent.widthProperty().divide(40), ";"));
+		return picker;
 	}
 	
-	public static CheckBox createCheckBox(Boolean value, String label) {
+	public static CheckBox createBooleanPropertyCheckBox(Boolean value, String label, Pane parent) {
 		CheckBox box = new CheckBox(label);
 		box.setSelected(value);
+		box.styleProperty().bind(Bindings.concat(
+				"-fx-font-size: ", parent.widthProperty().divide(40), ";"));
 		return box;
+	}
+	
+	public static Label createNumberPropertyLabel(String initValue, Pane parent) {
+		Label label = new Label(initValue);
+		
+		// TODO Play a bit with the values below to find the best fit
+		label.styleProperty().bind(Bindings.concat(
+				"-fx-font-size: ", parent.widthProperty().divide(40), ";", 
+				"-fx-padding: ", parent.widthProperty().divide(50), ";"));
+		return label;
 	}
 	
 	public static Line createThickRoundedLine(Color color) {
@@ -106,52 +126,57 @@ public class UiUtils {
 		line.setStrokeWidth(4);
 		line.setStrokeLineCap(StrokeLineCap.ROUND);
 		return line;
-		
 	}
 	
 	public static String colorToWeb(Color color) {
-		return MessageFormat.format("rgba({0}, {1}, {2}, {3})", 
+		return MessageFormat.format("rgba({0,number,#}, {1,number,#}, {2,number,#}, {3})", 
 				map(color.getRed(), 0, 1, 0, 255),
 				map(color.getGreen(), 0, 1, 0, 255),
 				map(color.getBlue(), 0, 1, 0, 255),
 				color.getOpacity());
 	}
 	
-	public static SimpleObjectProperty<Color> createConfigurableColorProperty(String key, String name, Color defaultValue) {
+	public static ConfigurableColorProperty createConfigurableColorProperty(String key, String name, Color defaultValue) {
 		ConfigService cs = ConfigService.getInstance();
-		SimpleObjectProperty<Color> prop = new SimpleObjectProperty<>(null, name, 
-				Color.web(cs.getOrCreateProperty(key, colorToWeb(defaultValue))));
-		prop.addListener((obs, oldVal, newVal) -> {
+		ConfigurableColorProperty prop = 
+				new ConfigurableColorProperty(name, null, null, 
+						Color.web(cs.getOrCreateProperty(key, colorToWeb(defaultValue))), null);
+		prop.getProp().addListener((obs, oldVal, newVal) -> {
 			cs.setProperty(key, colorToWeb(newVal));
 		});
 		return prop;
 	}
 	
-	public static SimpleObjectProperty<Double> createConfigurableDoubleProperty(String key, String name, Double defaultValue) {
+	public static ConfigurableDoubleProperty createConfigurableDoubleProperty(String key, String name, 
+			Double minValue, Double maxValue, Double defaultValue, Double increment) {
 		ConfigService cs = ConfigService.getInstance();
-		SimpleObjectProperty<Double> prop = new SimpleObjectProperty<>(null, name, 
-				Double.valueOf(cs.getOrCreateProperty(key, String.valueOf(defaultValue))));
-		prop.addListener((obs, oldVal, newVal) -> {
+		ConfigurableDoubleProperty prop = 
+				new ConfigurableDoubleProperty(name, minValue, maxValue, 
+						Double.valueOf(cs.getOrCreateProperty(key, String.valueOf(defaultValue))), increment);
+		prop.getProp().addListener((obs, oldVal, newVal) -> {
 			cs.setProperty(key, String.valueOf(newVal));
 		});
 		return prop;
 	}
 	
-	public static SimpleObjectProperty<Boolean> createConfigurableBooleanProperty(String key, String name, Boolean defaultValue) {
+	public static ConfigurableBooleanProperty createConfigurableBooleanProperty(String key, String name, Boolean defaultValue) {
 		ConfigService cs = ConfigService.getInstance();
-		SimpleObjectProperty<Boolean> prop = new SimpleObjectProperty<>(null, name, 
-				Boolean.valueOf(cs.getOrCreateProperty(key, String.valueOf(defaultValue))));
-		prop.addListener((obs, oldVal, newVal) -> {
+		ConfigurableBooleanProperty prop = 
+				new ConfigurableBooleanProperty(name, null, null, 
+						Boolean.valueOf(cs.getOrCreateProperty(key, String.valueOf(defaultValue))), null);
+		prop.getProp().addListener((obs, oldVal, newVal) -> {
 			cs.setProperty(key, String.valueOf(newVal));
 		});
 		return prop;
 	}
 	
-	public static SimpleObjectProperty<Integer> createConfigurableIntegerProperty(String key, String name, Integer defaultValue) {
+	public static ConfigurableIntegerProperty createConfigurableIntegerProperty(String key, String name, 
+			Integer minValue, Integer maxValue, Integer defaultValue, Integer increment) {
 		ConfigService cs = ConfigService.getInstance();
-		SimpleObjectProperty<Integer> prop = new SimpleObjectProperty<>(null, name, 
-				Integer.valueOf(cs.getOrCreateProperty(key, String.valueOf(defaultValue))));
-		prop.addListener((obs, oldVal, newVal) -> {
+		ConfigurableIntegerProperty prop = 
+				new ConfigurableIntegerProperty(name, minValue, maxValue, 
+						Integer.valueOf(cs.getOrCreateProperty(key, String.valueOf(defaultValue))), increment);
+		prop.getProp().addListener((obs, oldVal, newVal) -> {
 			cs.setProperty(key, String.valueOf(newVal));
 		});
 		return prop;
