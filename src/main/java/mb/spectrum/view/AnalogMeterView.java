@@ -12,26 +12,41 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
+import javafx.scene.effect.Effect;
+import javafx.scene.effect.Light;
+import javafx.scene.effect.Lighting;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
+import javafx.scene.shape.Rectangle;
 import mb.spectrum.UiUtils;
 import mb.spectrum.Utils;
+import mb.spectrum.prop.ConfigurableColorProperty;
+import mb.spectrum.prop.ConfigurableDoubleProperty;
+import mb.spectrum.prop.ConfigurableIntegerProperty;
 import mb.spectrum.prop.ConfigurableProperty;
 
 public class AnalogMeterView extends AbstractMixedChannelView {
 	
 	// TODO It will be cool to make these values configurable
-	private static final int MIN_DB_VALUE = -66; // = MIN_DBU_VALUE - MAX_DBU_VALUE = -42dBu
+	private static final int MIN_DB_VALUE = -66; // = MIN_DBU_VALUE - MAX_DBU_VALUE = -66dBu
 	private static final int MIN_DBU_VALUE = -42; // dBu
 	private static final int MAX_DBU_VALUE = 24; // dBu
 	private static final double MIN_DB_ANGLE_RAD = 2.22; // Range is 3.14 to 0
 	private static final double MAX_DB_ANGLE_RAD = 0.92; // Range is 3.14 to 0
+	private static final double RADIUS_TO_WIDTH_RATIO = 1.5;
 	private static final double TOP_MARGIN_RATIO = 0.15;
 	private static final double DIV_LENGTH_RATIO = 0.02;
-	private static final double LINGER_STAY_FACTOR = 0.02;
+	private static final double LINGER_STAY_FACTOR = 0.05;
 	private static final double LINGER_ACCELARATION_FACTOR = 1.15;
+	private static final double BACK_CIRCLE_RADIUS_TO_SCENE_WIDTH_RATIO = 0.05;
+	private static final double ELEMENT_WIDTH_TO_CIRCLE_RADIUS_RATIO = 2.5;
 	
-	private ConfigurableProperty<Integer> propDivCount;
+	private ConfigurableIntegerProperty propDivCount, propLightXPosition, propLightYPosition, propSensitivity;
+	private ConfigurableColorProperty propBackgroundColor, propLightColor, 
+		propIndicatorColor, propNormalLevelDigitsColor, propHighLevelDigitsColor;
+	private ConfigurableDoubleProperty propLightSurfaceScale, propLightDiffuseConstant, 
+		propLightSpecularConstant, propLightSpecularExponent, propLightZPosition;
 	
 	private DoubleProperty currentDbRmsProp, currentDbPeakProp, lingerLevelDbProp;
 	
@@ -47,9 +62,37 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 	protected void initProperties() {
 		super.initProperties();
 		
+		final String keyPrefix = "analogMeterView.";
+		
 		// Configuration properties
 		propDivCount = UiUtils.createConfigurableIntegerProperty(
-				"analogMeterView.divisionsCount", "Divisions Count", 4, 20, 11, 1);
+				keyPrefix + "divisionsCount", "Divisions Count", 4, 20, 11, 1);
+		propBackgroundColor = UiUtils.createConfigurableColorProperty(
+				keyPrefix + "backgroundColor", "Background Color", Color.ANTIQUEWHITE);
+		propLightColor = UiUtils.createConfigurableColorProperty(
+				keyPrefix + "lightColor", "Light Color", Color.ANTIQUEWHITE);
+		propIndicatorColor = UiUtils.createConfigurableColorProperty(
+				keyPrefix + "indicatorColor", "Indicator Color", Color.BLACK);
+		propNormalLevelDigitsColor = UiUtils.createConfigurableColorProperty(
+				keyPrefix + "normLevelDigitsColor", "Normal Level Digits Color", Color.BLACK);
+		propHighLevelDigitsColor = UiUtils.createConfigurableColorProperty(
+				keyPrefix + "highLevelDigitsColor", "High Level Digits Color", Color.RED);
+		propLightSurfaceScale = UiUtils.createConfigurableDoubleProperty(
+				keyPrefix + "lightSurfaceScale", "Light Surface Scale", 0.0, 10.0, 0.5, 0.5);
+		propLightDiffuseConstant = UiUtils.createConfigurableDoubleProperty(
+				keyPrefix + "lightDiffuseConstant", "Light Diffuse Constant", 0.0, 2.0, 1.0, 0.1);
+		propLightSpecularConstant = UiUtils.createConfigurableDoubleProperty(
+				keyPrefix + "lightSpecularConstant", "Light Specular Constant", 0.0, 2.0, 0.3, 0.1);
+		propLightSpecularExponent = UiUtils.createConfigurableDoubleProperty(
+				keyPrefix + "lightSpecularExponent", "Light Specular Exponent", 0.0, 40.0, 20.0, 2.0);
+		propLightXPosition = UiUtils.createConfigurableIntegerProperty(
+				keyPrefix + "lightXPosition", "Light X Position", 1, 4, 2, 1);
+		propLightYPosition = UiUtils.createConfigurableIntegerProperty(
+				keyPrefix + "lightYPosition", "Light Y Position", 1, 20, 16, 1);
+		propLightZPosition = UiUtils.createConfigurableDoubleProperty(
+				keyPrefix + "lightZPosition", "Light Z Position", 1.0, 10.0, 2.8, 0.2);
+		propSensitivity = UiUtils.createConfigurableIntegerProperty(
+				keyPrefix + "sensitivity", "Sensitivity", 1, 10, 3, 1);
 		
 		// Operational properties
 		currentDbRmsProp = new SimpleDoubleProperty(MIN_DB_VALUE);
@@ -59,44 +102,65 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 
 	@Override
 	public List<ConfigurableProperty<? extends Object>> getProperties() {
-		return Arrays.asList(propDivCount);
+		return Arrays.asList(propDivCount, propBackgroundColor, propLightColor, 
+				propIndicatorColor, propNormalLevelDigitsColor, propHighLevelDigitsColor, 
+				propLightSurfaceScale, propLightDiffuseConstant, propLightSpecularConstant, 
+				propLightSpecularExponent, propLightXPosition, propLightYPosition, propLightZPosition,
+				propSensitivity);
 	}
 	
 	@Override
 	protected List<Node> collectNodes() {
 		List<Node> nodes = new ArrayList<>();
 		
-		// Grid
+		// Lighting
+		Lighting lighting = createLighting();
+		
+		// Background
+		nodes.add(createBackground(lighting));
+		
+		// Divisions and labels
 		for (int i = 0; i < propDivCount.getProp().get(); i++) {
-			Line line = createDivisionLine(i);
+			Line line = createDivisionLine(i, lighting);
 		    nodes.add(line);
-		    nodes.add(createLabel(i, line));
+		    nodes.add(createLabel(i, line, lighting));
 		}
 		
-		// Indicator
-		Line line = new Line();
-		line.startXProperty().bind(Bindings.createDoubleBinding(
-				() -> {
-					double angleRad = map(lingerLevelDbProp.get(), MIN_DB_VALUE, 0, 
-							MIN_DB_ANGLE_RAD, MAX_DB_ANGLE_RAD);
-					double r = getRoot().widthProperty().get() / 2;
-	    			return r + Math.cos(angleRad) * r;
-				}, lingerLevelDbProp, getRoot().widthProperty()));
-	    line.startYProperty().bind(Bindings.createDoubleBinding(
-	    		() -> {
-	    			double angleRad = map(lingerLevelDbProp.get(), MIN_DB_VALUE, 0, 
-							MIN_DB_ANGLE_RAD, MAX_DB_ANGLE_RAD);
-	    			double r = getRoot().widthProperty().get() / 2;
-	    	        double topMagin = getRoot().heightProperty().get() * TOP_MARGIN_RATIO;
-	    	        return r + topMagin - Math.sin(angleRad) * r;
-	    		}, lingerLevelDbProp, getRoot().widthProperty(), getRoot().heightProperty()));
-		line.endXProperty().bind(getRoot().widthProperty().divide(2));
-		line.endYProperty().bind(getRoot().heightProperty());
+		// Decorative elements
+		Label centerLabel = new Label("Analog Meter");
+		centerLabel.textFillProperty().bind(propNormalLevelDigitsColor.getProp());
+		centerLabel.layoutXProperty().bind(getRoot().widthProperty().divide(2).subtract(
+				centerLabel.widthProperty().divide(2)));
+		centerLabel.layoutYProperty().bind(getRoot().heightProperty().divide(2).subtract(centerLabel.heightProperty().divide(2)));
+		centerLabel.setCache(true);
+		centerLabel.styleProperty().bind(Bindings.concat(
+				"-fx-font-size: ", Bindings.createDoubleBinding(
+						() -> (getRoot().widthProperty().get() * SCENE_MARGIN_RATIO) / 1.5,
+						getRoot().widthProperty()),
+				"; -fx-font-family: Trattatello"));
+		centerLabel.setEffect(lighting);
+		nodes.add(centerLabel);
 		
-	    // TODO Property
-	    line.setStroke(Color.WHITE);
-	    
-	    nodes.add(line);
+		// Peak
+		Circle peak = new Circle();
+		peak.centerXProperty().bind(getRoot().widthProperty().subtract(getRoot().widthProperty().divide(8)));
+		peak.centerYProperty().bind(getRoot().heightProperty().divide(8));
+		peak.radiusProperty().bind(getRoot().widthProperty().multiply(0.015));
+		peak.setFill(Color.RED);
+		peak.fillProperty().bind(Bindings.createObjectBinding(
+				() -> {
+					Color level;
+					if(currentDbPeakProp.get() >= 0) {
+						level = Color.RED;
+					} else {
+						level = Color.DARKRED;
+					}
+					return level;
+				}, currentDbPeakProp));
+		nodes.add(peak);
+		
+		// Indicator
+		createIndicator(nodes);
 	    
 		return nodes;
 	}
@@ -129,7 +193,7 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 			*/
 			
 			// TODO Accelarate, don't increase constantly
-			lingerLevelDb += 1.8;
+			lingerLevelDb += propSensitivity.getProp().get();
 			lingerOpValDb = LINGER_STAY_FACTOR;
 		} else {
 			lingerLevelDb = lingerLevelDb - lingerOpValDb;
@@ -142,55 +206,159 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 		lingerLevelDbProp.set(lingerLevelDb);
 	}
 	
-	private Line createDivisionLine(int idx) {
+	private void createIndicator(List<Node> nodes) {
+		
+		Line indicator = new Line();
+		indicator.startXProperty().bind(Bindings.createDoubleBinding(
+				() -> {
+					double angleRad = map(lingerLevelDbProp.get(), MIN_DB_VALUE, 0, 
+							MIN_DB_ANGLE_RAD, MAX_DB_ANGLE_RAD);
+					double radius = getRoot().widthProperty().get() / RADIUS_TO_WIDTH_RATIO;
+					double sceneCenterX = getRoot().widthProperty().get() / 2;
+	    			return sceneCenterX + Math.cos(angleRad) * radius;
+				}, lingerLevelDbProp, getRoot().widthProperty()));
+	    indicator.startYProperty().bind(Bindings.createDoubleBinding(
+	    		() -> {
+	    			double angleRad = map(lingerLevelDbProp.get(), MIN_DB_VALUE, 0, 
+							MIN_DB_ANGLE_RAD, MAX_DB_ANGLE_RAD);
+	    			double radius = getRoot().widthProperty().get() / RADIUS_TO_WIDTH_RATIO;
+	    	        double topMagin = getRoot().heightProperty().get() * TOP_MARGIN_RATIO;
+	    	        return radius + topMagin - Math.sin(angleRad) * radius;
+	    		}, lingerLevelDbProp, getRoot().widthProperty(), getRoot().heightProperty()));
+		indicator.endXProperty().bind(getRoot().widthProperty().divide(2));
+		indicator.endYProperty().bind(getRoot().heightProperty());
+		indicator.strokeProperty().bind(propIndicatorColor.getProp());
+		indicator.setStrokeWidth(2); // TODO Prop / Should scale
+		
+		Circle backCircle = new Circle();
+		backCircle.centerXProperty().bind(getRoot().widthProperty().divide(2));
+		backCircle.centerYProperty().bind(getRoot().heightProperty());
+		backCircle.radiusProperty().bind(getRoot().widthProperty().multiply(BACK_CIRCLE_RADIUS_TO_SCENE_WIDTH_RATIO));
+		backCircle.setFill(Color.DARKGRAY); // TODO Prop
+		backCircle.setStroke(Color.DIMGRAY); // TODO Should be derived from the fill
+		backCircle.setStrokeWidth(3); // TODO Should scale
+		backCircle.setCache(true);
+		
+		Rectangle frontElement = new Rectangle();
+		frontElement.widthProperty().bind(backCircle.radiusProperty().multiply(ELEMENT_WIDTH_TO_CIRCLE_RADIUS_RATIO));
+		frontElement.heightProperty().bind(frontElement.widthProperty().divide(4));
+		frontElement.xProperty().bind(backCircle.centerXProperty().subtract(frontElement.widthProperty().divide(2)));
+		frontElement.yProperty().bind(backCircle.centerYProperty().subtract(frontElement.heightProperty().divide(2)));
+		frontElement.arcHeightProperty().bind(frontElement.widthProperty().divide(8));
+		frontElement.arcWidthProperty().bind(frontElement.widthProperty().divide(8));
+		frontElement.rotateProperty().bind(Bindings.createDoubleBinding(
+				() -> {
+					double angleRad = map(lingerLevelDbProp.get(), MIN_DB_VALUE, 0, 
+							MIN_DB_ANGLE_RAD, MAX_DB_ANGLE_RAD);
+					return angleRad * -57.295779513 - 90;
+				}, lingerLevelDbProp));
+		
+		frontElement.setFill(Color.SANDYBROWN); // TODO Prop
+		frontElement.setStroke(Color.SADDLEBROWN); // TODO Should be derived from the fill
+		frontElement.strokeWidthProperty().bind(backCircle.strokeWidthProperty());
+		
+		nodes.addAll(Arrays.asList(backCircle, frontElement, indicator));
+	}
+	
+	private Lighting createLighting() {
+		Light.Point light = new Light.Point();
+		light.xProperty().bind(getRoot().widthProperty().divide(
+				Bindings.createDoubleBinding(() -> Double.valueOf(propLightXPosition.getProp().get()), 
+						propLightXPosition.getProp())));
+		light.yProperty().bind(getRoot().heightProperty().subtract(getRoot().heightProperty().divide(
+				Bindings.createDoubleBinding(() -> Double.valueOf(propLightYPosition.getProp().get()), 
+						propLightYPosition.getProp()))));
+		light.zProperty().bind(getRoot().widthProperty().divide(
+				Bindings.createDoubleBinding(() -> Double.valueOf(propLightZPosition.getProp().get()), 
+						propLightZPosition.getProp())));
+		light.colorProperty().bind(propLightColor.getProp());
+
+		Lighting lighting = new Lighting();
+		lighting.setLight(light);
+		lighting.surfaceScaleProperty().bind(propLightSurfaceScale.getProp());
+		lighting.diffuseConstantProperty().bind(propLightDiffuseConstant.getProp());
+		lighting.specularConstantProperty().bind(propLightSpecularConstant.getProp());
+		lighting.specularExponentProperty().bind(propLightSpecularExponent.getProp());
+		return lighting;
+	}
+	
+	private Rectangle createBackground(Lighting lighting) {
+		Rectangle background = new Rectangle();
+		background.setX(0);
+		background.setY(0);
+		background.widthProperty().bind(getRoot().widthProperty());
+		background.heightProperty().bind(getRoot().heightProperty());
+		background.fillProperty().bind(propBackgroundColor.getProp());
+		background.setCache(true); // If this is not set there are visible artifacts from the lighting effect and moving objects on top of it
+		background.setEffect(lighting);
+		return background;
+	}
+	
+	private Line createDivisionLine(int idx, Effect effect) {
 		
 		double angleRad = map(idx, 0, propDivCount.getProp().get() - 1, MIN_DB_ANGLE_RAD, MAX_DB_ANGLE_RAD);
 		
 	    Line line = new Line();
 	    line.startXProperty().bind(Bindings.createDoubleBinding(
 	    		() -> {
-	    			double r = getRoot().widthProperty().get() / 2;
-	    			return r + Math.cos(angleRad) * r;
+	    			double radius = getRoot().widthProperty().get() / RADIUS_TO_WIDTH_RATIO;
+	    			double sceneCenterX = getRoot().widthProperty().get() / 2;
+	    			return sceneCenterX + Math.cos(angleRad) * radius;
 	    		}, getRoot().widthProperty()));
 	    line.startYProperty().bind(Bindings.createDoubleBinding(
 	    		() -> {
-	    			double r = getRoot().widthProperty().get() / 2;
+	    			double radius = getRoot().widthProperty().get() / RADIUS_TO_WIDTH_RATIO;
 	    	        double topMagin = getRoot().heightProperty().get() * TOP_MARGIN_RATIO;
-	    	        return r + topMagin - Math.sin(angleRad) * r;
+	    	        return radius + topMagin - Math.sin(angleRad) * radius;
 	    		}, getRoot().widthProperty(), getRoot().heightProperty()));
 	    line.endXProperty().bind(Bindings.createDoubleBinding(
 	    		() -> {
-	    			double r = getRoot().widthProperty().get() / 2;
+	    			double radius = getRoot().widthProperty().get() / RADIUS_TO_WIDTH_RATIO;
 	    			double len = getRoot().heightProperty().get() * DIV_LENGTH_RATIO;
-	    	        return r + Math.cos(angleRad) * (r - len);
+	    			double sceneCenterX = getRoot().widthProperty().get() / 2;
+	    	        return sceneCenterX + Math.cos(angleRad) * (radius - len);
 	    		}, getRoot().widthProperty()));
 	    line.endYProperty().bind(Bindings.createDoubleBinding(
 	    		() -> {
-	    			double r = getRoot().widthProperty().get() / 2;
+	    			double radius = getRoot().widthProperty().get() / RADIUS_TO_WIDTH_RATIO;
 	    	        double topMagin = getRoot().heightProperty().get() * TOP_MARGIN_RATIO;
 	    	        double len = getRoot().heightProperty().get() * DIV_LENGTH_RATIO;
-	    	        return r + topMagin - Math.sin(angleRad) * (r - len);
+	    	        return radius + topMagin - Math.sin(angleRad) * (radius - len);
 	    		}, getRoot().widthProperty(), getRoot().heightProperty()));
+	    line.setCache(true);
 	    
-	    // TODO Property
-	    line.setStroke(Color.WHITE);
+		long dbValue = Math.round(map(idx, 0, propDivCount.getProp().get() - 1, MIN_DBU_VALUE, MAX_DBU_VALUE));
+	    if(dbValue < 0) {
+	    	line.strokeProperty().bind(propNormalLevelDigitsColor.getProp());
+	    } else {
+	    	line.strokeProperty().bind(propHighLevelDigitsColor.getProp());
+	    }
+	    
+	    line.setStrokeWidth(2); // TODO Should scale
+	    line.setEffect(effect);
 	    
 	    return line;
 	}
 	
-	private Label createLabel(int idx, Line line) {
-	    Label label = new Label(String.valueOf(Math.round(
-	    		map(idx, 0, propDivCount.getProp().get() - 1, MIN_DBU_VALUE, MAX_DBU_VALUE))) + "dB");
+	private Label createLabel(int idx, Line line, Effect effect) {
+		long dbValue = Math.round(map(idx, 0, propDivCount.getProp().get() - 1, MIN_DBU_VALUE, MAX_DBU_VALUE));
+		
+	    Label label = new Label(String.valueOf(dbValue) + "dB");
 	    label.layoutXProperty().bind(line.startXProperty().subtract(label.widthProperty().divide(2)));
 	    label.layoutYProperty().bind(line.startYProperty().subtract(label.heightProperty().multiply(1.5)));
 	    
-	    // TODO Property
-	    label.setTextFill(Color.WHITE);
+	    if(dbValue < 0) {
+	    	label.textFillProperty().bind(propNormalLevelDigitsColor.getProp());
+	    } else {
+	    	label.textFillProperty().bind(propHighLevelDigitsColor.getProp());
+	    }
 	    
 		label.styleProperty().bind(Bindings.concat(
 				"-fx-font-size: ", Bindings.createDoubleBinding(
 						() -> (getRoot().widthProperty().get() * SCENE_MARGIN_RATIO) / 2.5,
 						getRoot().widthProperty())));
+		label.setCache(true);
+		label.setEffect(effect);
 	    return label;
 	}
 

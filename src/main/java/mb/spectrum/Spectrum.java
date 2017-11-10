@@ -44,7 +44,7 @@ public class Spectrum extends Application {
 	private static final int BUFFER_SIZE = 2048;
 	
 	private static final int INIT_SCENE_WIDTH = 800;
-	private static final int INIT_SCENE_HEIGHT = 600;
+	private static final int INIT_SCENE_HEIGHT = 480;
 	private static final String VIEW_LABEL_COLOR = "#00FFFF";
 	private static final double VIEW_LABEL_FADE_IN_MS = 1000;
 	private static final double VIEW_LABEL_LINGER_MS = 1000;
@@ -115,7 +115,7 @@ public class Spectrum extends Application {
         		INIT_SCENE_WIDTH, INIT_SCENE_HEIGHT, false, SceneAntialiasing.DISABLED));
         currentView.onShow();
         
-        stage.setMaximized(true);
+        //stage.setMaximized(true);
         stage.show();
         
         // Event handlers
