@@ -38,10 +38,11 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 	private static final int MIN_DB_VALUE = -24; // = MIN_DBU_VALUE - MAX_DBU_VALUE = -66dBu
 	private static final int MAX_DBU_VALUE = 6; // dBu
 	private static final int MIN_DBU_VALUE = MIN_DB_VALUE + MAX_DBU_VALUE; // dBu
-	private static final double MIN_DB_ANGLE_RAD = 2.22; // Range is 3.14 to 0
-	private static final double MAX_DB_ANGLE_RAD = 0.92; // Range is 3.14 to 0
-	private static final double RADIUS_TO_WIDTH_RATIO = 1.5;
-	private static final double TOP_MARGIN_RATIO = 0.15;
+	
+	private static final int MIN_DB_ANGLE_DEGREES = 130;
+	private static final int MAX_DB_ANGLE_DEGREES = 50;
+	private static final double MIN_DB_ANGLE_RAD = Math.toRadians(MIN_DB_ANGLE_DEGREES);
+	private static final double MAX_DB_ANGLE_RAD = Math.toRadians(MAX_DB_ANGLE_DEGREES);
 	private static final double DIV_LENGTH_RATIO = 0.02;
 	private static final double LINGER_STAY_FACTOR = 0.05;
 	private static final double LINGER_ACCELARATION_FACTOR = 1.15;
@@ -55,7 +56,7 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 		propLightSpecularConstant, propLightSpecularExponent, propLightZPosition;
 	private ConfigurableBooleanProperty propVisualEnableExtras;
 	
-	private DoubleProperty currentDbRmsProp, currentDbPeakProp, lingerLevelDbProp;
+	private DoubleProperty currentDbRmsProp, currentDbPeakProp, lingerLevelDbProp, radiusProp, centerXProp, centerYProp, currentLevelRadProp;
 	
 	private double currentDbRms, currentDbPeak;
 	private double lingerLevelDb = MIN_DB_VALUE, lingerOpValDb = LINGER_STAY_FACTOR;
@@ -108,6 +109,25 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 		currentDbRmsProp = new SimpleDoubleProperty(MIN_DB_VALUE);
 		currentDbPeakProp = new SimpleDoubleProperty(MIN_DB_VALUE);
 		lingerLevelDbProp = new SimpleDoubleProperty(MIN_DB_VALUE);
+		
+		radiusProp = new SimpleDoubleProperty();
+		radiusProp.bind(Bindings.createDoubleBinding(
+				() -> {
+					return getRoot().widthProperty().get() / 2;
+				}, getRoot().widthProperty()));
+		
+		centerXProp = new SimpleDoubleProperty();
+		centerXProp.bind(getRoot().widthProperty().divide(2));
+		
+		centerYProp = new SimpleDoubleProperty();
+		centerYProp.bind(getRoot().heightProperty().divide(2));
+		
+		currentLevelRadProp = new SimpleDoubleProperty();
+		currentLevelRadProp.bind(Bindings.createDoubleBinding(
+				() -> {
+					return map(lingerLevelDbProp.get(), MIN_DB_VALUE, 0, 
+							MIN_DB_ANGLE_RAD, MAX_DB_ANGLE_RAD);
+				}, lingerLevelDbProp));
 	}
 
 	@Override
@@ -171,51 +191,44 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 		currentDbRmsProp.set(currentDbRms);
 		currentDbPeakProp.set(currentDbPeak);
 		
-		// Update linger levels
-		/*
-		lingerLevelDb = lingerLevelDb - lingerOpValDb;
-		lingerOpValDb = lingerOpValDb * LINGER_ACCELARATION_FACTOR;
-		 */
-		
-		if(currentDbRms > lingerLevelDb) {
+		// Update indicator levels		
+		if(lingerLevelDb < currentDbRms) {
 			
-			/*
-			lingerLevelDb = currentDbRms;
-			*/
-			
-			// TODO Accelarate, don't increase constantly
+			// TODO Accelerate, don't increase linearly
 			lingerLevelDb += propSensitivity.getProp().get();
 			lingerOpValDb = LINGER_STAY_FACTOR;
+			
+			if(lingerLevelDb > 0) {
+				lingerLevelDb = 0;
+			}
+			
 		} else {
 			lingerLevelDb = lingerLevelDb - lingerOpValDb;
 			lingerOpValDb = lingerOpValDb * LINGER_ACCELARATION_FACTOR;
+			
+			if(lingerLevelDb < MIN_DB_VALUE) {
+				lingerLevelDb = MIN_DB_VALUE;
+			}
 		}
 		
-		if(lingerLevelDb < MIN_DB_VALUE) {
-			lingerLevelDb = MIN_DB_VALUE;
-		}
 		lingerLevelDbProp.set(lingerLevelDb);
 	}
 	
 	private void createIndicator(List<Node> nodes) {
 		
 		Line indicator = new Line();
+		
 		indicator.startXProperty().bind(Bindings.createDoubleBinding(
 				() -> {
-					double angleRad = map(lingerLevelDbProp.get(), MIN_DB_VALUE, 0, 
-							MIN_DB_ANGLE_RAD, MAX_DB_ANGLE_RAD);
-					double radius = getRoot().widthProperty().get() / RADIUS_TO_WIDTH_RATIO;
-					double sceneCenterX = getRoot().widthProperty().get() / 2;
-	    			return sceneCenterX + Math.cos(angleRad) * radius;
-				}, lingerLevelDbProp, getRoot().widthProperty()));
+	    			return centerXProp.get() + Math.cos(currentLevelRadProp.get()) * radiusProp.get();
+				}, currentLevelRadProp, radiusProp, centerXProp));
+		
 	    indicator.startYProperty().bind(Bindings.createDoubleBinding(
 	    		() -> {
-	    			double angleRad = map(lingerLevelDbProp.get(), MIN_DB_VALUE, 0, 
-							MIN_DB_ANGLE_RAD, MAX_DB_ANGLE_RAD);
-	    			double radius = getRoot().widthProperty().get() / RADIUS_TO_WIDTH_RATIO;
-	    	        double topMagin = getRoot().heightProperty().get() * TOP_MARGIN_RATIO;
-	    	        return radius + topMagin - Math.sin(angleRad) * radius;
-	    		}, lingerLevelDbProp, getRoot().widthProperty(), getRoot().heightProperty()));
+	    			return getRoot().heightProperty().get() - Math.sin(currentLevelRadProp.get()) * radiusProp.get();
+	    		}, currentLevelRadProp,  radiusProp, getRoot().heightProperty()));
+		
+		
 		indicator.endXProperty().bind(getRoot().widthProperty().divide(2));
 		indicator.endYProperty().bind(getRoot().heightProperty());
 		indicator.strokeProperty().bind(propIndicatorColor.getProp());
@@ -239,9 +252,10 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 		frontElement.arcWidthProperty().bind(frontElement.widthProperty().divide(8));
 		frontElement.rotateProperty().bind(Bindings.createDoubleBinding(
 				() -> {
-					double angleRad = map(lingerLevelDbProp.get(), MIN_DB_VALUE, 0, 
-							MIN_DB_ANGLE_RAD, MAX_DB_ANGLE_RAD);
-					return angleRad * -57.295779513 - 90;
+					double angleDeg = map(lingerLevelDbProp.get(), MIN_DB_VALUE, 0, 
+							MIN_DB_ANGLE_DEGREES, MAX_DB_ANGLE_DEGREES);
+					return angleDeg * -1 - 90;
+				
 				}, lingerLevelDbProp));
 		
 		frontElement.setFill(Color.SANDYBROWN); // TODO Prop
@@ -262,7 +276,7 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 		peak.centerXProperty().bind(getRoot().widthProperty().subtract(getRoot().widthProperty().divide(8)));
 		peak.centerYProperty().bind(getRoot().heightProperty().divide(8));
 		peak.radiusProperty().bind(getRoot().widthProperty().multiply(0.015));
-		peak.fillProperty().bind(Bindings.createObjectBinding(
+		peak.fillProperty().bind(Bindings.createObjectBinding( // TODO Prop
 				() -> {
 					Color level;
 					if(currentDbPeakProp.get() >= 0) {
@@ -277,7 +291,7 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 		Label peakLabel = new Label("Peak");
 		peakLabel.textFillProperty().bind(propNormalLevelDigitsColor.getProp());
 		peakLabel.layoutXProperty().bind(peak.centerXProperty().add(peak.radiusProperty()));
-		peakLabel.layoutYProperty().bind(peak.centerYProperty().subtract(peak.radiusProperty()));
+		peakLabel.layoutYProperty().bind(peak.centerYProperty());
 		peakLabel.setCache(true);
 		peakLabel.styleProperty().bind(Bindings.concat(
 				"-fx-font-size: ", Bindings.createDoubleBinding(
@@ -354,8 +368,10 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 	private Line createDivisionLine(int idx, Effect effect) {
 		
 		double angleRad = map(idx, 0, propDivCount.getProp().get() - 1, MIN_DB_ANGLE_RAD, MAX_DB_ANGLE_RAD);
-		
+
 	    Line line = new Line();
+	    
+	    /*
 	    line.startXProperty().bind(Bindings.createDoubleBinding(
 	    		() -> {
 	    			double radius = getRoot().widthProperty().get() / RADIUS_TO_WIDTH_RATIO;
@@ -382,6 +398,27 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 	    	        double len = getRoot().heightProperty().get() * DIV_LENGTH_RATIO;
 	    	        return radius + topMagin - Math.sin(angleRad) * (radius - len);
 	    		}, getRoot().widthProperty(), getRoot().heightProperty()));
+	    line.setCache(true);
+	    */
+	    
+	    line.startXProperty().bind(Bindings.createDoubleBinding(
+	    		() -> {
+	    			return centerXProp.get() + Math.cos(angleRad) * radiusProp.get();
+	    		}, radiusProp, centerXProp));
+	    line.startYProperty().bind(Bindings.createDoubleBinding(
+	    		() -> {
+	    	        return getRoot().heightProperty().get() - Math.sin(angleRad) * radiusProp.get();
+	    		}, radiusProp, getRoot().heightProperty()));
+	    line.endXProperty().bind(Bindings.createDoubleBinding(
+	    		() -> {
+	    			double len = getRoot().heightProperty().get() * DIV_LENGTH_RATIO;
+	    	        return centerXProp.get() + Math.cos(angleRad) * (radiusProp.get() - len);
+	    		}, radiusProp, centerXProp, getRoot().heightProperty()));
+	    line.endYProperty().bind(Bindings.createDoubleBinding(
+	    		() -> {
+	    	        double len = getRoot().heightProperty().get() * DIV_LENGTH_RATIO;
+	    	        return getRoot().heightProperty().get() - Math.sin(angleRad) * (radiusProp.get() - len);
+	    		}, radiusProp, getRoot().heightProperty()));
 	    line.setCache(true);
 	    
 		long dbValue = Math.round(map(idx, 0, propDivCount.getProp().get() - 1, MIN_DBU_VALUE, MAX_DBU_VALUE));
