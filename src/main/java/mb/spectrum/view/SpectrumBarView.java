@@ -40,7 +40,7 @@ public class SpectrumBarView extends AbstractSpectrumView {
 		propBarColor1 = UiUtils.createConfigurableColorProperty(
 				getBasePropertyKey() + ".barColor1", "Bar Color 1", Color.web("#7CFC00", 0.75));
 		propBarColor2 = UiUtils.createConfigurableColorProperty(
-				getBasePropertyKey() + ".barColor1", "Bar Color 2", Color.web("#7CFC00", 0.25));
+				getBasePropertyKey() + ".barColor2", "Bar Color 2", Color.web("#7CFC00", 0.25));
 		propTrailColor = UiUtils.createConfigurableColorProperty(
 				getBasePropertyKey() + ".trailColor", "Trail Color", Color.LAWNGREEN);
 		propGapBarRatio = UiUtils.createConfigurableDoubleProperty(
