@@ -9,6 +9,7 @@ import ddf.minim.javasound.JSMinim;
 import javafx.animation.AnimationTimer;
 import javafx.animation.Transition;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ObjectProperty;
 import javafx.event.ActionEvent;
@@ -18,6 +19,7 @@ import javafx.scene.Scene;
 import javafx.scene.SceneAntialiasing;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
@@ -128,6 +130,11 @@ public class Spectrum extends Application {
 				onKey(event);
 			}
 		});
+        
+        stage.getScene().getAccelerators().put(
+        		KeyCombination.keyCombination("CTRL+C"),
+	        	() -> Platform.exit()
+        	);
 	}
 	
 	private void startFrameListener() {
@@ -172,6 +179,11 @@ public class Spectrum extends Application {
 		case DOWN:
 			changeCurrentPropertyValue(false);
 			break;
+			
+		case C:
+			if(event.isControlDown()) {
+				Platform.exit();
+			}
 			
 		default:
 			break;
