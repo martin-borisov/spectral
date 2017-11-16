@@ -350,11 +350,6 @@ public class StereoLevelsView extends AbstractView {
 		}
 		rightLingerLevelProp.set(lingerLevelR);
 	}
-	
-	
-	@Override
-	protected void onSceneWidthChange(Number oldValue, Number newValue) {
-	}
 
 	@Override
 	public void onShow() {

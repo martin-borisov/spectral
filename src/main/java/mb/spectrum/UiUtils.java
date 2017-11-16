@@ -12,6 +12,7 @@ import javafx.animation.Transition;
 import javafx.beans.binding.Bindings;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ColorPicker;
@@ -112,10 +113,11 @@ public class UiUtils {
 	
 	public static Label createNumberPropertyLabel(String initValue, Pane parent) {
 		Label label = new Label(initValue);
+		label.setAlignment(Pos.CENTER);
 		
 		// TODO Play a bit with the values below to find the best fit
 		label.styleProperty().bind(Bindings.concat(
-				"-fx-font-size: ", parent.widthProperty().divide(40), ";", 
+				"-fx-font-size: ", parent.widthProperty().divide(20), ";", 
 				"-fx-padding: ", parent.widthProperty().divide(50), ";"));
 		return label;
 	}

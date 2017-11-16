@@ -13,18 +13,22 @@ import javafx.beans.binding.Bindings;
 import javafx.beans.property.ObjectProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.SceneAntialiasing;
 import javafx.scene.control.CheckBox;
-import javafx.scene.control.ColorPicker;
-import javafx.scene.control.Control;
 import javafx.scene.control.Label;
-import javafx.scene.control.TitledPane;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
+import javafx.scene.layout.Border;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.BorderStroke;
+import javafx.scene.layout.BorderStrokeStyle;
+import javafx.scene.layout.BorderWidths;
 import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import mb.spectrum.prop.ConfigurableBooleanProperty;
@@ -65,7 +69,7 @@ public class Spectrum extends Application {
 	/* Property management */
 	private boolean propertiesVisible;
 	private int currentPropIdx;
-	private TitledPane currentPropertyNode;
+	private Pane currentPropertyNode;
 	
 	public Spectrum() {
 		currentViewIdx = 0;
@@ -285,14 +289,11 @@ public class Spectrum extends Application {
 		List<ConfigurableProperty<? extends Object>> props = currentView.getProperties();
 		if(!props.isEmpty()) {
 			ConfigurableProperty<? extends Object> prop = props.get(idx);
-			Control control = null;
+			Region control = null;
 			if(prop instanceof ConfigurableColorProperty) {
-				
-				// TODO Create a custom color control that can be controlled with keys
 				ObjectProperty<Color> p = (ObjectProperty<Color>) prop.getProp();
-				ColorPicker picker = UiUtils.createColorPropertyColorPicker(
-						p.getValue(), currentView.getRoot());
-				p.bind(picker.valueProperty());
+				ColorControl picker = new ColorControl(p.getValue());
+				p.bind(picker.colorProperty());
 				control = picker;
 				
 			} else if(prop instanceof ConfigurableDoubleProperty || 
@@ -311,7 +312,6 @@ public class Spectrum extends Application {
 						p.getValue(), prop.getName(), currentView.getRoot());
 				box.selectedProperty().bind(p);
 				control = box;
-				
 			}
 			
 			currentView.getRoot().getChildren().add(
@@ -321,41 +321,41 @@ public class Spectrum extends Application {
 		return !props.isEmpty();
 	}
 	
-	private void hideProperty(TitledPane node) {
+	private void hideProperty(Pane node) {
 		currentView.getProperties().get(currentPropIdx).getProp().unbind();
 		UiUtils.createFadeOutTransition(node, 1000, new EventHandler<ActionEvent>() {
 			public void handle(ActionEvent event) {
 				currentView.getRoot().getChildren().remove(node);
-				node.setContent(null);
+				node.getChildren().clear();
 			}
 		}).play();
 	}
 	
-	private TitledPane createPropertyPane(String name, Control control) {
+	private Pane createPropertyPane(String name, Region control) {
 		Pane parent = currentView.getRoot();
 
-		TitledPane pane = new TitledPane(null, control);
+		BorderPane pane = new BorderPane();
+		pane.setCenter(control);
+		BorderPane.setAlignment(control, Pos.CENTER);
+		
+		// This can be used to identify the control
+		pane.setUserData("Property Control");
 		
 		// Automatically resize pane based on the scene size
 		pane.prefWidthProperty().bind(parent.widthProperty().divide(2));
 		pane.prefHeightProperty().bind(parent.heightProperty().divide(2));
 		pane.layoutXProperty().bind(parent.widthProperty().subtract(pane.widthProperty()).divide(2));
 		pane.layoutYProperty().bind(parent.heightProperty().subtract(pane.heightProperty()).divide(2));
-		
-		// TODO This is just a sample. Remove later.
-		//pane.setStyle("-fx-color: -fx-focus-color;");
-		
-		pane.setCollapsible(false);
-		
-		// TODO This does not work. Revisit.
-		pane.setBackground(new Background(new BackgroundFill(Color.BLUE, new CornerRadii(5), null)));
-		pane.setOpacity(0.8);
+		pane.setBackground(new Background(new BackgroundFill(Color.rgb(230, 230, 230), new CornerRadii(5), null)));
+		pane.setBorder(new Border(new BorderStroke(Color.DARKGRAY, 
+	            BorderStrokeStyle.SOLID, new CornerRadii(6), new BorderWidths(2))));
+		//pane.setOpacity(0.9);
 		
 		Label label = new Label(name);
 		label.styleProperty().bind(Bindings.concat(
 				"-fx-font-size: ", parent.widthProperty().divide(40), ";", 
 				"-fx-padding: ", parent.widthProperty().divide(50), ";"));
-		pane.setGraphic(label);
+		pane.setTop(label);
 		
 		// Automatically resize the contained property control based on the pane size
 		control.prefWidthProperty().bind(pane.widthProperty().divide(2));

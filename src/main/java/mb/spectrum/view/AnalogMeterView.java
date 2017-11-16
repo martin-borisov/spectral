@@ -12,7 +12,9 @@ import java.util.List;
 
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.effect.Effect;
@@ -34,32 +36,40 @@ import mb.spectrum.prop.ConfigurableProperty;
 
 public class AnalogMeterView extends AbstractMixedChannelView {
 	
-	// TODO It will be cool to make these values configurable
-	private static final int MIN_DB_VALUE = -24; // = MIN_DBU_VALUE - MAX_DBU_VALUE = -66dBu
-	private static final int MAX_DBU_VALUE = 6; // dBu
-	private static final int MIN_DBU_VALUE = MIN_DB_VALUE + MAX_DBU_VALUE; // dBu
-	
 	private static final int MIN_DB_ANGLE_DEGREES = 130;
 	private static final int MAX_DB_ANGLE_DEGREES = 50;
 	private static final double MIN_DB_ANGLE_RAD = Math.toRadians(MIN_DB_ANGLE_DEGREES);
 	private static final double MAX_DB_ANGLE_RAD = Math.toRadians(MAX_DB_ANGLE_DEGREES);
-	private static final double DIV_LENGTH_RATIO = 0.02;
+	private static final double DIV_LENGTH_RATIO_BIG = 0.02;
+	private static final double DIV_LENGTH_RATIO_SMALL = DIV_LENGTH_RATIO_BIG / 3;
 	private static final double LINGER_STAY_FACTOR = 0.05;
 	private static final double LINGER_ACCELARATION_FACTOR = 1.15;
 	private static final double BACK_CIRCLE_RADIUS_TO_SCENE_WIDTH_RATIO = 0.05;
 	private static final double ELEMENT_WIDTH_TO_CIRCLE_RADIUS_RATIO = 2.5;
 	
-	private ConfigurableIntegerProperty propDivCount, propLightXPosition, propLightYPosition, propSensitivity;
+	/* Configurable properties */
+	
+	// Requiring reset
+	private ConfigurableIntegerProperty propDivCount, propMinDbValue;
+	
+	// Not requiring reset
+	private ConfigurableIntegerProperty propLightXPosition, 
+		propLightYPosition, propSensitivity, propMaxDbuValue;
 	private ConfigurableColorProperty propBackgroundColor, propLightColor, 
-		propIndicatorColor, propNormalLevelDigitsColor, propHighLevelDigitsColor;
+		propIndicatorColor, propNormalLevelDigitsColor, propHighLevelDigitsColor, propPeakColor, propRotorColor, propRotorPlateColor;
 	private ConfigurableDoubleProperty propLightSurfaceScale, propLightDiffuseConstant, 
-		propLightSpecularConstant, propLightSpecularExponent, propLightZPosition;
+		propLightSpecularConstant, propLightSpecularExponent, propLightZPosition, 
+		propIndicatorWidthRatio, propDivisionWidthRatio;
 	private ConfigurableBooleanProperty propVisualEnableExtras;
 	
-	private DoubleProperty currentDbRmsProp, currentDbPeakProp, lingerLevelDbProp, radiusProp, centerXProp, centerYProp, currentLevelRadProp;
+	/* Operational and optimization properties */
+	private DoubleProperty currentDbRmsProp, currentDbPeakProp, lingerLevelDbProp, 
+		radiusProp, centerXProp, centerYProp, currentLevelRadProp;
+	private ObjectProperty<Color> darkerPeakColorProp;
+	
 	
 	private double currentDbRms, currentDbPeak;
-	private double lingerLevelDb = MIN_DB_VALUE, lingerOpValDb = LINGER_STAY_FACTOR;
+	private double lingerLevelDb, lingerOpValDb = LINGER_STAY_FACTOR;
 
 	@Override
 	public String getName() {
@@ -72,9 +82,28 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 		
 		final String keyPrefix = "analogMeterView.";
 		
-		// Configuration properties
+		/* Configuration properties */
+		
+		// Requiring reset
 		propDivCount = createConfigurableIntegerProperty(
-				keyPrefix + "divisionsCount", "Divisions Count", 4, 20, 11, 1);
+				keyPrefix + "divisionsCount", "Divisions Count", 4, 41, 21, 1);
+		propDivCount.getProp().addListener((obs, oldVal, newVal) -> {
+			if(newVal != oldVal) {
+				reset();
+			}
+		});
+		
+		propMinDbValue = createConfigurableIntegerProperty(
+				keyPrefix + "minDbValue", "Min. DB Value", -100, -10, -24, 1);
+		propMinDbValue.getProp().addListener((obs, oldVal, newVal) -> {
+			if(newVal != oldVal) {
+				reset();
+			}
+		});
+		
+		// Not requiring reset
+		propMaxDbuValue = createConfigurableIntegerProperty(
+				keyPrefix + "maxDBuValue", "Max. dBu Value", 0, 24, 6, 1);
 		propBackgroundColor = createConfigurableColorProperty(
 				keyPrefix + "backgroundColor", "Background Color", Color.ANTIQUEWHITE);
 		propLightColor = createConfigurableColorProperty(
@@ -103,12 +132,21 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 				keyPrefix + "sensitivity", "Sensitivity", 1, 10, 3, 1);
 		propVisualEnableExtras = createConfigurableBooleanProperty(
 				keyPrefix + "enableExtras", "Enable Visual Extras", false);
+		propIndicatorWidthRatio = UiUtils.createConfigurableDoubleProperty(
+				keyPrefix + "indicatorWidthRatio", "Indicator Width", 0.001, 0.1, 0.002, 0.001);
+		propDivisionWidthRatio = UiUtils.createConfigurableDoubleProperty(
+				keyPrefix + "divisionWidthRatio", "Division Width", 0.001, 0.1, 0.003, 0.001);
+		propPeakColor = createConfigurableColorProperty(
+				keyPrefix + "peakColor", "Peak LED Color", Color.RED);
+		propRotorColor = createConfigurableColorProperty(
+				keyPrefix + "rotorColor", "Rotor Color", Color.DARKGRAY);
+		propRotorPlateColor = createConfigurableColorProperty(
+				keyPrefix + "rotorPlateColor", "Rotor Plate Color", Color.SANDYBROWN);
 		
-		
-		// Operational properties
-		currentDbRmsProp = new SimpleDoubleProperty(MIN_DB_VALUE);
-		currentDbPeakProp = new SimpleDoubleProperty(MIN_DB_VALUE);
-		lingerLevelDbProp = new SimpleDoubleProperty(MIN_DB_VALUE);
+		/* Operational properties */
+		currentDbRmsProp = new SimpleDoubleProperty(propMinDbValue.getProp().get());
+		currentDbPeakProp = new SimpleDoubleProperty(propMinDbValue.getProp().get());
+		lingerLevelDbProp = new SimpleDoubleProperty(propMinDbValue.getProp().get());
 		
 		radiusProp = new SimpleDoubleProperty();
 		radiusProp.bind(Bindings.createDoubleBinding(
@@ -125,18 +163,46 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 		currentLevelRadProp = new SimpleDoubleProperty();
 		currentLevelRadProp.bind(Bindings.createDoubleBinding(
 				() -> {
-					return map(lingerLevelDbProp.get(), MIN_DB_VALUE, 0, 
+					return map(lingerLevelDbProp.get(), propMinDbValue.getProp().get(), 0, 
 							MIN_DB_ANGLE_RAD, MAX_DB_ANGLE_RAD);
-				}, lingerLevelDbProp));
+				}, lingerLevelDbProp, propMinDbValue.getProp()));
+		
+		// This property is used for optimization
+		darkerPeakColorProp = new SimpleObjectProperty<>();
+		darkerPeakColorProp.bind(Bindings.createObjectBinding(
+				() -> {
+					return propPeakColor.getProp().get().darker().darker();
+				}, propPeakColor.getProp()));
+		
+		// This value controls the starting position of the indicator
+		lingerLevelDb = propMinDbValue.getProp().get();
 	}
 
 	@Override
 	public List<ConfigurableProperty<? extends Object>> getProperties() {
-		return Arrays.asList(propDivCount, propBackgroundColor, 
-				propIndicatorColor, propNormalLevelDigitsColor, propHighLevelDigitsColor, 
-				propVisualEnableExtras, propLightColor, propLightSurfaceScale, propLightDiffuseConstant, 
-				propLightSpecularConstant, propLightSpecularExponent, propLightXPosition, propLightYPosition, 
-				propLightZPosition, propSensitivity);
+		return Arrays.asList(
+				propBackgroundColor, 
+				propIndicatorColor, 
+				propNormalLevelDigitsColor, 
+				propHighLevelDigitsColor,
+				propPeakColor, 
+				propRotorColor, 
+				propRotorPlateColor,
+				propDivCount, 
+				propMinDbValue, 
+				propMaxDbuValue, 
+				propSensitivity, 
+				propIndicatorWidthRatio, 
+				propDivisionWidthRatio,
+				propVisualEnableExtras, 
+				propLightColor, 
+				propLightSurfaceScale, 
+				propLightDiffuseConstant, 
+				propLightSpecularConstant, 
+				propLightSpecularExponent, 
+				propLightXPosition, 
+				propLightYPosition, 
+				propLightZPosition);
 	}
 	
 	@Override
@@ -155,11 +221,17 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 		
 		// Divisions and labels
 		for (int i = 0; i < propDivCount.getProp().get(); i++) {
-			Line line = createDivisionLine(i, lighting);
-		    nodes.add(line);
-		    nodes.add(createDbLabel(i, line, lighting));
 		    
+			Line line;
 		    if(i % 2 == 0) {
+				line = createDivisionLine(i, lighting, DIV_LENGTH_RATIO_BIG);
+		    	nodes.add(createDbLabel(i, line, lighting));
+		    } else {
+		    	line = createDivisionLine(i, lighting, DIV_LENGTH_RATIO_SMALL);
+		    }
+		    nodes.add(line);
+		    
+		    if(i % 4 == 0) {
 		    	nodes.add(createPercentageLabel(i, line, lighting));
 		    }
 		}
@@ -178,10 +250,11 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 	
 	@Override
 	public void dataAvailable(float[] data) {
+		Integer minDbValue = propMinDbValue.getProp().get();
 		currentDbRms = Utils.toDB(peakLevel(data));
-		currentDbRms = currentDbRms < MIN_DB_VALUE ? MIN_DB_VALUE : currentDbRms;
+		currentDbRms = currentDbRms < minDbValue ? minDbValue : currentDbRms;
 		currentDbPeak = Utils.toDB(peakLevel(data));
-		currentDbPeak = currentDbPeak < MIN_DB_VALUE ? MIN_DB_VALUE : currentDbPeak;
+		currentDbPeak = currentDbPeak < minDbValue ? minDbValue : currentDbPeak;
 	}
 
 	@Override
@@ -206,8 +279,9 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 			lingerLevelDb = lingerLevelDb - lingerOpValDb;
 			lingerOpValDb = lingerOpValDb * LINGER_ACCELARATION_FACTOR;
 			
-			if(lingerLevelDb < MIN_DB_VALUE) {
-				lingerLevelDb = MIN_DB_VALUE;
+			Integer minDbValue = propMinDbValue.getProp().get();
+			if(lingerLevelDb < minDbValue) {
+				lingerLevelDb = minDbValue;
 			}
 		}
 		
@@ -232,37 +306,46 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 		indicator.endXProperty().bind(getRoot().widthProperty().divide(2));
 		indicator.endYProperty().bind(getRoot().heightProperty());
 		indicator.strokeProperty().bind(propIndicatorColor.getProp());
-		indicator.setStrokeWidth(2); // TODO Prop / Should scale
-		
-		Circle backCircle = new Circle();
-		backCircle.centerXProperty().bind(getRoot().widthProperty().divide(2));
-		backCircle.centerYProperty().bind(getRoot().heightProperty());
-		backCircle.radiusProperty().bind(getRoot().widthProperty().multiply(BACK_CIRCLE_RADIUS_TO_SCENE_WIDTH_RATIO));
-		backCircle.setFill(Color.DARKGRAY); // TODO Prop
-		backCircle.setStroke(Color.DIMGRAY); // TODO Should be derived from the fill
-		backCircle.setStrokeWidth(3); // TODO Should scale
-		backCircle.setCache(true);
-		
-		Rectangle frontElement = new Rectangle();
-		frontElement.widthProperty().bind(backCircle.radiusProperty().multiply(ELEMENT_WIDTH_TO_CIRCLE_RADIUS_RATIO));
-		frontElement.heightProperty().bind(frontElement.widthProperty().divide(4));
-		frontElement.xProperty().bind(backCircle.centerXProperty().subtract(frontElement.widthProperty().divide(2)));
-		frontElement.yProperty().bind(backCircle.centerYProperty().subtract(frontElement.heightProperty().divide(2)));
-		frontElement.arcHeightProperty().bind(frontElement.widthProperty().divide(8));
-		frontElement.arcWidthProperty().bind(frontElement.widthProperty().divide(8));
-		frontElement.rotateProperty().bind(Bindings.createDoubleBinding(
+
+		// Bind the arrow width to a dedicated property and the width of the parent
+		indicator.strokeWidthProperty().bind(Bindings.createDoubleBinding(
 				() -> {
-					double angleDeg = map(lingerLevelDbProp.get(), MIN_DB_VALUE, 0, 
+					return getRoot().widthProperty().get() * propIndicatorWidthRatio.getProp().get();
+				}, propIndicatorWidthRatio.getProp(), getRoot().widthProperty()));
+		
+		Circle circle = new Circle();
+		circle.centerXProperty().bind(getRoot().widthProperty().divide(2));
+		circle.centerYProperty().bind(getRoot().heightProperty());
+		circle.radiusProperty().bind(getRoot().widthProperty().multiply(BACK_CIRCLE_RADIUS_TO_SCENE_WIDTH_RATIO));
+		circle.fillProperty().bind(propRotorColor.getProp());
+		circle.strokeProperty().bind(Bindings.createObjectBinding(
+				() -> propRotorColor.getProp().get().darker(), 
+				propRotorColor.getProp()));
+		circle.strokeWidthProperty().bind(indicator.strokeWidthProperty());
+		circle.setCache(true);
+		
+		Rectangle plate = new Rectangle();
+		plate.widthProperty().bind(circle.radiusProperty().multiply(ELEMENT_WIDTH_TO_CIRCLE_RADIUS_RATIO));
+		plate.heightProperty().bind(plate.widthProperty().divide(4));
+		plate.xProperty().bind(circle.centerXProperty().subtract(plate.widthProperty().divide(2)));
+		plate.yProperty().bind(circle.centerYProperty().subtract(plate.heightProperty().divide(2)));
+		plate.arcHeightProperty().bind(plate.widthProperty().divide(8));
+		plate.arcWidthProperty().bind(plate.widthProperty().divide(8));
+		plate.rotateProperty().bind(Bindings.createDoubleBinding(
+				() -> {
+					double angleDeg = map(lingerLevelDbProp.get(), propMinDbValue.getProp().get(), 0, 
 							MIN_DB_ANGLE_DEGREES, MAX_DB_ANGLE_DEGREES);
 					return angleDeg * -1 - 90;
 				
-				}, lingerLevelDbProp));
+				}, lingerLevelDbProp, propMinDbValue.getProp()));
 		
-		frontElement.setFill(Color.SANDYBROWN); // TODO Prop
-		frontElement.setStroke(Color.SADDLEBROWN); // TODO Should be derived from the fill
-		frontElement.strokeWidthProperty().bind(backCircle.strokeWidthProperty());
+		plate.fillProperty().bind(propRotorPlateColor.getProp());
+		plate.strokeProperty().bind(Bindings.createObjectBinding(
+				() -> propRotorPlateColor.getProp().get().darker(), 
+				propRotorPlateColor.getProp()));
+		plate.strokeWidthProperty().bind(circle.strokeWidthProperty());
 		
-		nodes.addAll(Arrays.asList(backCircle, frontElement, indicator));
+		nodes.addAll(Arrays.asList(circle, plate, indicator));
 	}
 	
 	private void createPeak(List<Node> nodes, Effect effect) {
@@ -276,16 +359,17 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 		peak.centerXProperty().bind(getRoot().widthProperty().subtract(getRoot().widthProperty().divide(8)));
 		peak.centerYProperty().bind(getRoot().heightProperty().divide(8));
 		peak.radiusProperty().bind(getRoot().widthProperty().multiply(0.015));
-		peak.fillProperty().bind(Bindings.createObjectBinding( // TODO Prop
+		peak.fillProperty().bind(Bindings.createObjectBinding(
 				() -> {
 					Color level;
 					if(currentDbPeakProp.get() >= 0) {
-						level = Color.RED;
+						level = propPeakColor.getProp().get();
 					} else {
-						level = Color.rgb(100, 0, 0);
+						level = darkerPeakColorProp.get();
 					}
 					return level;
-				}, currentDbPeakProp));		
+				}, currentDbPeakProp, propPeakColor.getProp(), darkerPeakColorProp));
+		
 		peak.setEffect(peakEffect);
 		
 		Label peakLabel = new Label("Peak");
@@ -365,41 +449,11 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 		return background;
 	}
 	
-	private Line createDivisionLine(int idx, Effect effect) {
+	private Line createDivisionLine(int idx, Effect effect, double divLengthRatio) {
 		
 		double angleRad = map(idx, 0, propDivCount.getProp().get() - 1, MIN_DB_ANGLE_RAD, MAX_DB_ANGLE_RAD);
 
 	    Line line = new Line();
-	    
-	    /*
-	    line.startXProperty().bind(Bindings.createDoubleBinding(
-	    		() -> {
-	    			double radius = getRoot().widthProperty().get() / RADIUS_TO_WIDTH_RATIO;
-	    			double sceneCenterX = getRoot().widthProperty().get() / 2;
-	    			return sceneCenterX + Math.cos(angleRad) * radius;
-	    		}, getRoot().widthProperty()));
-	    line.startYProperty().bind(Bindings.createDoubleBinding(
-	    		() -> {
-	    			double radius = getRoot().widthProperty().get() / RADIUS_TO_WIDTH_RATIO;
-	    	        double topMagin = getRoot().heightProperty().get() * TOP_MARGIN_RATIO;
-	    	        return radius + topMagin - Math.sin(angleRad) * radius;
-	    		}, getRoot().widthProperty(), getRoot().heightProperty()));
-	    line.endXProperty().bind(Bindings.createDoubleBinding(
-	    		() -> {
-	    			double radius = getRoot().widthProperty().get() / RADIUS_TO_WIDTH_RATIO;
-	    			double len = getRoot().heightProperty().get() * DIV_LENGTH_RATIO;
-	    			double sceneCenterX = getRoot().widthProperty().get() / 2;
-	    	        return sceneCenterX + Math.cos(angleRad) * (radius - len);
-	    		}, getRoot().widthProperty()));
-	    line.endYProperty().bind(Bindings.createDoubleBinding(
-	    		() -> {
-	    			double radius = getRoot().widthProperty().get() / RADIUS_TO_WIDTH_RATIO;
-	    	        double topMagin = getRoot().heightProperty().get() * TOP_MARGIN_RATIO;
-	    	        double len = getRoot().heightProperty().get() * DIV_LENGTH_RATIO;
-	    	        return radius + topMagin - Math.sin(angleRad) * (radius - len);
-	    		}, getRoot().widthProperty(), getRoot().heightProperty()));
-	    line.setCache(true);
-	    */
 	    
 	    line.startXProperty().bind(Bindings.createDoubleBinding(
 	    		() -> {
@@ -411,25 +465,42 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 	    		}, radiusProp, getRoot().heightProperty()));
 	    line.endXProperty().bind(Bindings.createDoubleBinding(
 	    		() -> {
-	    			double len = getRoot().heightProperty().get() * DIV_LENGTH_RATIO;
+	    			double len = getRoot().heightProperty().get() * divLengthRatio;
 	    	        return centerXProp.get() + Math.cos(angleRad) * (radiusProp.get() - len);
 	    		}, radiusProp, centerXProp, getRoot().heightProperty()));
 	    line.endYProperty().bind(Bindings.createDoubleBinding(
 	    		() -> {
-	    	        double len = getRoot().heightProperty().get() * DIV_LENGTH_RATIO;
+	    	        double len = getRoot().heightProperty().get() * divLengthRatio;
 	    	        return getRoot().heightProperty().get() - Math.sin(angleRad) * (radiusProp.get() - len);
 	    		}, radiusProp, getRoot().heightProperty()));
 	    line.setCache(true);
 	    
-		long dbValue = Math.round(map(idx, 0, propDivCount.getProp().get() - 1, MIN_DBU_VALUE, MAX_DBU_VALUE));
-	    if(dbValue < 0) {
-	    	line.strokeProperty().bind(propNormalLevelDigitsColor.getProp());
-	    } else {
-	    	line.strokeProperty().bind(propHighLevelDigitsColor.getProp());
-	    }
+	    // Bind the line color to the minimum dB value and the max dBu value,
+	    // as well as normal level and high level colors
+	    line.strokeProperty().bind(Bindings.createObjectBinding(
+	    		() -> {
+	    			long db = Math.round(map(idx, 0, propDivCount.getProp().get() - 1,
+	    					propMinDbValue.getProp().get() + propMaxDbuValue.getProp().get() , 
+	    					propMaxDbuValue.getProp().get()));
+	    			
+	    			Color color;
+	    			if(db < 0) {
+	    				color = propNormalLevelDigitsColor.getProp().get();
+	    			} else {
+	    				color = propHighLevelDigitsColor.getProp().get();
+	    			}
+	    			
+	    			return color;
+ 	    		}, propMinDbValue.getProp(), propMaxDbuValue.getProp(), 
+	    			propNormalLevelDigitsColor.getProp(), propHighLevelDigitsColor.getProp()));
 	    
-	    line.setStrokeWidth(2); // TODO Should scale
-	   
+		// Bind the line width to a dedicated property and the width of the parent
+	    line.strokeWidthProperty().bind(Bindings.createDoubleBinding(
+				() -> {
+					return getRoot().widthProperty().get() * propDivisionWidthRatio.getProp().get();
+				}, propDivisionWidthRatio.getProp(), getRoot().widthProperty()));
+		
+	    // Enable or disable the effect based on a boolean property
 	    line.effectProperty().bind(Bindings.createObjectBinding(
 				() -> {
 					return propVisualEnableExtras.getProp().get() ? effect : null;
@@ -439,17 +510,38 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 	}
 	
 	private Label createDbLabel(int idx, Line line, Effect effect) {
-		long dbValue = Math.round(map(idx, 0, propDivCount.getProp().get() - 1, MIN_DBU_VALUE, MAX_DBU_VALUE));
-		
-	    Label label = new Label(String.valueOf(dbValue) + "dB");
+
+		Label label = new Label();
 	    label.layoutXProperty().bind(line.startXProperty().subtract(label.widthProperty().divide(2)));
 	    label.layoutYProperty().bind(line.startYProperty().subtract(label.heightProperty().multiply(1.5)));
 	    
-	    if(dbValue < 0) {
-	    	label.textFillProperty().bind(propNormalLevelDigitsColor.getProp());
-	    } else {
-	    	label.textFillProperty().bind(propHighLevelDigitsColor.getProp());
-	    }
+	    // Bind the text to the minimum dB value and the max dBu value
+	    label.textProperty().bind(Bindings.createStringBinding(
+	    		() -> {
+	    			long db = Math.round(map(idx, 0, propDivCount.getProp().get() - 1,
+	    					propMinDbValue.getProp().get() + propMaxDbuValue.getProp().get() , 
+	    					propMaxDbuValue.getProp().get()));
+	    			return String.valueOf(db) + "dB";
+	    		}, propMinDbValue.getProp(), propMaxDbuValue.getProp()));
+	    
+	    // Bind the text color to the minimum dB value and the max dBu value,
+	    // as well as normal level and high level colors
+	    label.textFillProperty().bind(Bindings.createObjectBinding(
+	    		() -> {
+	    			long db = Math.round(map(idx, 0, propDivCount.getProp().get() - 1,
+	    					propMinDbValue.getProp().get() + propMaxDbuValue.getProp().get() , 
+	    					propMaxDbuValue.getProp().get()));
+	    			
+	    			Color color;
+	    			if(db < 0) {
+	    				color = propNormalLevelDigitsColor.getProp().get();
+	    			} else {
+	    				color = propHighLevelDigitsColor.getProp().get();
+	    			}
+	    			
+	    			return color;
+ 	    		}, propMinDbValue.getProp(), propMaxDbuValue.getProp(), 
+	    			propNormalLevelDigitsColor.getProp(), propHighLevelDigitsColor.getProp()));
 	    
 		label.styleProperty().bind(Bindings.concat(
 				"-fx-font-size: ", Bindings.createDoubleBinding(
@@ -467,17 +559,29 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 	
 	private Label createPercentageLabel(int idx, Line line, Effect effect) {
 		long percentageValue = Math.round(map(idx, 0, propDivCount.getProp().get() - 1, 0, 100));
-		long dbValue = Math.round(map(idx, 0, propDivCount.getProp().get() - 1, MIN_DBU_VALUE, MAX_DBU_VALUE));
 		
 	    Label label = new Label(String.valueOf(percentageValue) + "%");
 	    label.layoutXProperty().bind(line.endXProperty().subtract(label.widthProperty().divide(2)));
 	    label.layoutYProperty().bind(line.endYProperty().add(label.heightProperty().divide(3)));
 	    
-	    if(dbValue < 0) {
-	    	label.textFillProperty().bind(propNormalLevelDigitsColor.getProp());
-	    } else {
-	    	label.textFillProperty().bind(propHighLevelDigitsColor.getProp());
-	    }
+	    // Bind the text color to the minimum dB value and the max dBu value,
+	    // as well as normal level and high level colors
+	    label.textFillProperty().bind(Bindings.createObjectBinding(
+	    		() -> {
+	    			long db = Math.round(map(idx, 0, propDivCount.getProp().get() - 1,
+	    					propMinDbValue.getProp().get() + propMaxDbuValue.getProp().get() , 
+	    					propMaxDbuValue.getProp().get()));
+	    			
+	    			Color color;
+	    			if(db < 0) {
+	    				color = propNormalLevelDigitsColor.getProp().get();
+	    			} else {
+	    				color = propHighLevelDigitsColor.getProp().get();
+	    			}
+	    			
+	    			return color;
+ 	    		}, propMinDbValue.getProp(), propMaxDbuValue.getProp(), 
+	    			propNormalLevelDigitsColor.getProp(), propHighLevelDigitsColor.getProp()));
 	    
 		label.styleProperty().bind(Bindings.concat(
 				"-fx-font-size: ", Bindings.createDoubleBinding(
