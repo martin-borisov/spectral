@@ -30,9 +30,9 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 	
 	// Configurable properties
 	private static final int SAMPLING_RATE = Integer.valueOf(
-			ConfigService.getInstance().getProperty("mb.spectrum.sampling-rate"));
+			ConfigService.getInstance().getProperty("mb.sampling-rate"));
 	private static final int BUFFER_SIZE = Integer.valueOf(
-			ConfigService.getInstance().getProperty("mb.spectrum.buffer-size"));
+			ConfigService.getInstance().getProperty("mb.buffer-size"));
 	private ConfigurableProperty<Color> propGridColor;
 	
 	private List<Line> vLines, hLines;

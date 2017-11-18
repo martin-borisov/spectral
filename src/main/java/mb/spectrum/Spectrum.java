@@ -33,6 +33,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+import mb.spectrum.gpio.StageGpioController;
 import mb.spectrum.prop.ConfigurableBooleanProperty;
 import mb.spectrum.prop.ConfigurableColorProperty;
 import mb.spectrum.prop.ConfigurableDoubleProperty;
@@ -46,8 +47,12 @@ import mb.spectrum.view.View;
 
 public class Spectrum extends Application {
 	
-	private static final int SAMPLING_RATE = 44100;
-	private static final int BUFFER_SIZE = 2048;
+	private static final int SAMPLING_RATE = Integer.valueOf(
+			ConfigService.getInstance().getProperty("mb.sampling-rate"));
+	private static final int BUFFER_SIZE = Integer.valueOf(
+			ConfigService.getInstance().getProperty("mb.buffer-size"));
+	private static final boolean ENABLE_GPIO = Boolean.valueOf(
+			ConfigService.getInstance().getProperty("mb.enable-gpio"));
 	
 	private static final int INIT_SCENE_WIDTH = 800;
 	private static final int INIT_SCENE_HEIGHT = 480;
@@ -56,6 +61,7 @@ public class Spectrum extends Application {
 	private static final double VIEW_LABEL_LINGER_MS = 1000;
 	private static final double VIEW_LABEL_FADE_OUT_MS = 1000;
 	
+	private StageGpioController gpio;
 	private Scene scene;
 	private Minim minim;
 	private AudioInput in;
@@ -81,6 +87,7 @@ public class Spectrum extends Application {
 
 	@Override
 	public void start(Stage stage) throws Exception {
+		checkAndEnableGpio(stage);
 		startAudio();
         setupStage(stage);
 		startFrameListener();
@@ -89,6 +96,19 @@ public class Spectrum extends Application {
 	@Override
 	public void stop() throws Exception {
 		stopAudio();
+		checkAndDisableGpio();
+	}
+	
+	private void checkAndEnableGpio(Stage stage) {
+		if(ENABLE_GPIO) {
+			gpio = new StageGpioController(stage);
+		}
+	}
+	
+	private void checkAndDisableGpio() {
+		if(ENABLE_GPIO && gpio != null) {
+			gpio.close();
+		}
 	}
 
 	private void startAudio() {
