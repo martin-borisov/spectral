@@ -2,6 +2,7 @@ package mb.spectrum;
 
 import static java.text.MessageFormat.format;
 
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Properties;
@@ -52,13 +53,23 @@ public class ConfigService {
 	}
 
 	private Properties getProperties() {
-		if (properties == null) {
-			properties = new Properties();
-			try {
-				properties.load(this.getClass().getClassLoader()
-						.getResourceAsStream("config.properties"));
-			} catch (IOException e) {
-				throw new RuntimeException("Failed to load properties file", e);
+		synchronized (ConfigService.class) {
+			if (properties == null) {
+				FileInputStream fis = null;
+				try {
+					fis = new FileInputStream("config.properties");
+					properties = new Properties();
+					properties.load(fis);
+				} catch (Exception e) {
+					throw new RuntimeException("Failed to load properties file", e);
+				} finally {
+					if(fis != null) {
+						try {
+							fis.close();
+						} catch (IOException e) {
+						}
+					}
+				}
 			}
 		}
 		return properties;
