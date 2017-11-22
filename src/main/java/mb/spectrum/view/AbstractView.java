@@ -55,4 +55,12 @@ public abstract class AbstractView implements View {
 			pane.getChildren().add(property);
 		}
 	}
+
+	@Override
+	public void onShow() {
+	}
+
+	@Override
+	public void onHide() {
+	}
 }

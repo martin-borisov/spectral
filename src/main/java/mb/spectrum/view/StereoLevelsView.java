@@ -3,6 +3,7 @@ package mb.spectrum.view;
 import static mb.spectrum.UiUtils.createConfigurableBooleanProperty;
 import static mb.spectrum.UiUtils.createConfigurableColorProperty;
 import static mb.spectrum.UiUtils.createConfigurableDoubleProperty;
+import static mb.spectrum.UiUtils.createConfigurableIntegerProperty;
 import static mb.spectrum.UiUtils.createLabel;
 import static mb.spectrum.Utils.map;
 import static mb.spectrum.Utils.peakLevel;
@@ -25,15 +26,12 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.StrokeLineCap;
 import mb.spectrum.UiUtils;
 import mb.spectrum.Utils;
+import mb.spectrum.prop.ConfigurableIntegerProperty;
 import mb.spectrum.prop.ConfigurableProperty;
 
 public class StereoLevelsView extends AbstractView {
 	
-	// NB: The minimum DB value is empirical and it acts as a threshold in order to avoid
-	// flicker of the graph caused by very low audio levels
-	// TODO It will be cool to make this value configurable
-	private static final int MIN_DB_VALUE = -66;
-	
+	private static final int INIT_MIN_DB_VALUE = -66;
 	private static final int DB_LINES_COUNT = 8;
 	private static final double BAR_HEIGHT_PROPORTION = 0.35;
 	private static final double BAR_MARGIN_PROPORTION = 0.05;
@@ -43,6 +41,10 @@ public class StereoLevelsView extends AbstractView {
 	private static final double LINGER_STAY_FACTOR = 0.01;
 	private static final double LINGER_ACCELARATION_FACTOR = 1.08;
 	
+	// Requiring reset
+	private ConfigurableIntegerProperty propMinDbValue;
+	
+	// Not requiring reset
 	private ConfigurableProperty<Color> propGridColor;
 	private ConfigurableProperty<Color> propBarColorNormal;
 	private ConfigurableProperty<Color> propBarColorMid;
@@ -61,9 +63,9 @@ public class StereoLevelsView extends AbstractView {
 	
 	private double currentDbL, currentDbR, 
 		minLevelL = 0, minLevelR = 0, 
-		maxLevelL = MIN_DB_VALUE, maxLevelR = MIN_DB_VALUE;
+		maxLevelL = INIT_MIN_DB_VALUE, maxLevelR = INIT_MIN_DB_VALUE;
 	
-	private double lingerLevelL = MIN_DB_VALUE, lingerLevelR = MIN_DB_VALUE, 
+	private double lingerLevelL = INIT_MIN_DB_VALUE, lingerLevelR = INIT_MIN_DB_VALUE, 
 			lingerOpValL = LINGER_STAY_FACTOR, lingerOpValR = LINGER_STAY_FACTOR;
 	
 	private DoubleProperty currLevelLProp, currLevelRProp, minLevelLProp, 
@@ -77,29 +79,42 @@ public class StereoLevelsView extends AbstractView {
 	@Override
 	protected void initProperties() {
 		
-		// Configuration properties
-		propGridColor = createConfigurableColorProperty(
-				"stereoLevelsView.gridColor", "Grid Color", Color.web("#fd4a11"));
-		propBarColorNormal = createConfigurableColorProperty(
-				"stereoLevelsView.normalLevelColor", "Normal Level Color", Color.DARKGREEN);
-		propBarColorMid = createConfigurableColorProperty(
-				"stereoLevelsView.middleLevelColor", "Middle Level Color", Color.LAWNGREEN);
-		propBarColorClip = createConfigurableColorProperty(
-				"stereoLevelsView.clipLevelColor", "Clip Level Color", Color.RED);
-		propLingerIndicatorColor = createConfigurableColorProperty(
-				"stereoLevelsView.lingerIndicatorColor","Linger Level Color", Color.LIGHTGREEN);
-		propBarOpacity = createConfigurableDoubleProperty(
-				"stereoLevelsView.barOpacity", "Bar Opacity", 0.1, 1.0, 0.9, 0.1);
-		propDrBarColor = createConfigurableColorProperty(
-				"stereoLevelsView.drBarColor", "D/R Bar Color", Color.ORANGE);
-		propDrBarOpacity = createConfigurableDoubleProperty(
-				"stereoLevelsView.drBarOpacity", "D/R Bar Opacity", 0.1, 1.0, 0.2, 0.1);
-		propShowDr = createConfigurableBooleanProperty(
-				"stereoLevelsView.showDynamicRange", "Show Dynamic Range", true);
-		propRms = createConfigurableBooleanProperty(
-				"stereoLevelsView.enableRmsMode", "RMS Mode", false);
+		final String keyPrefix = "stereoLevelsView.";
 		
-		// Operational properties
+		/* Configuration Properties */
+		
+		// Requiring reset
+		propMinDbValue = createConfigurableIntegerProperty(
+				keyPrefix + "minDbValue", "Min. DB Value", -100, -10, INIT_MIN_DB_VALUE, 1);
+		propMinDbValue.getProp().addListener((obs, oldVal, newVal) -> {
+			if(newVal != oldVal) {
+				reset();
+			}
+		});
+		
+		// Not requiring reset
+		propGridColor = createConfigurableColorProperty(
+				keyPrefix + "gridColor", "Grid Color", Color.web("#fd4a11"));
+		propBarColorNormal = createConfigurableColorProperty(
+				keyPrefix + "normalLevelColor", "Normal Level Color", Color.DARKGREEN);
+		propBarColorMid = createConfigurableColorProperty(
+				keyPrefix + "middleLevelColor", "Middle Level Color", Color.LAWNGREEN);
+		propBarColorClip = createConfigurableColorProperty(
+				keyPrefix + "clipLevelColor", "Clip Level Color", Color.RED);
+		propLingerIndicatorColor = createConfigurableColorProperty(
+				keyPrefix + "lingerIndicatorColor","Linger Level Color", Color.LIGHTGREEN);
+		propBarOpacity = createConfigurableDoubleProperty(
+				keyPrefix + "barOpacity", "Bar Opacity", 0.1, 1.0, 0.9, 0.1);
+		propDrBarColor = createConfigurableColorProperty(
+				keyPrefix + "drBarColor", "D/R Bar Color", Color.ORANGE);
+		propDrBarOpacity = createConfigurableDoubleProperty(
+				keyPrefix + "drBarOpacity", "D/R Bar Opacity", 0.1, 1.0, 0.2, 0.1);
+		propShowDr = createConfigurableBooleanProperty(
+				keyPrefix + "showDynamicRange", "Show Dynamic Range", true);
+		propRms = createConfigurableBooleanProperty(
+				keyPrefix + "enableRmsMode", "RMS Mode", false);
+		
+		/* Operational properties */
 		currLevelLProp = new SimpleDoubleProperty();
 		currLevelRProp = new SimpleDoubleProperty();
 		minLevelLProp = new SimpleDoubleProperty();
@@ -114,7 +129,7 @@ public class StereoLevelsView extends AbstractView {
 	public List<ConfigurableProperty<? extends Object>> getProperties() {
 		return Arrays.asList(propGridColor, propBarOpacity, propBarColorNormal, 
 				propBarColorMid, propLingerIndicatorColor, propBarColorClip, propRms, 
-				propDrBarColor, propDrBarOpacity, propShowDr);
+				propDrBarColor, propDrBarOpacity, propShowDr, propMinDbValue);
 	}
 
 	@Override
@@ -185,18 +200,18 @@ public class StereoLevelsView extends AbstractView {
 	
 	private void createGridLineAndLabel(int idx) {
 		
-		double dBVal = map(idx, 0, DB_LINES_COUNT, MIN_DB_VALUE, 0);
+		double dBVal = map(idx, 0, DB_LINES_COUNT, propMinDbValue.getProp().get(), 0);
 		
 		// Create line
 		Line line = new Line();
 		line.startXProperty().bind(
 				Bindings.createDoubleBinding(() -> {
 					double parentWidth = getRoot().widthProperty().get();
-					return map(dBVal, MIN_DB_VALUE, 0, 
+					return map(dBVal, propMinDbValue.getProp().get(), 0, 
 						parentWidth * SCENE_MARGIN_RATIO, 
 						parentWidth - parentWidth * SCENE_MARGIN_RATIO);
 					}, 
-					getRoot().widthProperty()));
+					getRoot().widthProperty(), propMinDbValue.getProp()));
 		line.endXProperty().bind(line.startXProperty());
 		line.startYProperty().bind(getRoot().heightProperty().multiply(GRID_MARGIN_RATIO));
 		line.endYProperty().bind(getRoot().heightProperty().subtract(
@@ -245,10 +260,10 @@ public class StereoLevelsView extends AbstractView {
 		line.startXProperty().bind(Bindings.createDoubleBinding(
 				() -> {
 					double parentWidth = getRoot().widthProperty().get();
-					return map(lingerLevelProp.get(), MIN_DB_VALUE, 0, 
+					return map(lingerLevelProp.get(), propMinDbValue.getProp().get(), 0, 
 							parentWidth * SCENE_MARGIN_RATIO, parentWidth - parentWidth * SCENE_MARGIN_RATIO);
 				}, 
-				lingerLevelProp, getRoot().widthProperty()));
+				lingerLevelProp, getRoot().widthProperty(), propMinDbValue.getProp()));
 		line.endXProperty().bind(line.startXProperty());
 		line.startYProperty().bind(levelBar.yProperty());
 		line.endYProperty().bind(levelBar.yProperty().add(levelBar.heightProperty()));
@@ -326,6 +341,7 @@ public class StereoLevelsView extends AbstractView {
 		maxLevelRProp.set(maxLevelR);
 		
 		// Update linger levels
+		int minDbValue = propMinDbValue.getProp().get();
 		lingerLevelL = lingerLevelL - lingerOpValL;
 		lingerOpValL = lingerOpValL * LINGER_ACCELARATION_FACTOR;
 		
@@ -333,8 +349,8 @@ public class StereoLevelsView extends AbstractView {
 			lingerLevelL = currentDbL;
 			lingerOpValL = LINGER_STAY_FACTOR;
 		}
-		if(lingerLevelL < MIN_DB_VALUE) {
-			lingerLevelL = MIN_DB_VALUE;
+		if(lingerLevelL < minDbValue) {
+			lingerLevelL = minDbValue;
 		}
 		leftLingerLevelProp.set(lingerLevelL);
 		
@@ -345,18 +361,10 @@ public class StereoLevelsView extends AbstractView {
 			lingerLevelR = currentDbR;
 			lingerOpValR = LINGER_STAY_FACTOR;
 		}
-		if(lingerLevelR < MIN_DB_VALUE) {
-			lingerLevelR = MIN_DB_VALUE;
+		if(lingerLevelR < minDbValue) {
+			lingerLevelR = minDbValue;
 		}
 		rightLingerLevelProp.set(lingerLevelR);
-	}
-
-	@Override
-	public void onShow() {
-	}
-
-	@Override
-	public void onHide() {
 	}
 	
 	/* Binding Logic */
@@ -366,10 +374,10 @@ public class StereoLevelsView extends AbstractView {
 		bar.widthProperty().bind(Bindings.createDoubleBinding(
 				() -> {
 					double parentWidth = getRoot().widthProperty().get();
-					return map(prop.get(), MIN_DB_VALUE, 0, 
+					return map(prop.get(), propMinDbValue.getProp().get(), 0, 
 							0, parentWidth - parentWidth * SCENE_MARGIN_RATIO * 2);
 				}, 
-				prop, getRoot().widthProperty()));
+				prop, getRoot().widthProperty(), propMinDbValue.getProp()));
 	}
 	
 	private void createDrBarExprBinding(Rectangle bar, 
@@ -378,18 +386,18 @@ public class StereoLevelsView extends AbstractView {
 		bar.xProperty().bind(Bindings.createDoubleBinding(
 				() -> {
 					double parentWidth = getRoot().widthProperty().get();
-					return map(minLevelProp.get(), MIN_DB_VALUE, 0,
+					return map(minLevelProp.get(), propMinDbValue.getProp().get(), 0,
 							parentWidth * SCENE_MARGIN_RATIO, parentWidth - parentWidth * SCENE_MARGIN_RATIO);
 				}, 
-				minLevelProp, getRoot().widthProperty()));
+				minLevelProp, getRoot().widthProperty(), propMinDbValue.getProp()));
 		
 		bar.widthProperty().bind(Bindings.createDoubleBinding(
 				() -> {
 					double parentWidth = getRoot().widthProperty().get();
-					return map(maxLevelProp.get(), MIN_DB_VALUE, 0,
+					return map(maxLevelProp.get(), propMinDbValue.getProp().get(), 0,
 							parentWidth * SCENE_MARGIN_RATIO, parentWidth - parentWidth * SCENE_MARGIN_RATIO) - bar.xProperty().get();
 				}, 
-				maxLevelProp, getRoot().widthProperty(), bar.xProperty()));
+				maxLevelProp, getRoot().widthProperty(), bar.xProperty(), propMinDbValue.getProp()));
 	}
 
 }

@@ -378,7 +378,7 @@ public class Spectrum extends Application {
 		pane.prefHeightProperty().bind(parent.heightProperty().divide(2));
 		pane.layoutXProperty().bind(parent.widthProperty().subtract(pane.widthProperty()).divide(2));
 		pane.layoutYProperty().bind(parent.heightProperty().subtract(pane.heightProperty()).divide(2));
-		pane.setBackground(new Background(new BackgroundFill(Color.rgb(230, 230, 230), new CornerRadii(5), null)));
+		pane.setBackground(new Background(new BackgroundFill(Color.rgb(180, 180, 180), new CornerRadii(5), null)));
 		pane.setBorder(new Border(new BorderStroke(Color.DARKGRAY, 
 	            BorderStrokeStyle.SOLID, new CornerRadii(6), new BorderWidths(2))));
 		//pane.setOpacity(0.9);

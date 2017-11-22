@@ -50,10 +50,10 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 	/* Configurable properties */
 	
 	// Requiring reset
-	private ConfigurableIntegerProperty propDivCount, propMinDbValue;
+	private ConfigurableIntegerProperty propDivCount;
 	
 	// Not requiring reset
-	private ConfigurableIntegerProperty propLightXPosition, 
+	private ConfigurableIntegerProperty propMinDbValue, propLightXPosition, 
 		propLightYPosition, propSensitivity, propMaxDbuValue;
 	private ConfigurableColorProperty propBackgroundColor, propLightColor, 
 		propIndicatorColor, propNormalLevelDigitsColor, propHighLevelDigitsColor, propPeakColor, propRotorColor, propRotorPlateColor;
@@ -93,15 +93,9 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 			}
 		});
 		
+		// Not requiring reset
 		propMinDbValue = createConfigurableIntegerProperty(
 				keyPrefix + "minDbValue", "Min. DB Value", -100, -10, -24, 1);
-		propMinDbValue.getProp().addListener((obs, oldVal, newVal) -> {
-			if(newVal != oldVal) {
-				reset();
-			}
-		});
-		
-		// Not requiring reset
 		propMaxDbuValue = createConfigurableIntegerProperty(
 				keyPrefix + "maxDBuValue", "Max. dBu Value", 0, 24, 6, 1);
 		propBackgroundColor = createConfigurableColorProperty(
