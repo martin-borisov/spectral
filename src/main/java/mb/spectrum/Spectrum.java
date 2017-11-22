@@ -145,7 +145,7 @@ public class Spectrum extends Application {
         stage.show();
         
         // Event handlers
-        stage.addEventHandler(KeyEvent.KEY_RELEASED, new EventHandler<KeyEvent>() {
+        stage.addEventFilter(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 			public void handle(KeyEvent event) {
 				onKey(event);
 			}
@@ -167,6 +167,7 @@ public class Spectrum extends Application {
 	
 	private void onKey(KeyEvent event) {
 		
+		// NB: Only left and right events are consumed to prevent propagation to property sliders
 		switch (event.getCode()) {
 		case RIGHT:
 			if(propertiesVisible) {
@@ -174,6 +175,7 @@ public class Spectrum extends Application {
 			} else {
 				nextView();
 			}
+			event.consume();
 			break;
 			
 		case LEFT:
@@ -182,6 +184,7 @@ public class Spectrum extends Application {
 			} else {
 				prevView();
 			}
+			event.consume();
 			break;
 		
 		case SPACE:

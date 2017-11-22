@@ -10,6 +10,7 @@ import javafx.event.Event;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.stage.Stage;
+import mb.spectrum.gpio.RotaryEncoderHandler.Direction;
 
 public class StageGpioController implements GpioPinListenerDigital {
 	
@@ -19,11 +20,31 @@ public class StageGpioController implements GpioPinListenerDigital {
 	public StageGpioController(Stage stage) {
 		this.stage = stage;
 		setupPins();
+		setupRotaryEncoder();
 	}
 	
 	private void setupPins() {
-		gpio.createDigitalInputPin(RaspiPin.GPIO_04, "Button A", this);
-		gpio.createDigitalInputPin(RaspiPin.GPIO_05, "Button B", this);
+		gpio.createDigitalHardwareDebouncedInputPin(RaspiPin.GPIO_04, "Button A", this);
+		gpio.createDigitalHardwareDebouncedInputPin(RaspiPin.GPIO_05, "Button B", this);
+	}
+	
+	private void setupRotaryEncoder() {
+		new RotaryEncoderHandler(RaspiPin.GPIO_25, RaspiPin.GPIO_27, 
+				new RotaryEncoderHandler.RotationListener() {
+			public void rotated(Direction direction) {
+				switch (direction) {
+				case LEFT:
+					fireEvent(new KeyEvent(KeyEvent.KEY_PRESSED, null, null, 
+							KeyCode.DOWN, false, false, false, false));
+					break;
+
+				case RIGHT:
+					fireEvent(new KeyEvent(KeyEvent.KEY_PRESSED, null, null, 
+							KeyCode.UP, false, false, false, false));
+					break;
+				}
+			}
+		});
 	}
 	
 	@Override
@@ -40,10 +61,10 @@ public class StageGpioController implements GpioPinListenerDigital {
 	
 	private void handleHighEvent(GpioPin pin) {
 		if(RaspiPin.GPIO_04.equals(pin.getPin())) {
-			fireEvent(new KeyEvent(KeyEvent.KEY_RELEASED, null, null, 
+			fireEvent(new KeyEvent(KeyEvent.KEY_PRESSED, null, null, 
 					KeyCode.LEFT, false, false, false, false));
 		} else if (RaspiPin.GPIO_05.equals(pin.getPin())) {
-			fireEvent(new KeyEvent(KeyEvent.KEY_RELEASED, null, null, 
+			fireEvent(new KeyEvent(KeyEvent.KEY_PRESSED, null, null, 
 					KeyCode.RIGHT, false, false, false, false));
 		}
 	}

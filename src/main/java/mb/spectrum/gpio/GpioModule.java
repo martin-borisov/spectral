@@ -26,9 +26,18 @@ public class GpioModule {
 		return ref;
 	}
 	
-    public GpioPinDigitalInput createDigitalInputPin(Pin pin, String name, GpioPinListenerDigital listener) {
+    public GpioPinDigitalInput createDigitalHardwareDebouncedInputPin(Pin pin, String name, GpioPinListenerDigital listener) {
     	GpioPinDigitalInput input = gpio.provisionDigitalInputPin(
     			pin, name, PinPullResistance.PULL_DOWN);
+    	input.addListener(listener);
+    	input.setShutdownOptions(true, PinState.LOW, PinPullResistance.OFF);
+    	return input;
+    }
+    
+    public GpioPinDigitalInput createDigitalSoftwareDebouncedInputPin(Pin pin, String name, GpioPinListenerDigital listener) {
+    	GpioPinDigitalInput input = gpio.provisionDigitalInputPin(
+    			pin, name, PinPullResistance.PULL_UP);
+    	input.setDebounce(100);
     	input.addListener(listener);
     	input.setShutdownOptions(true, PinState.LOW, PinPullResistance.OFF);
     	return input;
