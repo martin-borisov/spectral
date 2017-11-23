@@ -122,17 +122,6 @@ public class RotaryEncoderHandler implements GpioPinListenerDigital {
 			}
 			
 		}
-		
-		/*
-		Direction direction = EncoderMatchingUtil.match(list);
-		if(direction != null) {
-			list.clear();
-			
-			if(listener != null) {
-				listener.rotated(direction);
-			}
-		}
-		*/
 	}
 	
 	public interface RotationListener {
