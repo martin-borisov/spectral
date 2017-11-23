@@ -3,6 +3,10 @@ package mb.spectrum.gpio;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+
+import org.apache.commons.lang3.builder.EqualsBuilder;
 
 import com.pi4j.io.gpio.Pin;
 import com.pi4j.io.gpio.PinState;
@@ -17,14 +21,17 @@ public class RotaryEncoderHandler implements GpioPinListenerDigital {
 	
 	private Pin pinA, pinB;
 	private RotationListener listener;
-	private List<PinStateChange> states;
+	private BlockingQueue<PinStateChange> queue;
+	private List<PinStateChange> list;
 	
 	public RotaryEncoderHandler(Pin pinA, Pin pinB, RotationListener listener) {
 		this.pinA = pinA;
 		this.pinB = pinB;
 		this.listener = listener;
-		states = Collections.synchronizedList(new ArrayList<>(4));
+		queue = new ArrayBlockingQueue<>(1000);
+		list = Collections.synchronizedList(new ArrayList<>());
 		provisionPins();
+		startEventProcessing();
 	}
 	
 	private void provisionPins() {
@@ -34,33 +41,33 @@ public class RotaryEncoderHandler implements GpioPinListenerDigital {
 	
 	@Override
 	public void handleGpioPinDigitalStateChangeEvent(GpioPinDigitalStateChangeEvent event) {
-		addStateChangeAndDecode(new PinStateChange(event.getPin().getName(), event.getState()));
+		queue.offer(new PinStateChange(event.getPin().getName(), event.getState()));
 	}
 	
-	private void addStateChangeAndDecode(PinStateChange state) {
-		states.add(0, state);
-		if(states.size() >= 4) {
-			if(PinState.LOW.equals(states.get(0).getState()) && 
-					PinState.LOW.equals(states.get(1).getState()) && 
-					PinState.HIGH.equals(states.get(2).getState()) && 
-					PinState.HIGH.equals(states.get(3).getState())) {
-				if("Left".equals(states.get(0).getPinName()) && 
-						"Right".equals(states.get(1).getPinName()) && 
-						"Left".equals(states.get(2).getPinName()) && 
-						"Right".equals(states.get(3).getPinName())) {
-					if(listener != null) {
-						listener.rotated(Direction.LEFT);
-					}
-				} else 	if("Right".equals(states.get(0).getPinName()) && 
-						"Left".equals(states.get(1).getPinName()) && 
-						"Right".equals(states.get(2).getPinName()) && 
-						"Left".equals(states.get(3).getPinName())) {
-					if(listener != null) {
-						listener.rotated(Direction.RIGHT);
+	private void startEventProcessing() {
+		new Thread(new Runnable() {
+			public void run() {
+				while(true) {
+					PinStateChange change;
+					try {
+						change = queue.take();
+						list.add(change);
+						decode();
+					} catch (InterruptedException e) {
 					}
 				}
 			}
-			states.clear();
+		}).start();
+	}
+	
+	private void decode() {
+		Direction direction = EncoderMatchingUtil.match(list);
+		if(direction != null) {
+			list.clear();
+			
+			if(listener != null) {
+				listener.rotated(direction);
+			}
 		}
 	}
 	
@@ -68,7 +75,7 @@ public class RotaryEncoderHandler implements GpioPinListenerDigital {
 		void rotated(Direction direction);
 	}
 	
-	private class PinStateChange {
+	public static class PinStateChange {
 		private String pinName;
 		private PinState state;
 		
@@ -83,6 +90,22 @@ public class RotaryEncoderHandler implements GpioPinListenerDigital {
 
 		public PinState getState() {
 			return state;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (!(obj instanceof PinStateChange)) {
+				return false;
+			}
+	        if (obj == this) {
+	            return true;
+	        }
+	        
+	        PinStateChange other = (PinStateChange) obj;
+	        return new EqualsBuilder().
+	        		append(pinName, other.getPinName()).
+	        		append(state, other.getState()).
+	        		isEquals();
 		}
 	}
 }
