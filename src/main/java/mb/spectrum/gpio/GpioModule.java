@@ -37,7 +37,7 @@ public class GpioModule {
     public GpioPinDigitalInput createDigitalSoftwareDebouncedInputPin(Pin pin, String name, GpioPinListenerDigital listener) {
     	GpioPinDigitalInput input = gpio.provisionDigitalInputPin(
     			pin, name, PinPullResistance.PULL_UP);
-    	input.setDebounce(100);
+    	input.setDebounce(50);
     	input.addListener(listener);
     	input.setShutdownOptions(true, PinState.LOW, PinPullResistance.OFF);
     	return input;

@@ -150,11 +150,6 @@ public class Spectrum extends Application {
 				onKey(event);
 			}
 		});
-        
-        stage.getScene().getAccelerators().put(
-        		KeyCombination.keyCombination("CTRL+C"),
-	        	() -> Platform.exit()
-        	);
 	}
 	
 	private void startFrameListener() {

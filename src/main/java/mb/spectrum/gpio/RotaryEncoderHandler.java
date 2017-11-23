@@ -45,22 +45,85 @@ public class RotaryEncoderHandler implements GpioPinListenerDigital {
 	}
 	
 	private void startEventProcessing() {
-		new Thread(new Runnable() {
+		Thread thread = new Thread(new Runnable() {
 			public void run() {
 				while(true) {
 					PinStateChange change;
 					try {
 						change = queue.take();
-						list.add(change);
-						decode();
+						decode(change);
 					} catch (InterruptedException e) {
 					}
 				}
 			}
-		}).start();
+		});
+		thread.setDaemon(true);
+		thread.start();
 	}
 	
-	private void decode() {
+	private void decode(PinStateChange state) {
+		
+		if(list.isEmpty()) {
+			
+			if(PinState.LOW.equals(state.getState())) {
+				list.add(state);
+			}
+			
+		} else if(list.size() == 1) {
+			
+			if(PinState.LOW.equals(state.getState())) {
+				if(("Right".equals(list.get(0).getPinName()) && 
+						"Left".equals(state.getPinName())) ||
+						("Left".equals(list.get(0).getPinName()) && 
+								"Right".equals(state.getPinName()))) {
+					list.add(state);
+				} else {
+					list.clear();
+				}
+			} else {
+				list.clear();
+			}
+			
+		} else if(list.size() == 2) {
+			
+			if(PinState.HIGH.equals(state.getState())) {
+				if(("Right".equals(list.get(1).getPinName()) && 
+						"Left".equals(state.getPinName())) ||
+						("Left".equals(list.get(1).getPinName()) && 
+								"Right".equals(state.getPinName()))) {
+					list.add(state);
+				} else {
+					list.clear();
+				}
+			} else {
+				list.clear();
+			}
+			
+		} else if(list.size() == 3) {
+			
+			if(PinState.HIGH.equals(state.getState())) {
+				if("Right".equals(list.get(2).getPinName()) && 
+						"Left".equals(state.getPinName())) {
+					if(listener != null) {
+						listener.rotated(Direction.RIGHT);
+						list.clear();
+					}
+				} else if("Left".equals(list.get(2).getPinName()) && 
+						"Right".equals(state.getPinName())) {
+					if(listener != null) {
+						listener.rotated(Direction.LEFT);
+						list.clear();
+					}
+				} else {
+					list.clear();
+				}
+			} else {
+				list.clear();
+			}
+			
+		}
+		
+		/*
 		Direction direction = EncoderMatchingUtil.match(list);
 		if(direction != null) {
 			list.clear();
@@ -69,6 +132,7 @@ public class RotaryEncoderHandler implements GpioPinListenerDigital {
 				listener.rotated(direction);
 			}
 		}
+		*/
 	}
 	
 	public interface RotationListener {
