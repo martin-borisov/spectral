@@ -19,7 +19,6 @@ import javafx.scene.Scene;
 import javafx.scene.SceneAntialiasing;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
-import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
@@ -202,6 +201,7 @@ public class Spectrum extends Application {
 			if(event.isControlDown()) {
 				Platform.exit();
 			}
+			break;
 			
 		default:
 			break;

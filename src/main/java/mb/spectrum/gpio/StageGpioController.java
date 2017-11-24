@@ -7,6 +7,7 @@ import com.pi4j.io.gpio.event.GpioPinListenerDigital;
 
 import javafx.application.Platform;
 import javafx.event.Event;
+import javafx.scene.Node;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.stage.Stage;
@@ -32,17 +33,7 @@ public class StageGpioController implements GpioPinListenerDigital {
 		new RotaryEncoderHandler(RaspiPin.GPIO_25, RaspiPin.GPIO_27, 
 				new RotaryEncoderHandler.RotationListener() {
 			public void rotated(Direction direction) {
-				switch (direction) {
-				case LEFT:
-					fireEvent(new KeyEvent(KeyEvent.KEY_PRESSED, null, null, 
-							KeyCode.DOWN, false, false, false, false));
-					break;
-
-				case RIGHT:
-					fireEvent(new KeyEvent(KeyEvent.KEY_PRESSED, null, null, 
-							KeyCode.UP, false, false, false, false));
-					break;
-				}
+				fireRotaryTurnEvent(direction);
 			}
 		});
 	}
@@ -61,20 +52,43 @@ public class StageGpioController implements GpioPinListenerDigital {
 	
 	private void handleHighEvent(GpioPin pin) {
 		if(RaspiPin.GPIO_04.equals(pin.getPin())) {
-			fireEvent(new KeyEvent(KeyEvent.KEY_PRESSED, null, null, 
+			fireStageEvent(new KeyEvent(KeyEvent.KEY_PRESSED, null, null, 
 					KeyCode.LEFT, false, false, false, false));
 		} else if (RaspiPin.GPIO_05.equals(pin.getPin())) {
-			fireEvent(new KeyEvent(KeyEvent.KEY_PRESSED, null, null, 
+			fireStageEvent(new KeyEvent(KeyEvent.KEY_PRESSED, null, null, 
 					KeyCode.RIGHT, false, false, false, false));
 		}
 	}
 	
-	private void fireEvent(Event event) {
+	private void fireStageEvent(Event event) {
 		Platform.runLater(new Runnable() {
 			public void run() {
 				stage.fireEvent(event);
 			}
 		});
+	}
+	
+	private void fireFocusedControlEvent(Event event) {
+		Platform.runLater(new Runnable() {
+			public void run() {
+				Node focusNode = stage.getScene().focusOwnerProperty().get();
+				if(focusNode != null) {
+					focusNode.fireEvent(event);
+				}
+			}
+		});
+	}
+	
+	private void fireRotaryTurnEvent(Direction direction) {
+		KeyEvent event = new KeyEvent(KeyEvent.KEY_PRESSED, null, null, 
+				Direction.RIGHT.equals(direction) ? KeyCode.UP : KeyCode.DOWN, 
+						false, false, false, false);
+		Node focusNode = stage.getScene().focusOwnerProperty().get();
+		if(focusNode != null) {
+			fireFocusedControlEvent(event);
+		} else {
+			fireStageEvent(event);
+		}
 	}
 	
 	public void close() {
