@@ -35,8 +35,8 @@ public class RotaryEncoderHandler implements GpioPinListenerDigital {
 	}
 	
 	private void provisionPins() {
-		GpioModule.getInstance().createDigitalSoftwareDebouncedInputPin(pinA, "Left", this);
-		GpioModule.getInstance().createDigitalSoftwareDebouncedInputPin(pinB, "Right", this);
+		GpioModule.getInstance().createDigitalSoftwareDebouncedInputPinForRotary(pinA, "Left", this);
+		GpioModule.getInstance().createDigitalSoftwareDebouncedInputPinForRotary(pinB, "Right", this);
 	}
 	
 	@Override

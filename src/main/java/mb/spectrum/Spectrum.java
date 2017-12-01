@@ -41,6 +41,7 @@ import mb.spectrum.prop.ConfigurableProperty;
 import mb.spectrum.view.AnalogMeterView;
 import mb.spectrum.view.SpectrumAreaView;
 import mb.spectrum.view.SpectrumBarView;
+import mb.spectrum.view.StereoLevelsLedView;
 import mb.spectrum.view.StereoLevelsView;
 import mb.spectrum.view.View;
 
@@ -65,6 +66,7 @@ public class Spectrum extends Application {
 	private Minim minim;
 	private AudioInput in;
 	private View[] views = new View[] {
+			new StereoLevelsLedView(),
 			new AnalogMeterView(),
 			new SpectrumBarView(),
 			new SpectrumAreaView(),
@@ -98,9 +100,13 @@ public class Spectrum extends Application {
 		checkAndDisableGpio();
 	}
 	
+	public boolean isPropertyVisible() {
+		return propertiesVisible;
+	}
+	
 	private void checkAndEnableGpio(Stage stage) {
 		if(ENABLE_GPIO) {
-			gpio = new StageGpioController(stage);
+			gpio = new StageGpioController(this, stage);
 		}
 	}
 	
@@ -161,7 +167,8 @@ public class Spectrum extends Application {
 	
 	private void onKey(KeyEvent event) {
 		
-		// NB: Only left and right events are consumed to prevent propagation to property sliders
+		// NB: Only left and right events are consumed to prevent switching to the next slider
+		// if a custom color control is currently shown
 		switch (event.getCode()) {
 		case RIGHT:
 			if(propertiesVisible) {

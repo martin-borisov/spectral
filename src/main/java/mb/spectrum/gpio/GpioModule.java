@@ -35,9 +35,17 @@ public class GpioModule {
     }
     
     public GpioPinDigitalInput createDigitalSoftwareDebouncedInputPin(Pin pin, String name, GpioPinListenerDigital listener) {
+    	return createDigitalSoftwareDebouncedInputPin(pin, name, 200, listener);
+    }
+    
+    public GpioPinDigitalInput createDigitalSoftwareDebouncedInputPinForRotary(Pin pin, String name, GpioPinListenerDigital listener) {
+    	return createDigitalSoftwareDebouncedInputPin(pin, name, 50, listener);
+    }
+    
+    public GpioPinDigitalInput createDigitalSoftwareDebouncedInputPin(Pin pin, String name, int delay, GpioPinListenerDigital listener) {
     	GpioPinDigitalInput input = gpio.provisionDigitalInputPin(
     			pin, name, PinPullResistance.PULL_UP);
-    	input.setDebounce(50);
+    	input.setDebounce(delay);
     	input.addListener(listener);
     	input.setShutdownOptions(true, PinState.LOW, PinPullResistance.OFF);
     	return input;
