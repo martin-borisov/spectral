@@ -14,19 +14,20 @@ import javafx.scene.Node;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.stage.Stage;
-import mb.spectrum.Spectrum;
+import mb.spectrum.SystemUtils;
 import mb.spectrum.gpio.RotaryEncoderHandler.Direction;
 
 public class StageGpioController implements GpioPinListenerDigital {
 	
 	private GpioModule gpio = GpioModule.getInstance();
-	private Spectrum spectrum;
 	private Stage stage;
-	volatile private Direction rotaryADirectionFlag, rotaryBDirectionFlag;
+	private volatile Direction rotaryADirectionFlag, rotaryBDirectionFlag;
+	private boolean buttonAPressed, buttonBPressed;
+	private Timer bothButtonsPressedTimer;
 	
-	public StageGpioController(Spectrum spectrum, Stage stage) {
-		this.spectrum = spectrum;
+	public StageGpioController(Stage stage) {
 		this.stage = stage;
+		bothButtonsPressedTimer = null;
 		setupPins();
 		setupRotaryEncoder();
 		setupRotaryEncoderPollThread();
@@ -76,22 +77,62 @@ public class StageGpioController implements GpioPinListenerDigital {
 	public void handleGpioPinDigitalStateChangeEvent(GpioPinDigitalStateChangeEvent event) {
 		switch (event.getState()) {
 		case HIGH:
-			//handleHighEvent(event.getPin());
+			handleHighEvent(event.getPin());
 			break;
 			
 		case LOW:
-			handleHighEvent(event.getPin());
+			handleLowEvent(event.getPin());
 			break;
 		}
 	}
 	
+	
 	private void handleHighEvent(GpioPin pin) {
 		if(RaspiPin.GPIO_23.equals(pin.getPin())) {
-			fireStageEvent(new KeyEvent(KeyEvent.KEY_PRESSED, null, null, 
-					KeyCode.ESCAPE, false, false, false, false));
+			if(!buttonBPressed) {
+				fireStageEvent(new KeyEvent(KeyEvent.KEY_PRESSED, null, null, 
+						KeyCode.ESCAPE, false, false, false, false));
+			}
+			cancelShutdownTimer();
+			buttonAPressed = false;
 		} else if (RaspiPin.GPIO_00.equals(pin.getPin())) {
-			fireStageEvent(new KeyEvent(KeyEvent.KEY_PRESSED, null, null, 
-					KeyCode.SPACE, false, false, false, false));
+			if(!buttonAPressed) {
+				fireStageEvent(new KeyEvent(KeyEvent.KEY_PRESSED, null, null, 
+						KeyCode.SPACE, false, false, false, false));
+			}
+			cancelShutdownTimer();
+			buttonBPressed = false;
+		}
+	}
+
+	private void handleLowEvent(GpioPin pin) {
+		if(RaspiPin.GPIO_23.equals(pin.getPin())) {
+			buttonAPressed = true;
+			if(buttonBPressed) {
+				onBothButtonsPressed();
+			}
+		} else if (RaspiPin.GPIO_00.equals(pin.getPin())) {
+			buttonBPressed = true;
+			if(buttonAPressed) {
+				onBothButtonsPressed();
+			}
+		}
+	}
+	
+	// TODO Similarly create onButtonPressed and onButtonReleased handlers
+	private void onBothButtonsPressed() {
+		bothButtonsPressedTimer = new Timer(false);
+		bothButtonsPressedTimer.schedule(new TimerTask() {
+			public void run() {
+				SystemUtils.shutdown();
+			}
+		}, 5000);
+	}
+	
+	private void cancelShutdownTimer() {
+		if(bothButtonsPressedTimer != null) {
+			bothButtonsPressedTimer.cancel();
+			bothButtonsPressedTimer = null;
 		}
 	}
 	

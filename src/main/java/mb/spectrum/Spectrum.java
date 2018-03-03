@@ -106,7 +106,7 @@ public class Spectrum extends Application {
 	
 	private void checkAndEnableGpio(Stage stage) {
 		if(ENABLE_GPIO) {
-			gpio = new StageGpioController(this, stage);
+			gpio = new StageGpioController(stage);
 		}
 	}
 	
@@ -146,7 +146,7 @@ public class Spectrum extends Application {
         		INIT_SCENE_WIDTH, INIT_SCENE_HEIGHT, false, SceneAntialiasing.DISABLED));
         currentView.onShow();
         
-        //stage.setMaximized(true);
+        stage.setMaximized(true);
         stage.show();
         
         // Event handlers
