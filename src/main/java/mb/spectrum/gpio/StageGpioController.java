@@ -29,13 +29,12 @@ public class StageGpioController implements GpioPinListenerDigital {
 	private GpioModule gpio = GpioModule.getInstance();
 	private Stage stage;
 	private volatile Direction rotaryADirectionFlag, rotaryBDirectionFlag;
-	private boolean buttonAPressed, buttonBPressed;
 	private ButtonState buttonAState = RELEASED, buttonBState = RELEASED;
-	private Timer bothButtonsPressedTimer;
+	private Timer bothButtonsHoldTimer, buttonBHoldTimer;;
 	
 	public StageGpioController(Stage stage) {
 		this.stage = stage;
-		bothButtonsPressedTimer = null;
+		bothButtonsHoldTimer = null;
 		setupPins();
 		setupRotaryEncoder();
 		setupRotaryEncoderPollThread();
@@ -102,30 +101,14 @@ public class StageGpioController implements GpioPinListenerDigital {
 			if(buttonBState == RELEASED) {
 				onButtonAReleased();
 			}
-			
-			/*
-			if(!buttonBPressed) {
-				fireStageEvent(new KeyEvent(KeyEvent.KEY_PRESSED, null, null, 
-						KeyCode.ESCAPE, false, false, false, false));
-			}
-			cancelShutdownTimer();
-			buttonAPressed = false;
-			*/
+			cancelBothButtonsPressedTimer();
 		} else if (RaspiPin.GPIO_00.equals(pin.getPin())) {
 			
 			buttonBState = RELEASED;
 			if(buttonAState == RELEASED) {
 				onButtonBReleased();
 			}
-			
-			/*
-			if(!buttonAPressed) {
-				fireStageEvent(new KeyEvent(KeyEvent.KEY_PRESSED, null, null, 
-						KeyCode.SPACE, false, false, false, false));
-			}
-			cancelShutdownTimer();
-			buttonBPressed = false;
-			*/
+			cancelBothButtonsPressedTimer();
 		}
 	}
 
@@ -138,13 +121,6 @@ public class StageGpioController implements GpioPinListenerDigital {
 			} else {
 				onBothButtonsPressed();
 			}
-
-			/*
-			buttonAPressed = true;
-			if(buttonBPressed) {
-				onBothButtonsPressed();
-			}
-			*/
 		} else if (RaspiPin.GPIO_00.equals(pin.getPin())) {
 			
 			buttonBState = PRESSED;
@@ -153,13 +129,6 @@ public class StageGpioController implements GpioPinListenerDigital {
 			} else {
 				onBothButtonsPressed();
 			}
-			
-			/*
-			buttonBPressed = true;
-			if(buttonAPressed) {
-				onBothButtonsPressed();
-			}
-			*/
 		}
 	}
 	
@@ -169,32 +138,44 @@ public class StageGpioController implements GpioPinListenerDigital {
 	private void onButtonAReleased() {
 		fireStageEvent(new KeyEvent(KeyEvent.KEY_PRESSED, null, null, 
 				KeyCode.ESCAPE, false, false, false, false));
-		cancelShutdownTimer();
 	}
 	
 	private void onButtonBPressed() {
+		buttonBHoldTimer = new Timer(false);
+		buttonBHoldTimer.schedule(new TimerTask() {
+			public void run() {
+				fireStageEvent(new KeyEvent(KeyEvent.KEY_PRESSED, null, null, 
+						KeyCode.ENTER, false, false, false, false));
+			}
+		}, 3000);
 	}
 	
 	private void onButtonBReleased() {
+		cancelButtonBHoldTimer();
 		fireStageEvent(new KeyEvent(KeyEvent.KEY_PRESSED, null, null, 
 				KeyCode.SPACE, false, false, false, false));
-		cancelShutdownTimer();
 	}
 	
-	
 	private void onBothButtonsPressed() {
-		bothButtonsPressedTimer = new Timer(false);
-		bothButtonsPressedTimer.schedule(new TimerTask() {
+		bothButtonsHoldTimer = new Timer(false);
+		bothButtonsHoldTimer.schedule(new TimerTask() {
 			public void run() {
 				SystemUtils.shutdown();
 			}
 		}, 5000);
 	}
 	
-	private void cancelShutdownTimer() {
-		if(bothButtonsPressedTimer != null) {
-			bothButtonsPressedTimer.cancel();
-			bothButtonsPressedTimer = null;
+	private void cancelBothButtonsPressedTimer() {
+		if(bothButtonsHoldTimer != null) {
+			bothButtonsHoldTimer.cancel();
+			bothButtonsHoldTimer = null;
+		}
+	}
+	
+	private void cancelButtonBHoldTimer() {
+		if(buttonBHoldTimer != null) {
+			buttonBHoldTimer.cancel();
+			buttonBHoldTimer = null;
 		}
 	}
 	

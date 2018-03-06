@@ -1,5 +1,9 @@
 package mb.spectrum;
 
+import static mb.spectrum.UiUtils.createConfigurableIntegerProperty;
+
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import ddf.minim.AudioInput;
@@ -76,32 +80,38 @@ public class Spectrum extends Application {
 	private int currentViewIdx;
 	
 	/* Property management */
-	private boolean propertiesVisible;
+	private List<ConfigurableProperty<? extends Object>> currentPropertyList;
 	private int currentPropIdx;
 	private Pane currentPropertyNode;
+	
+	/* Global Properties */
+	List<ConfigurableProperty<? extends Object>> globalPropertyList;
+	private ConfigurableIntegerProperty propGlobalGain;
 	
 	public Spectrum() {
 		currentViewIdx = 0;
 		currentView = views[currentViewIdx];
+		globalPropertyList = new ArrayList<>();
 		minim = new Minim(new JSMinim(new MinimInitializer()));
 	}
 
 	@Override
 	public void start(Stage stage) throws Exception {
 		checkAndEnableGpio(stage);
+		initProperties();
 		startAudio();
         setupStage(stage);
 		startFrameListener();
 	}
-	
+
 	@Override
 	public void stop() throws Exception {
 		stopAudio();
 		checkAndDisableGpio();
 	}
 	
-	public boolean isPropertyVisible() {
-		return propertiesVisible;
+	public boolean isPropertiesVisible() {
+		return currentPropertyList != null;
 	}
 	
 	private void checkAndEnableGpio(Stage stage) {
@@ -115,6 +125,13 @@ public class Spectrum extends Application {
 			gpio.close();
 		}
 	}
+	
+	private void initProperties() {
+		final String keyPrefix = "global.";
+		propGlobalGain = createConfigurableIntegerProperty(
+				keyPrefix + "gain", "Global Gain (%)", 10, 400, 100, 10);
+		globalPropertyList.addAll(Arrays.asList(propGlobalGain));
+	}
 
 	private void startAudio() {
 		in = minim.getLineIn(Minim.STEREO, BUFFER_SIZE, SAMPLING_RATE, 16);
@@ -124,6 +141,16 @@ public class Spectrum extends Application {
 		
 		in.addListener(new AudioListener() {
 			public void samples(float[] left, float[] right) {
+				
+				// Gain
+				float gain = propGlobalGain.getProp().get() / 100f;
+				for (int i = 0; i < left.length; i++) {
+					left[i] = left[i] * gain;
+				}
+				for (int i = 0; i < right.length; i++) {
+					right[i] = right[i] * gain;
+				}
+				
 				currentView.dataAvailable(left, right);
 			}
 			public void samples(float[] paramArrayOfFloat) {
@@ -171,7 +198,7 @@ public class Spectrum extends Application {
 		// if a custom color control is currently shown
 		switch (event.getCode()) {
 		case RIGHT:
-			if(propertiesVisible) {
+			if(isPropertiesVisible()) {
 				nextProperty();
 			} else {
 				nextView();
@@ -180,7 +207,7 @@ public class Spectrum extends Application {
 			break;
 			
 		case LEFT:
-			if(propertiesVisible) {
+			if(isPropertiesVisible()) {
 				prevProperty();
 			} else {
 				prevView();
@@ -189,11 +216,15 @@ public class Spectrum extends Application {
 			break;
 		
 		case SPACE:
-			togglePropertiesOn();
+			toggleCurrentViewPropertiesOn();
 			break;
 			
 		case ESCAPE:
 			togglePropertiesOff();
+			break;
+			
+		case ENTER:
+			toggleGlobalPropertiesOn();
 			break;
 			
 		case UP:
@@ -215,13 +246,22 @@ public class Spectrum extends Application {
 		}
 	}
 	
+	private void toggleGlobalPropertiesOn() {
+		if(!isPropertiesVisible()) {
+			currentPropertyList = globalPropertyList;
+			currentPropIdx = 0;
+			showProperty(currentPropIdx);
+		}
+	}
+	
 	/**
 	 * Resets the property index and shows first property of current view
 	 */
-	private void togglePropertiesOn() {
-		if(!propertiesVisible) {
+	private void toggleCurrentViewPropertiesOn() {
+		if(!isPropertiesVisible()) {
+			currentPropertyList = currentView.getProperties();
 			currentPropIdx = 0;
-			propertiesVisible = showProperty(currentPropIdx);
+			showProperty(currentPropIdx);
 		}
 	}
 	
@@ -229,9 +269,9 @@ public class Spectrum extends Application {
 	 * If properties are currently shown, hides the current property
 	 */
 	private void togglePropertiesOff() {
-		if(propertiesVisible) {
+		if(isPropertiesVisible()) {
 			hideProperty(currentPropertyNode);
-			propertiesVisible = false;
+			currentPropertyList = null;
 		}
 	}
 	
@@ -301,8 +341,8 @@ public class Spectrum extends Application {
 		}
 		
 		currentPropIdx++;
-		if(currentPropIdx > currentView.getProperties().size() - 1) {
-			currentPropIdx = currentView.getProperties().size() - 1;
+		if(currentPropIdx > currentPropertyList.size() - 1) {
+			currentPropIdx = currentPropertyList.size() - 1;
 		}
 		showProperty(currentPropIdx);
 	}
@@ -321,11 +361,10 @@ public class Spectrum extends Application {
 	}
 	
 	@SuppressWarnings("unchecked")
-	private boolean showProperty(int idx) {
+	private void showProperty(int idx) {
 
-		List<ConfigurableProperty<? extends Object>> props = currentView.getProperties();
-		if(!props.isEmpty()) {
-			ConfigurableProperty<? extends Object> prop = props.get(idx);
+		if(!currentPropertyList.isEmpty()) {
+			ConfigurableProperty<? extends Object> prop = currentPropertyList.get(idx);
 			Region control = null;
 			if(prop instanceof ConfigurableColorProperty) {
 				ObjectProperty<Color> p = (ObjectProperty<Color>) prop.getProp();
@@ -355,11 +394,10 @@ public class Spectrum extends Application {
 					currentPropertyNode = createPropertyPane(prop.getName(), control));
 			UiUtils.createFadeInTransition(currentPropertyNode, 1000, null).play();
 		}
-		return !props.isEmpty();
 	}
 	
 	private void hideProperty(Pane node) {
-		currentView.getProperties().get(currentPropIdx).getProp().unbind();
+		currentPropertyList.get(currentPropIdx).getProp().unbind();
 		UiUtils.createFadeOutTransition(node, 1000, new EventHandler<ActionEvent>() {
 			public void handle(ActionEvent event) {
 				currentView.getRoot().getChildren().remove(node);
@@ -402,9 +440,9 @@ public class Spectrum extends Application {
 	}
 	
 	private void changeCurrentPropertyValue(boolean increment) {
-		if(propertiesVisible) {
+		if(isPropertiesVisible()) {
 			ConfigurableProperty<? extends Object> prop = 
-					currentView.getProperties().get(currentPropIdx);
+					currentPropertyList.get(currentPropIdx);
 			if (increment) {
 				prop.increment();
 			} else {
