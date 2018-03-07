@@ -1,10 +1,13 @@
 package mb.spectrum;
 
+import static mb.spectrum.UiUtils.createConfigurableBooleanProperty;
 import static mb.spectrum.UiUtils.createConfigurableIntegerProperty;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import ddf.minim.AudioInput;
 import ddf.minim.AudioListener;
@@ -78,6 +81,7 @@ public class Spectrum extends Application {
 			};
 	private View currentView;
 	private int currentViewIdx;
+	private Timer viewRotateTimer;
 	
 	/* Property management */
 	private List<ConfigurableProperty<? extends Object>> currentPropertyList;
@@ -87,11 +91,12 @@ public class Spectrum extends Application {
 	/* Global Properties */
 	List<ConfigurableProperty<? extends Object>> globalPropertyList;
 	private ConfigurableIntegerProperty propGlobalGain;
+	private ConfigurableBooleanProperty propViewAutoRotate;
+	private ConfigurableIntegerProperty propViewAutoRotateInterval;
 	
 	public Spectrum() {
 		currentViewIdx = 0;
 		currentView = views[currentViewIdx];
-		globalPropertyList = new ArrayList<>();
 		minim = new Minim(new JSMinim(new MinimInitializer()));
 	}
 
@@ -130,7 +135,21 @@ public class Spectrum extends Application {
 		final String keyPrefix = "global.";
 		propGlobalGain = createConfigurableIntegerProperty(
 				keyPrefix + "gain", "Global Gain (%)", 10, 400, 100, 10);
-		globalPropertyList.addAll(Arrays.asList(propGlobalGain));
+		propViewAutoRotate = createConfigurableBooleanProperty(
+				keyPrefix + "viewAutoRotate", "Auto Rotate Views", false);
+		propViewAutoRotate.getProp().addListener((obs, oldVal, newVal) -> {
+			if(newVal != oldVal) {
+				if(newVal) {
+					scheduleViewRotateTimer();
+				} else {
+					cancelViewRotateTimer();
+				}
+			}
+		});
+		propViewAutoRotateInterval = createConfigurableIntegerProperty(
+				keyPrefix + "viewAutoRotateInterval", "View Rotate Int. (S)", 5, 6000, 60, 5);
+		globalPropertyList = new ArrayList<>(Arrays.asList(
+				propGlobalGain, propViewAutoRotate, propViewAutoRotateInterval));
 	}
 
 	private void startAudio() {
@@ -182,6 +201,11 @@ public class Spectrum extends Application {
 				onKey(event);
 			}
 		});
+        
+        // View rotate timer
+        if(propViewAutoRotate.getProp().get()) {
+        	scheduleViewRotateTimer();
+        }
 	}
 	
 	private void startFrameListener() {
@@ -448,6 +472,34 @@ public class Spectrum extends Application {
 			} else {
 				prop.decrement();
 			}
+		}
+	}
+	
+	private void scheduleViewRotateTimer() {
+		int interval = propViewAutoRotateInterval.getProp().get() * 1000;
+		viewRotateTimer = new Timer(true);
+		viewRotateTimer.schedule(new TimerTask() {
+			public void run() {
+				final int idx;
+				if(currentViewIdx + 1 > views.length - 1) {
+					idx = 0;
+				} else {
+					idx = currentViewIdx + 1;
+				}
+				Platform.runLater(new Runnable() {
+					public void run() {
+						System.out.println("run:");
+						switchView(idx);
+					}
+				});
+			}
+		}, interval, interval);
+	}
+	
+	private void cancelViewRotateTimer() {
+		if(viewRotateTimer != null) {
+			viewRotateTimer.cancel();
+			viewRotateTimer = null;
 		}
 	}
 	

@@ -30,7 +30,7 @@ public class StageGpioController implements GpioPinListenerDigital {
 	private Stage stage;
 	private volatile Direction rotaryADirectionFlag, rotaryBDirectionFlag;
 	private ButtonState buttonAState = RELEASED, buttonBState = RELEASED;
-	private Timer bothButtonsHoldTimer, buttonBHoldTimer;;
+	private Timer bothButtonsHoldTimer, buttonBHoldTimer;
 	
 	public StageGpioController(Stage stage) {
 		this.stage = stage;
