@@ -70,7 +70,7 @@ public class UiUtils {
 			EventHandler<ActionEvent> handler) {
 		FadeTransition fadeIn = new FadeTransition(Duration.millis(fadeInMs), node);
 		fadeIn.setFromValue(0.0f);
-		fadeIn.setToValue(node.getOpacity());
+		fadeIn.setToValue(1.0f);
 		fadeIn.setCycleCount(1);
 		fadeIn.setAutoReverse(false);
 		fadeIn.setOnFinished(handler);

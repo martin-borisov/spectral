@@ -72,7 +72,9 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 		
 		// Get number of bands
 		fft = new FFT(BUFFER_SIZE, SAMPLING_RATE);
-		fft.logAverages(22, 3);
+		
+		// For 44100 the values should be 22, 3
+		fft.logAverages(24, 4);
 				
 		bandCount = fft.avgSize();
 				

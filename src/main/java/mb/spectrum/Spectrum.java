@@ -188,8 +188,17 @@ public class Spectrum extends Application {
 	
 	private void setupStage(Stage stage) {
 		
+		// This is necessary for the fade out/in transitions when switching views 
+		for (int i = 0; i < views.length; i++) {
+			if(i != currentViewIdx) {
+				views[i].getRoot().setOpacity(0);
+			}
+		}
+		
+		// Create scene
         stage.setScene(scene = new Scene(currentView.getRoot(), 
         		INIT_SCENE_WIDTH, INIT_SCENE_HEIGHT, false, SceneAntialiasing.DISABLED));
+        scene.setFill(Color.BLACK);
         currentView.onShow();
         
         stage.setMaximized(true);
@@ -328,33 +337,46 @@ public class Spectrum extends Application {
 			// Reset properties
 			togglePropertiesOff();
 			
-			// Trigger "hide" of current view
-			currentView.onHide();
-			
-			currentView = views[currentViewIdx];
-			scene.setRoot(currentView.getRoot());
-			
-			// Trigger "show" of new view
-			currentView.onShow();
-			
-			// Show view label with animation
-			Pane parent = currentView.getRoot();
-			Label name = new Label(currentView.getName());
-			name.styleProperty().bind(Bindings.concat(
-					"-fx-font-size: ", parent.widthProperty().divide(20), ";", 
-					"-fx-text-fill: ", VIEW_LABEL_COLOR, ";"));
-			name.layoutXProperty().bind(parent.widthProperty().subtract(name.widthProperty()).divide(2));
-			name.layoutYProperty().bind(parent.heightProperty().subtract(name.heightProperty()).divide(2));
-			parent.getChildren().add(name);
-			
-			Transition trans = UiUtils.createFadeInOutTransition(
-					name, VIEW_LABEL_FADE_IN_MS, VIEW_LABEL_LINGER_MS, VIEW_LABEL_FADE_OUT_MS, 
-					new EventHandler<ActionEvent>() {
+			UiUtils.createFadeOutTransition(currentView.getRoot(), 1000, new EventHandler<ActionEvent>() {
 				public void handle(ActionEvent event) {
-					parent.getChildren().remove(name);
+					
+					// Trigger "hide" of current view
+					currentView.onHide();
+					
+					// Set new current view and add to scene
+					currentView = views[currentViewIdx];
+					scene.setRoot(currentView.getRoot());
+					
+					UiUtils.createFadeInTransition(currentView.getRoot(), 1000, new EventHandler<ActionEvent>() {
+						public void handle(ActionEvent event) {
+							
+							// Trigger "show" of new view
+							currentView.onShow();
+							
+							// Show view label with animation
+							Pane parent = currentView.getRoot();
+							Label name = new Label(currentView.getName());
+							name.styleProperty().bind(Bindings.concat(
+									"-fx-font-size: ", parent.widthProperty().divide(20), ";", 
+									"-fx-text-fill: ", VIEW_LABEL_COLOR, ";"));
+							name.layoutXProperty().bind(parent.widthProperty().subtract(name.widthProperty()).divide(2));
+							name.layoutYProperty().bind(parent.heightProperty().subtract(name.heightProperty()).divide(2));
+							parent.getChildren().add(name);
+							
+							Transition trans = UiUtils.createFadeInOutTransition(
+									name, VIEW_LABEL_FADE_IN_MS, VIEW_LABEL_LINGER_MS, VIEW_LABEL_FADE_OUT_MS, 
+									new EventHandler<ActionEvent>() {
+								public void handle(ActionEvent event) {
+									parent.getChildren().remove(name);
+								}
+							});
+							trans.play();
+							
+						}
+					}).play();
+					
 				}
-			});
-			trans.play();
+			}).play();
 		}
 	}
 	
