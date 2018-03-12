@@ -22,10 +22,12 @@ import javafx.beans.property.ObjectProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.SceneAntialiasing;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.Slider;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
@@ -86,7 +88,7 @@ public class Spectrum extends Application {
 	/* Property management */
 	private List<ConfigurableProperty<? extends Object>> currentPropertyList;
 	private int currentPropIdx;
-	private Pane currentPropertyNode;
+	private BorderPane currentPropertyNode;
 	
 	/* Global Properties */
 	List<ConfigurableProperty<? extends Object>> globalPropertyList;
@@ -103,7 +105,7 @@ public class Spectrum extends Application {
 	@Override
 	public void start(Stage stage) throws Exception {
 		checkAndEnableGpio(stage);
-		initProperties();
+		initGlobalProperties();
 		startAudio();
         setupStage(stage);
 		startFrameListener();
@@ -131,7 +133,7 @@ public class Spectrum extends Application {
 		}
 	}
 	
-	private void initProperties() {
+	private void initGlobalProperties() {
 		final String keyPrefix = "global.";
 		propGlobalGain = createConfigurableIntegerProperty(
 				keyPrefix + "gain", "Global Gain (%)", 10, 400, 100, 10);
@@ -227,25 +229,25 @@ public class Spectrum extends Application {
 	
 	private void onKey(KeyEvent event) {
 		
-		// NB: Only left and right events are consumed to prevent switching to the next slider
-		// if a custom color control is currently shown
 		switch (event.getCode()) {
 		case RIGHT:
 			if(isPropertiesVisible()) {
-				nextProperty();
+				if(!isPropertySliderInFocusAndNotLast()) {
+					nextProperty();
+				}
 			} else {
 				nextView();
 			}
-			event.consume();
 			break;
 			
 		case LEFT:
 			if(isPropertiesVisible()) {
-				prevProperty();
+				if(!isPropertySliderInFocusAndNotFirst()) {
+					prevProperty();
+				}
 			} else {
 				prevView();
 			}
-			event.consume();
 			break;
 		
 		case SPACE:
@@ -452,7 +454,7 @@ public class Spectrum extends Application {
 		}).play();
 	}
 	
-	private Pane createPropertyPane(String name, Region control) {
+	private BorderPane createPropertyPane(String name, Region control) {
 		Pane parent = currentView.getRoot();
 
 		BorderPane pane = new BorderPane();
@@ -523,6 +525,31 @@ public class Spectrum extends Application {
 			viewRotateTimer.cancel();
 			viewRotateTimer = null;
 		}
+	}
+	
+	
+	private boolean isPropertySliderInFocusAndNotLast() {
+		boolean isVisible = false;
+		Node focusOwner = currentView.getRoot().getScene().getFocusOwner();
+		if(focusOwner instanceof Slider && isPropertiesVisible()) {
+			Node control = currentPropertyNode.getCenter();
+			if(control instanceof ColorControl) {
+				isVisible = ((ColorControl) control).hasMoreSlidersToTheRight((Slider) focusOwner);
+			}
+		}
+		return isVisible;
+	}
+	
+	private boolean isPropertySliderInFocusAndNotFirst() {
+		boolean isVisible = false;
+		Node focusOwner = currentView.getRoot().getScene().getFocusOwner();
+		if(focusOwner instanceof Slider && isPropertiesVisible()) {
+			Node control = currentPropertyNode.getCenter();
+			if(control instanceof ColorControl) {
+				isVisible = ((ColorControl) control).hasMoreSlidersToTheLeft((Slider) focusOwner);
+			}
+		}
+		return isVisible;
 	}
 	
 	public static void main(String[] args) {

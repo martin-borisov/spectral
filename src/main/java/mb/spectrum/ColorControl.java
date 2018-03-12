@@ -1,5 +1,8 @@
 package mb.spectrum;
 
+import java.util.Arrays;
+import java.util.List;
+
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -38,6 +41,22 @@ public class ColorControl extends GridPane {
 				() -> new Insets(hgapProperty().get()), hgapProperty()));
 		
 		setAlignment(Pos.CENTER);
+	}
+	
+	public ObjectProperty<Color> colorProperty() {
+		return colorProperty;
+	}
+	
+	public boolean hasMoreSlidersToTheRight(Slider slider) {
+		List<Slider> sliders = Arrays.asList(hue, saturation, brightness, opacity);
+		int sliderIdx = sliders.indexOf(slider);
+		return (sliderIdx > -1) && (sliderIdx < sliders.size() - 1);
+	}
+	
+	public boolean hasMoreSlidersToTheLeft(Slider slider) {
+		List<Slider> sliders = Arrays.asList(hue, saturation, brightness, opacity);
+		int sliderIdx = sliders.indexOf(slider);
+		return (sliderIdx > 0);
 	}
 	
 	private void createControls() {
@@ -95,10 +114,6 @@ public class ColorControl extends GridPane {
 		add(new Label("O"), 3, 1);
 		add(transparentRect, 4, 0, 1, 2);
 		add(colorRect, 4, 0, 1, 2);
-	}
-	
-	public ObjectProperty<Color> colorProperty() {
-		return colorProperty;
 	}
 	
 	private Slider createSlider(double min, double max, double value) {

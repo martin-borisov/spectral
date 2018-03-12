@@ -136,28 +136,27 @@ public class StageGpioController implements GpioPinListenerDigital {
 	}
 	
 	private void onButtonAReleased() {
-		fireStageEvent(new KeyEvent(KeyEvent.KEY_PRESSED, null, null, 
-				KeyCode.ESCAPE, false, false, false, false));
+		triggerKeyPress(KeyCode.ESCAPE);
 	}
 	
 	private void onButtonBPressed() {
-		buttonBHoldTimer = new Timer(false);
-		buttonBHoldTimer.schedule(new TimerTask() {
-			public void run() {
-				fireStageEvent(new KeyEvent(KeyEvent.KEY_PRESSED, null, null, 
-						KeyCode.ENTER, false, false, false, false));
-			}
-		}, 3000);
+		if(!bothButtonsPressed()) {
+			buttonBHoldTimer = new Timer(true);
+			buttonBHoldTimer.schedule(new TimerTask() {
+				public void run() {
+					triggerKeyPress(KeyCode.ENTER);
+				}
+			}, 3000);
+		}
 	}
 	
 	private void onButtonBReleased() {
 		cancelButtonBHoldTimer();
-		fireStageEvent(new KeyEvent(KeyEvent.KEY_PRESSED, null, null, 
-				KeyCode.SPACE, false, false, false, false));
+		triggerKeyPress(KeyCode.SPACE);
 	}
 	
 	private void onBothButtonsPressed() {
-		bothButtonsHoldTimer = new Timer(false);
+		bothButtonsHoldTimer = new Timer(true);
 		bothButtonsHoldTimer.schedule(new TimerTask() {
 			public void run() {
 				SystemUtils.shutdown();
@@ -177,6 +176,15 @@ public class StageGpioController implements GpioPinListenerDigital {
 			buttonBHoldTimer.cancel();
 			buttonBHoldTimer = null;
 		}
+	}
+	
+	private boolean bothButtonsPressed() {
+		return bothButtonsHoldTimer != null;
+	}
+	
+	private void triggerKeyPress(KeyCode code) {
+		fireStageEvent(new KeyEvent(KeyEvent.KEY_PRESSED, null, null, 
+				code, false, false, false, false));
 	}
 	
 	private void fireStageEvent(Event event) {
