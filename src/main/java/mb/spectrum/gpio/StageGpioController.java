@@ -225,7 +225,15 @@ public class StageGpioController implements GpioPinListenerDigital {
 		KeyEvent event = new KeyEvent(KeyEvent.KEY_PRESSED, null, null, 
 				Direction.RIGHT.equals(direction) ? KeyCode.RIGHT : KeyCode.LEFT, 
 						false, false, false, false);
-		fireStageEvent(event);
+		
+		// Check if a slider is currently in focus
+		// as we want to be able to dispatch the event directly to it and not the stage
+		Node focusNode = stage.getScene().focusOwnerProperty().get();
+		if(focusNode != null) {
+			fireFocusedControlEvent(event);
+		} else {
+			fireStageEvent(event);
+		}
 	}
 	
 	public void close() {

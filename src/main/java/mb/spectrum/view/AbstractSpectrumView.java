@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import ddf.minim.analysis.FFT;
+import ddf.minim.analysis.FourierTransform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.Node;
@@ -72,6 +73,7 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 		
 		// Get number of bands
 		fft = new FFT(BUFFER_SIZE, SAMPLING_RATE);
+		fft.window(FourierTransform.BLACKMAN);
 		
 		// For 44100 the values should be 22, 3
 		fft.logAverages(24, 4);
