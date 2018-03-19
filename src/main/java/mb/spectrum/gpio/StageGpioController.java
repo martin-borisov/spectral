@@ -140,14 +140,12 @@ public class StageGpioController implements GpioPinListenerDigital {
 	}
 	
 	private void onButtonBPressed() {
-		if(!bothButtonsPressed()) {
-			buttonBHoldTimer = new Timer(true);
-			buttonBHoldTimer.schedule(new TimerTask() {
-				public void run() {
-					triggerKeyPress(KeyCode.ENTER);
-				}
-			}, 3000);
-		}
+		buttonBHoldTimer = new Timer(true);
+		buttonBHoldTimer.schedule(new TimerTask() {
+			public void run() {
+				triggerKeyPress(KeyCode.ENTER);
+			}
+		}, 3000);
 	}
 	
 	private void onButtonBReleased() {
@@ -156,6 +154,7 @@ public class StageGpioController implements GpioPinListenerDigital {
 	}
 	
 	private void onBothButtonsPressed() {
+		cancelButtonBHoldTimer();
 		bothButtonsHoldTimer = new Timer(true);
 		bothButtonsHoldTimer.schedule(new TimerTask() {
 			public void run() {
@@ -176,10 +175,6 @@ public class StageGpioController implements GpioPinListenerDigital {
 			buttonBHoldTimer.cancel();
 			buttonBHoldTimer = null;
 		}
-	}
-	
-	private boolean bothButtonsPressed() {
-		return bothButtonsHoldTimer != null;
 	}
 	
 	private void triggerKeyPress(KeyCode code) {

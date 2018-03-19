@@ -75,8 +75,8 @@ public class Spectrum extends Application {
 	private Minim minim;
 	private AudioInput in;
 	private View[] views = new View[] {
-			new StereoLevelsLedView(),
 			new AnalogMeterView(),
+			new StereoLevelsLedView(),
 			new SpectrumBarView(),
 			new SpectrumAreaView(),
 			new StereoLevelsView(),
@@ -306,6 +306,7 @@ public class Spectrum extends Application {
 	private void togglePropertiesOff() {
 		if(isPropertiesVisible()) {
 			hideProperty(currentPropertyNode);
+			currentPropertyNode = null;
 			currentPropertyList = null;
 		}
 	}
@@ -504,18 +505,21 @@ public class Spectrum extends Application {
 		viewRotateTimer = new Timer(true);
 		viewRotateTimer.schedule(new TimerTask() {
 			public void run() {
-				final int idx;
-				if(currentViewIdx + 1 > views.length - 1) {
-					idx = 0;
-				} else {
-					idx = currentViewIdx + 1;
-				}
-				Platform.runLater(new Runnable() {
-					public void run() {
-						System.out.println("run:");
-						switchView(idx);
+				
+				// Don't switch views if a property is currently visible
+				if(currentPropertyNode == null) {
+					final int idx;
+					if(currentViewIdx + 1 > views.length - 1) {
+						idx = 0;
+					} else {
+						idx = currentViewIdx + 1;
 					}
-				});
+					Platform.runLater(new Runnable() {
+						public void run() {
+							switchView(idx);
+						}
+					});
+				}
 			}
 		}, interval, interval);
 	}

@@ -376,10 +376,10 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 						() -> (getRoot().widthProperty().get() * SCENE_MARGIN_RATIO) / 1.2,
 						getRoot().widthProperty()),
 				"; -fx-font-family: 'Alex Brush'"));
-		peakLabel.effectProperty().bind(Bindings.createObjectBinding(
-				() -> {
-					return propVisualEnableExtras.getProp().get() ? effect : null;
-				}, propVisualEnableExtras.getProp()));
+//		peakLabel.effectProperty().bind(Bindings.createObjectBinding(
+//				() -> {
+//					return propVisualEnableExtras.getProp().get() ? effect : null;
+//				}, propVisualEnableExtras.getProp()));
 		
 		nodes.add(peakLabel);
 		nodes.add(peak);
@@ -398,10 +398,10 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 						() -> (getRoot().widthProperty().get() * SCENE_MARGIN_RATIO) / 1.2,
 						getRoot().widthProperty()),
 				"; -fx-font-family: 'Alex Brush'"));
-		centerLabel.effectProperty().bind(Bindings.createObjectBinding(
-				() -> {
-					return propVisualEnableExtras.getProp().get() ? effect : null;
-				}, propVisualEnableExtras.getProp()));
+//		centerLabel.effectProperty().bind(Bindings.createObjectBinding(
+//				() -> {
+//					return propVisualEnableExtras.getProp().get() ? effect : null;
+//				}, propVisualEnableExtras.getProp()));
 		nodes.add(centerLabel);
 	}
 	
@@ -495,10 +495,10 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 				}, propDivisionWidthRatio.getProp(), getRoot().widthProperty()));
 		
 	    // Enable or disable the effect based on a boolean property
-	    line.effectProperty().bind(Bindings.createObjectBinding(
-				() -> {
-					return propVisualEnableExtras.getProp().get() ? effect : null;
-				}, propVisualEnableExtras.getProp()));
+//	    line.effectProperty().bind(Bindings.createObjectBinding(
+//				() -> {
+//					return propVisualEnableExtras.getProp().get() ? effect : null;
+//				}, propVisualEnableExtras.getProp()));
 	    
 	    return line;
 	}
@@ -543,10 +543,10 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 						getRoot().widthProperty())));
 		label.setCache(true);
 		
-		label.effectProperty().bind(Bindings.createObjectBinding(
-				() -> {
-					return propVisualEnableExtras.getProp().get() ? effect : null;
-				}, propVisualEnableExtras.getProp()));
+//		label.effectProperty().bind(Bindings.createObjectBinding(
+//				() -> {
+//					return propVisualEnableExtras.getProp().get() ? effect : null;
+//				}, propVisualEnableExtras.getProp()));
 	    
 	    return label;
 	}
@@ -583,10 +583,10 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 						getRoot().widthProperty())));
 		label.setCache(true);
 		
-		label.effectProperty().bind(Bindings.createObjectBinding(
-				() -> {
-					return propVisualEnableExtras.getProp().get() ? effect : null;
-				}, propVisualEnableExtras.getProp()));
+//		label.effectProperty().bind(Bindings.createObjectBinding(
+//				() -> {
+//					return propVisualEnableExtras.getProp().get() ? effect : null;
+//				}, propVisualEnableExtras.getProp()));
 		
 	    return label;
 	}
