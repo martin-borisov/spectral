@@ -23,6 +23,7 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.PerspectiveCamera;
 import javafx.scene.Scene;
 import javafx.scene.SceneAntialiasing;
 import javafx.scene.control.CheckBox;
@@ -48,6 +49,7 @@ import mb.spectrum.prop.ConfigurableDoubleProperty;
 import mb.spectrum.prop.ConfigurableIntegerProperty;
 import mb.spectrum.prop.ConfigurableProperty;
 import mb.spectrum.view.AnalogMeterView;
+import mb.spectrum.view.CubeView;
 import mb.spectrum.view.SpectrumAreaView;
 import mb.spectrum.view.SpectrumBarView;
 import mb.spectrum.view.StereoLevelsLedView;
@@ -75,6 +77,7 @@ public class Spectrum extends Application {
 	private Minim minim;
 	private AudioInput in;
 	private View[] views = new View[] {
+			new CubeView(),
 			new AnalogMeterView(),
 			new StereoLevelsLedView(),
 			new SpectrumBarView(),
@@ -198,9 +201,14 @@ public class Spectrum extends Application {
 		}
 		
 		// Create scene
+		// TODO Check how BALANCED antialiasing will be handled by the RPi
         stage.setScene(scene = new Scene(currentView.getRoot(), 
         		INIT_SCENE_WIDTH, INIT_SCENE_HEIGHT, false, SceneAntialiasing.DISABLED));
         scene.setFill(Color.BLACK);
+        
+        // The perspective camera is needed for perspective view of 3D shapes, as opposed to orthogonal
+        scene.setCamera(new PerspectiveCamera());
+        
         currentView.onShow();
         
         stage.setMaximized(true);
