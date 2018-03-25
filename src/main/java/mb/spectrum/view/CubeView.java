@@ -1,13 +1,10 @@
 package mb.spectrum.view;
 
-import static mb.spectrum.Utils.peakLevel;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 import javafx.animation.Interpolator;
-import javafx.animation.ParallelTransition;
 import javafx.animation.RotateTransition;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
@@ -18,7 +15,6 @@ import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Box;
 import javafx.scene.transform.Rotate;
 import javafx.util.Duration;
-import mb.spectrum.Utils;
 import mb.spectrum.prop.ConfigurableProperty;
 
 public class CubeView extends AbstractMixedChannelView {
