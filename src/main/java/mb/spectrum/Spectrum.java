@@ -201,7 +201,6 @@ public class Spectrum extends Application {
 		}
 		
 		// Create scene
-		// TODO Check how BALANCED antialiasing will be handled by the RPi
         stage.setScene(scene = new Scene(currentView.getRoot(), 
         		INIT_SCENE_WIDTH, INIT_SCENE_HEIGHT, false, SceneAntialiasing.BALANCED));
         scene.setFill(Color.BLACK);
