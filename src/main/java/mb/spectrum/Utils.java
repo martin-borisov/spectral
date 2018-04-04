@@ -6,6 +6,13 @@ public class Utils {
 		return b1 + (s - a1) * (b2 - b1) / (a2 - a1);
 	}
 	
+	public static double mapBounded(double s, double a1, double a2, double b1, double b2) {
+		double val = map(s, a1, a2, b1, b2);
+		val = val < b1 ? b1 : val;
+		val = val > b2 ? b2 : val;
+		return val;
+	}
+	
 	public static double toDB(double value, int bufferSize) {
 		double valueDb = 0;
 		if(value > 0) {

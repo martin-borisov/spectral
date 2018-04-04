@@ -6,6 +6,7 @@ import static mb.spectrum.UiUtils.createConfigurableDoubleProperty;
 import static mb.spectrum.UiUtils.createConfigurableIntegerProperty;
 import static mb.spectrum.UiUtils.createLabel;
 import static mb.spectrum.Utils.map;
+import static mb.spectrum.Utils.mapBounded;
 import static mb.spectrum.Utils.peakLevel;
 import static mb.spectrum.Utils.rmsLevel;
 
@@ -26,6 +27,7 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.StrokeLineCap;
 import mb.spectrum.UiUtils;
 import mb.spectrum.Utils;
+import mb.spectrum.prop.ConfigurableDoubleProperty;
 import mb.spectrum.prop.ConfigurableIntegerProperty;
 import mb.spectrum.prop.ConfigurableProperty;
 
@@ -33,10 +35,6 @@ public class StereoLevelsView extends AbstractView {
 	
 	private static final int INIT_MIN_DB_VALUE = -66;
 	private static final int DB_LINES_COUNT = 8;
-	private static final double BAR_HEIGHT_PROPORTION = 0.35;
-	private static final double BAR_MARGIN_PROPORTION = 0.05;
-	private static final double DR_BAR_HEIGHT_PROPORTION = 0.37;
-	private static final double DR_BAR_MARGIN_PROPORTION = 0.04;
 	private static final double GRID_MARGIN_RATIO = 0.07;
 	private static final double LINGER_STAY_FACTOR = 0.01;
 	private static final double LINGER_ACCELARATION_FACTOR = 1.08;
@@ -54,6 +52,7 @@ public class StereoLevelsView extends AbstractView {
 	private ConfigurableProperty<Color> propDrBarColor;
 	private ConfigurableProperty<Double> propDrBarOpacity;
 	private ConfigurableProperty<Boolean> propShowDr;
+	private ConfigurableDoubleProperty propBarHeight;
 	private ConfigurableProperty<Boolean> propRms;
 	
 	private List<Line> lines;
@@ -111,6 +110,8 @@ public class StereoLevelsView extends AbstractView {
 				keyPrefix + "drBarOpacity", "D/R Bar Opacity", 0.1, 1.0, 0.2, 0.1);
 		propShowDr = createConfigurableBooleanProperty(
 				keyPrefix + "showDynamicRange", "Show Dynamic Range", true);
+		propBarHeight = createConfigurableDoubleProperty(
+				keyPrefix + "barHeight", "Level Bar Height", 0.05, 1.0, 0.25, 0.05);
 		propRms = createConfigurableBooleanProperty(
 				keyPrefix + "enableRmsMode", "RMS Mode", false);
 		
@@ -129,7 +130,7 @@ public class StereoLevelsView extends AbstractView {
 	public List<ConfigurableProperty<? extends Object>> getProperties() {
 		return Arrays.asList(propGridColor, propBarOpacity, propBarColorNormal, 
 				propBarColorMid, propLingerIndicatorColor, propBarColorClip, propRms, 
-				propDrBarColor, propDrBarOpacity, propShowDr, propMinDbValue);
+				propDrBarColor, propDrBarOpacity, propShowDr, propBarHeight, propMinDbValue);
 	}
 
 	@Override
@@ -144,28 +145,30 @@ public class StereoLevelsView extends AbstractView {
 		
 		// Level bars
 		leftBar = createLevelBar(
-				getRoot().heightProperty().multiply(SCENE_MARGIN_RATIO + BAR_MARGIN_PROPORTION), 
-				currLevelLProp);
+				Bindings.createDoubleBinding(() -> {
+					double rootHeight = getRoot().heightProperty().get();
+					double canvasHalfHeight = (rootHeight - rootHeight * SCENE_MARGIN_RATIO * 2) /2;
+					double barHeight = propBarHeight.getProp().get() * canvasHalfHeight;
+					return rootHeight * SCENE_MARGIN_RATIO + ((canvasHalfHeight - barHeight) / 2);
+				}, getRoot().heightProperty(), propBarHeight.getProp()), 
+			currLevelLProp);
 		
 		rightBar = createLevelBar(
-				getRoot().heightProperty().subtract(
-						getRoot().heightProperty().multiply(
-								SCENE_MARGIN_RATIO + BAR_MARGIN_PROPORTION + BAR_HEIGHT_PROPORTION)), 
-				currLevelRProp);
+				Bindings.createDoubleBinding(() -> {
+					double rootHeight = getRoot().heightProperty().get();
+					double canvasHalfHeight = (rootHeight - rootHeight * SCENE_MARGIN_RATIO * 2) /2;
+					return rootHeight * SCENE_MARGIN_RATIO + canvasHalfHeight + 
+							((canvasHalfHeight - leftBar.heightProperty().get()) / 2);
+				}, getRoot().heightProperty(), leftBar.heightProperty()), 
+			currLevelRProp);
 		
 		// RMS indicators
 		leftLingerLevel = createLingerIndicator(leftLingerLevelProp, leftBar);
 		rightLingerLevel = createLingerIndicator(rightLingerLevelProp, rightBar);
 		
 		// DR bars
-		leftDrBar = createDrBar(
-				getRoot().heightProperty().multiply(SCENE_MARGIN_RATIO + DR_BAR_MARGIN_PROPORTION), 
-				minLevelLProp, maxLevelLProp);
-		
-		rightDrBar = createDrBar(getRoot().heightProperty().subtract(
-				getRoot().heightProperty().multiply(
-						SCENE_MARGIN_RATIO + DR_BAR_MARGIN_PROPORTION + DR_BAR_HEIGHT_PROPORTION)), 
-				minLevelRProp, maxLevelRProp);
+		leftDrBar = createDrBar(leftBar, minLevelLProp, maxLevelLProp);
+		rightDrBar = createDrBar(rightBar, minLevelRProp, maxLevelRProp);
 		
 		// DR indicators
 		leftMinLevel = createMinDrLine(leftDrBar);
@@ -236,7 +239,12 @@ public class StereoLevelsView extends AbstractView {
 		Rectangle bar = new Rectangle();
 		bar.xProperty().bind(lines.get(0).startXProperty());
 		bar.yProperty().bind(yBinding);
-		bar.heightProperty().bind(getRoot().heightProperty().multiply(BAR_HEIGHT_PROPORTION));
+		bar.heightProperty().bind(
+			Bindings.createDoubleBinding(() -> {
+				double rootHeight = getRoot().heightProperty().get();
+				double canvasHalfHeight = (rootHeight - rootHeight * SCENE_MARGIN_RATIO * 2) /2;
+				return propBarHeight.getProp().get() * canvasHalfHeight;
+			}, getRoot().heightProperty(), propBarHeight.getProp()));
 		bar.opacityProperty().bind(propBarOpacity.getProp());
 		createLevelBarExprBinding(bar, levelProp);
 		
@@ -275,10 +283,10 @@ public class StereoLevelsView extends AbstractView {
 		return line;
 	}
 	
-	private Rectangle createDrBar(DoubleBinding yBinding, DoubleProperty minLevelProp, DoubleProperty maxLevelProp) {
+	private Rectangle createDrBar(Rectangle levelBar, DoubleProperty minLevelProp, DoubleProperty maxLevelProp) {
 		Rectangle bar = new Rectangle();
-		bar.yProperty().bind(yBinding);
-		bar.heightProperty().bind(getRoot().heightProperty().multiply(DR_BAR_HEIGHT_PROPORTION));
+		bar.yProperty().bind(levelBar.yProperty());
+		bar.heightProperty().bind(levelBar.heightProperty());
 		bar.fillProperty().bind(propDrBarColor.getProp());
 		bar.opacityProperty().bind(propDrBarOpacity.getProp());
 		bar.visibleProperty().bind(propShowDr.getProp());
@@ -386,7 +394,7 @@ public class StereoLevelsView extends AbstractView {
 		bar.xProperty().bind(Bindings.createDoubleBinding(
 				() -> {
 					double parentWidth = getRoot().widthProperty().get();
-					return map(minLevelProp.get(), propMinDbValue.getProp().get(), 0,
+					return mapBounded(minLevelProp.get(), propMinDbValue.getProp().get(), 0,
 							parentWidth * SCENE_MARGIN_RATIO, parentWidth - parentWidth * SCENE_MARGIN_RATIO);
 				}, 
 				minLevelProp, getRoot().widthProperty(), propMinDbValue.getProp()));
@@ -394,7 +402,7 @@ public class StereoLevelsView extends AbstractView {
 		bar.widthProperty().bind(Bindings.createDoubleBinding(
 				() -> {
 					double parentWidth = getRoot().widthProperty().get();
-					return map(maxLevelProp.get(), propMinDbValue.getProp().get(), 0,
+					return mapBounded(maxLevelProp.get(), propMinDbValue.getProp().get(), 0,
 							parentWidth * SCENE_MARGIN_RATIO, parentWidth - parentWidth * SCENE_MARGIN_RATIO) - bar.xProperty().get();
 				}, 
 				maxLevelProp, getRoot().widthProperty(), bar.xProperty(), propMinDbValue.getProp()));

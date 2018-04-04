@@ -77,12 +77,12 @@ public class Spectrum extends Application {
 	private Minim minim;
 	private AudioInput in;
 	private View[] views = new View[] {
-			new CubeView(),
 			new AnalogMeterView(),
 			new StereoLevelsLedView(),
 			new SpectrumBarView(),
 			new SpectrumAreaView(),
 			new StereoLevelsView(),
+			new CubeView()
 			};
 	private View currentView;
 	private int currentViewIdx;
