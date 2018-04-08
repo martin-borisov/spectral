@@ -21,6 +21,7 @@ import javafx.beans.binding.Bindings;
 import javafx.beans.property.ObjectProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.PerspectiveCamera;
@@ -29,6 +30,7 @@ import javafx.scene.SceneAntialiasing;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.Slider;
+import javafx.scene.effect.Glow;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
@@ -347,7 +349,7 @@ public class Spectrum extends Application {
 			// Reset properties
 			togglePropertiesOff();
 			
-			UiUtils.createFadeOutTransition(currentView.getRoot(), 1000, new EventHandler<ActionEvent>() {
+			UiUtils.createFadeOutTransition(currentView.getRoot(), 500, new EventHandler<ActionEvent>() {
 				public void handle(ActionEvent event) {
 					
 					// Trigger "hide" of current view
@@ -357,7 +359,7 @@ public class Spectrum extends Application {
 					currentView = views[currentViewIdx];
 					scene.setRoot(currentView.getRoot());
 					
-					UiUtils.createFadeInTransition(currentView.getRoot(), 1000, new EventHandler<ActionEvent>() {
+					UiUtils.createFadeInTransition(currentView.getRoot(), 500, new EventHandler<ActionEvent>() {
 						public void handle(ActionEvent event) {
 							
 							// Trigger "show" of new view
@@ -365,19 +367,27 @@ public class Spectrum extends Application {
 							
 							// Show view label with animation
 							Pane parent = currentView.getRoot();
-							Label name = new Label(currentView.getName());
-							name.styleProperty().bind(Bindings.concat(
+							
+							/*
+							Label title = new Label(currentView.getName());
+							title.styleProperty().bind(Bindings.concat(
 									"-fx-font-size: ", parent.widthProperty().divide(20), ";", 
-									"-fx-text-fill: ", VIEW_LABEL_COLOR, ";"));
-							name.layoutXProperty().bind(parent.widthProperty().subtract(name.widthProperty()).divide(2));
-							name.layoutYProperty().bind(parent.heightProperty().subtract(name.heightProperty()).divide(2));
-							parent.getChildren().add(name);
+									"-fx-text-fill: ", VIEW_LABEL_COLOR, ";",
+									"-fx-stroke: white;",
+								    "-fx-stroke-width: 5;"));
+							title.layoutXProperty().bind(parent.widthProperty().subtract(title.widthProperty()).divide(2));
+							title.layoutYProperty().bind(parent.heightProperty().subtract(title.heightProperty()).divide(2));
+							parent.getChildren().add(title);
+							*/
+							
+							BorderPane title = createViewTitlePane(currentView.getName());
+							parent.getChildren().add(title);
 							
 							Transition trans = UiUtils.createFadeInOutTransition(
-									name, VIEW_LABEL_FADE_IN_MS, VIEW_LABEL_LINGER_MS, VIEW_LABEL_FADE_OUT_MS, 
+									title, VIEW_LABEL_FADE_IN_MS, VIEW_LABEL_LINGER_MS, VIEW_LABEL_FADE_OUT_MS, 
 									new EventHandler<ActionEvent>() {
 								public void handle(ActionEvent event) {
-									parent.getChildren().remove(name);
+									parent.getChildren().remove(title);
 								}
 							});
 							trans.play();
@@ -462,27 +472,55 @@ public class Spectrum extends Application {
 		}).play();
 	}
 	
-	private BorderPane createPropertyPane(String name, Region control) {
-		Pane parent = currentView.getRoot();
+	private BorderPane createUtilityPane(double widthRatio, double heightRatio, double opacity) {
 
 		BorderPane pane = new BorderPane();
+		Pane parent = currentView.getRoot();
+		
+		// Automatically resize pane based on the scene size
+		pane.prefWidthProperty().bind(parent.widthProperty().divide(widthRatio));
+		pane.prefHeightProperty().bind(parent.heightProperty().divide(heightRatio));
+		pane.layoutXProperty().bind(parent.widthProperty().subtract(pane.widthProperty()).divide(2));
+		pane.layoutYProperty().bind(parent.heightProperty().subtract(pane.heightProperty()).divide(2));
+		pane.setBackground(new Background(
+				new BackgroundFill(Color.rgb(180, 180, 180, opacity), new CornerRadii(5), Insets.EMPTY)));
+		pane.setBorder(new Border(new BorderStroke(Color.DARKGRAY, 
+	            BorderStrokeStyle.SOLID, new CornerRadii(6), new BorderWidths(2))));
+		
+		return pane;
+	}
+	
+	private BorderPane createViewTitlePane(String viewName) {
+		
+		Label label = new Label(viewName);
+		Pane parent = currentView.getRoot();
+		label.styleProperty().bind(Bindings.concat(
+				"-fx-font-size: ", parent.widthProperty().divide(20), ";",
+				"-fx-font-family: 'Alex Brush';",
+				"-fx-text-fill: ", VIEW_LABEL_COLOR, ";"));
+		label.setEffect(new Glow(1));
+		
+		BorderPane pane = createUtilityPane(1.5, 4, 0.6);
+		pane.setCenter(label);
+		BorderPane.setAlignment(label, Pos.CENTER);
+		
+		return pane;
+	}
+	
+	private BorderPane createPropertyPane(String name, Region control) {
+		
+		BorderPane pane = createUtilityPane(2, 2, 1);
+		//pane.setOpacity(0.9);
+
 		pane.setCenter(control);
 		BorderPane.setAlignment(control, Pos.CENTER);
 		
 		// This can be used to identify the control
 		pane.setUserData("Property Control");
-		
-		// Automatically resize pane based on the scene size
-		pane.prefWidthProperty().bind(parent.widthProperty().divide(2));
-		pane.prefHeightProperty().bind(parent.heightProperty().divide(2));
-		pane.layoutXProperty().bind(parent.widthProperty().subtract(pane.widthProperty()).divide(2));
-		pane.layoutYProperty().bind(parent.heightProperty().subtract(pane.heightProperty()).divide(2));
-		pane.setBackground(new Background(new BackgroundFill(Color.rgb(180, 180, 180), new CornerRadii(5), null)));
-		pane.setBorder(new Border(new BorderStroke(Color.DARKGRAY, 
-	            BorderStrokeStyle.SOLID, new CornerRadii(6), new BorderWidths(2))));
-		//pane.setOpacity(0.9);
-		
+
+		// Create top label
 		Label label = new Label(name);
+		Pane parent = currentView.getRoot();
 		label.styleProperty().bind(Bindings.concat(
 				"-fx-font-size: ", parent.widthProperty().divide(40), ";", 
 				"-fx-padding: ", parent.widthProperty().divide(50), ";"));
