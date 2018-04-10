@@ -53,9 +53,10 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 	private ConfigurableIntegerProperty propDivCount;
 	
 	// Not requiring reset
-	private ConfigurableIntegerProperty propMinDbValue, propLightXPosition, 
-		propLightYPosition, propSensitivity, propMaxDbuValue;
-	private ConfigurableColorProperty propBackgroundColor, propLightColor, 
+	private ConfigurableIntegerProperty propMinDbValue, propSensitivity, propMaxDbuValue, 
+		propBgCenterX, propBgCenterY, propBgRadius, propBgFocusDistance, propBgFocusAngle,
+		propLightXPosition, propLightYPosition;
+	private ConfigurableColorProperty propBgColorA, propBgColorB, propLightColor, 
 		propIndicatorColor, propNormalLevelDigitsColor, propHighLevelDigitsColor, propPeakColor, propRotorColor, propRotorPlateColor;
 	private ConfigurableDoubleProperty propLightSurfaceScale, propLightDiffuseConstant, 
 		propLightSpecularConstant, propLightSpecularExponent, propLightZPosition, 
@@ -98,8 +99,10 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 				keyPrefix + "minDbValue", "Min. DB Value", -100, -10, -24, 1);
 		propMaxDbuValue = createConfigurableIntegerProperty(
 				keyPrefix + "maxDBuValue", "Max. dBu Value", 0, 24, 6, 1);
-		propBackgroundColor = createConfigurableColorProperty(
-				keyPrefix + "backgroundColor", "Background Color", Color.ANTIQUEWHITE);
+		propBgColorA = createConfigurableColorProperty(
+				keyPrefix + "bgColorA", "Background Color A", Color.BLACK);
+		propBgColorB = createConfigurableColorProperty(
+				keyPrefix + "bgColorB", "Background Color B", Color.BLACK);
 		propLightColor = createConfigurableColorProperty(
 				keyPrefix + "lightColor", "Light Color", Color.ANTIQUEWHITE);
 		propIndicatorColor = createConfigurableColorProperty(
@@ -136,6 +139,16 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 				keyPrefix + "rotorColor", "Rotor Color", Color.DARKGRAY);
 		propRotorPlateColor = createConfigurableColorProperty(
 				keyPrefix + "rotorPlateColor", "Rotor Plate Color", Color.SANDYBROWN);
+		propBgCenterX = createConfigurableIntegerProperty(
+				keyPrefix + "bgCenterX", "Basic Light X", 0, 100, 50, 1);
+		propBgCenterY = createConfigurableIntegerProperty(
+				keyPrefix + "bgCenterY", "Basic Light Y", 0, 100, 100, 1);
+		propBgRadius = createConfigurableIntegerProperty(
+				keyPrefix + "bgRadius", "Basic Light Radius", 0 , 100, 50, 1);
+		propBgFocusAngle = createConfigurableIntegerProperty(
+				keyPrefix + "bgFocusAngle", "Basic Light Angle", 0, 360, 0, 10);
+		propBgFocusDistance = createConfigurableIntegerProperty(
+				keyPrefix + "bgFocusDistance", "Basic Light Dist.", 0, 100, 0, 1);
 		
 		/* Operational properties */
 		currentDbRmsProp = new SimpleDoubleProperty(propMinDbValue.getProp().get());
@@ -175,7 +188,13 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 	@Override
 	public List<ConfigurableProperty<? extends Object>> getProperties() {
 		return Arrays.asList(
-				propBackgroundColor, 
+				propBgColorA,
+				propBgColorB,
+				propBgCenterX,
+				propBgCenterY,
+				propBgRadius,
+				propBgFocusAngle,
+				propBgFocusDistance,
 				propIndicatorColor, 
 				propNormalLevelDigitsColor, 
 				propHighLevelDigitsColor,
@@ -433,7 +452,19 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 		background.setY(0);
 		background.widthProperty().bind(getRoot().widthProperty());
 		background.heightProperty().bind(getRoot().heightProperty());
-		background.fillProperty().bind(propBackgroundColor.getProp());
+		
+		background.styleProperty().bind(
+				Bindings.concat(
+						"-fx-fill: ", 
+							"radial-gradient("
+							+ "focus-angle ", propBgFocusAngle.getProp(), "deg, ",
+							  "focus-distance ", propBgFocusDistance.getProp(), "%, ",
+							  "center ", propBgCenterX.getProp(), "% ", propBgCenterY.getProp(), "%, ",
+							  "radius ", propBgRadius.getProp(), "%, ",
+							  Bindings.createStringBinding(() -> (UiUtils.colorToWeb(propBgColorA.getProp().get())), propBgColorA.getProp()), ", ",
+							  Bindings.createStringBinding(() -> (UiUtils.colorToWeb(propBgColorB.getProp().get())), propBgColorB.getProp()), ")"
+				));
+		
 		background.setCache(true); // If this is not set there are visible artifacts from the lighting effect and moving objects on top of it
 		background.setEffect(lighting);
 		background.effectProperty().bind(Bindings.createObjectBinding(

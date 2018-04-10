@@ -27,6 +27,7 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.StrokeLineCap;
 import mb.spectrum.UiUtils;
 import mb.spectrum.Utils;
+import mb.spectrum.prop.ActionProperty;
 import mb.spectrum.prop.ConfigurableDoubleProperty;
 import mb.spectrum.prop.ConfigurableIntegerProperty;
 import mb.spectrum.prop.ConfigurableProperty;
@@ -54,6 +55,7 @@ public class StereoLevelsView extends AbstractView {
 	private ConfigurableProperty<Boolean> propShowDr;
 	private ConfigurableDoubleProperty propBarHeight;
 	private ConfigurableProperty<Boolean> propRms;
+	private ActionProperty propResetDr;
 	
 	private List<Line> lines;
 	private List<Label> labels;
@@ -114,6 +116,10 @@ public class StereoLevelsView extends AbstractView {
 				keyPrefix + "barHeight", "Level Bar Height", 0.05, 1.0, 0.25, 0.05);
 		propRms = createConfigurableBooleanProperty(
 				keyPrefix + "enableRmsMode", "RMS Mode", false);
+		propResetDr = new ActionProperty("Reset D/R");
+		propResetDr.setOnAction((e) -> {
+			onResetDr();
+		});
 		
 		/* Operational properties */
 		currLevelLProp = new SimpleDoubleProperty();
@@ -129,7 +135,7 @@ public class StereoLevelsView extends AbstractView {
 	@Override
 	public List<ConfigurableProperty<? extends Object>> getProperties() {
 		return Arrays.asList(propGridColor, propBarOpacity, propBarColorNormal, 
-				propBarColorMid, propLingerIndicatorColor, propBarColorClip, propRms, 
+				propBarColorMid, propLingerIndicatorColor, propBarColorClip, propRms, propResetDr,
 				propDrBarColor, propDrBarOpacity, propShowDr, propBarHeight, propMinDbValue);
 	}
 
@@ -406,6 +412,13 @@ public class StereoLevelsView extends AbstractView {
 							parentWidth * SCENE_MARGIN_RATIO, parentWidth - parentWidth * SCENE_MARGIN_RATIO) - bar.xProperty().get();
 				}, 
 				maxLevelProp, getRoot().widthProperty(), bar.xProperty(), propMinDbValue.getProp()));
+	}
+	
+	private void onResetDr() {
+		minLevelL = 0;
+		minLevelR = 0; 
+		maxLevelL = INIT_MIN_DB_VALUE;
+		maxLevelR = INIT_MIN_DB_VALUE;
 	}
 
 }

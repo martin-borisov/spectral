@@ -27,6 +27,7 @@ import javafx.scene.Node;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.Scene;
 import javafx.scene.SceneAntialiasing;
+import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.Slider;
@@ -45,6 +46,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import mb.spectrum.gpio.StageGpioController;
+import mb.spectrum.prop.ActionProperty;
 import mb.spectrum.prop.ConfigurableBooleanProperty;
 import mb.spectrum.prop.ConfigurableColorProperty;
 import mb.spectrum.prop.ConfigurableDoubleProperty;
@@ -454,6 +456,10 @@ public class Spectrum extends Application {
 						p.getValue(), prop.getName(), currentView.getRoot());
 				box.selectedProperty().bind(p);
 				control = box;
+			} else if(prop instanceof ActionProperty) {
+				Button button = UiUtils.createActionPropertyButton(
+						prop.getName(), (ActionProperty) prop);
+				control = button;
 			}
 			
 			currentView.getRoot().getChildren().add(

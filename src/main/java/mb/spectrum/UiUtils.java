@@ -14,6 +14,7 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.Label;
@@ -22,6 +23,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.util.Duration;
+import mb.spectrum.prop.ActionProperty;
 import mb.spectrum.prop.ConfigurableBooleanProperty;
 import mb.spectrum.prop.ConfigurableColorProperty;
 import mb.spectrum.prop.ConfigurableDoubleProperty;
@@ -101,6 +103,16 @@ public class UiUtils {
 		picker.styleProperty().bind(Bindings.concat(
 				"-fx-font-size: ", parent.widthProperty().divide(40), ";"));
 		return picker;
+	}
+	
+	public static Button createActionPropertyButton(String label, ActionProperty prop) {
+		Button button = new Button(label);
+		button.setOnAction(new EventHandler<ActionEvent>() {
+			public void handle(ActionEvent event) {
+				prop.trigger();
+			}
+		});
+		return button;
 	}
 	
 	public static CheckBox createBooleanPropertyCheckBox(Boolean value, String label, Pane parent) {
