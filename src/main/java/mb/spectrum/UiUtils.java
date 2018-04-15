@@ -23,7 +23,6 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.util.Duration;
-import mb.spectrum.prop.ActionProperty;
 import mb.spectrum.prop.ConfigurableBooleanProperty;
 import mb.spectrum.prop.ConfigurableColorProperty;
 import mb.spectrum.prop.ConfigurableDoubleProperty;
@@ -105,13 +104,8 @@ public class UiUtils {
 		return picker;
 	}
 	
-	public static Button createActionPropertyButton(String label, ActionProperty prop) {
+	public static Button createActionPropertyButton(String label) {
 		Button button = new Button(label);
-		button.setOnAction(new EventHandler<ActionEvent>() {
-			public void handle(ActionEvent event) {
-				prop.trigger();
-			}
-		});
 		return button;
 	}
 	

@@ -136,21 +136,21 @@ public class StageGpioController implements GpioPinListenerDigital {
 	}
 	
 	private void onButtonAReleased() {
-		triggerKeyPress(KeyCode.ESCAPE);
+		triggerKeyPress(KeyCode.ESCAPE, false);
 	}
 	
 	private void onButtonBPressed() {
 		buttonBHoldTimer = new Timer(true);
 		buttonBHoldTimer.schedule(new TimerTask() {
 			public void run() {
-				triggerKeyPress(KeyCode.ENTER);
+				triggerKeyPress(KeyCode.ENTER, false);
 			}
 		}, 3000);
 	}
 	
 	private void onButtonBReleased() {
 		cancelButtonBHoldTimer();
-		triggerKeyPress(KeyCode.SPACE);
+		triggerKeyPress(KeyCode.SPACE, true);
 	}
 	
 	private void onBothButtonsPressed() {
@@ -177,9 +177,19 @@ public class StageGpioController implements GpioPinListenerDigital {
 		}
 	}
 	
-	private void triggerKeyPress(KeyCode code) {
-		fireStageEvent(new KeyEvent(KeyEvent.KEY_PRESSED, null, null, 
-				code, false, false, false, false));
+	private void triggerKeyPress(KeyCode code, boolean focused) {
+		KeyEvent event = new KeyEvent(KeyEvent.KEY_PRESSED, null, null, 
+				code, false, false, false, false);
+		
+		// Check if a button is currently in focus
+		// as we want to be able to dispatch the event directly to it and not the stage
+		if(focused && 
+				stage.getScene().focusOwnerProperty().get() != null) {
+			fireFocusedControlEvent(event);
+		} else {
+			fireStageEvent(event);
+		}
+		
 	}
 	
 	private void fireStageEvent(Event event) {

@@ -71,7 +71,7 @@ public class Spectrum extends Application {
 	
 	private static final int INIT_SCENE_WIDTH = 800;
 	private static final int INIT_SCENE_HEIGHT = 480;
-	private static final String VIEW_LABEL_COLOR = "#00FFFF";
+	private static final String VIEW_LABEL_COLOR = "#00aeff";
 	private static final double VIEW_LABEL_FADE_IN_MS = 1000;
 	private static final double VIEW_LABEL_LINGER_MS = 1000;
 	private static final double VIEW_LABEL_FADE_OUT_MS = 1000;
@@ -262,7 +262,11 @@ public class Spectrum extends Application {
 			break;
 		
 		case SPACE:
-			toggleCurrentViewPropertiesOn();
+			if(isPropertiesVisible()) {
+				firePropertyButtonIfInFocus();
+			} else {
+				toggleCurrentViewPropertiesOn();
+			}
 			break;
 			
 		case ESCAPE:
@@ -457,8 +461,12 @@ public class Spectrum extends Application {
 				box.selectedProperty().bind(p);
 				control = box;
 			} else if(prop instanceof ActionProperty) {
-				Button button = UiUtils.createActionPropertyButton(
-						prop.getName(), (ActionProperty) prop);
+				Button button = UiUtils.createActionPropertyButton(prop.getName());
+				button.setOnAction(new EventHandler<ActionEvent>() {
+					public void handle(ActionEvent event) {
+						((ActionProperty) prop).trigger();
+					}
+				});
 				control = button;
 			}
 			
@@ -489,8 +497,8 @@ public class Spectrum extends Application {
 		pane.layoutXProperty().bind(parent.widthProperty().subtract(pane.widthProperty()).divide(2));
 		pane.layoutYProperty().bind(parent.heightProperty().subtract(pane.heightProperty()).divide(2));
 		pane.setBackground(new Background(
-				new BackgroundFill(Color.rgb(180, 180, 180, opacity), new CornerRadii(5), Insets.EMPTY)));
-		pane.setBorder(new Border(new BorderStroke(Color.DARKGRAY, 
+				new BackgroundFill(Color.rgb(140, 140, 140, opacity), new CornerRadii(5), Insets.EMPTY)));
+		pane.setBorder(new Border(new BorderStroke(Color.DARKGREY, 
 	            BorderStrokeStyle.SOLID, new CornerRadii(6), new BorderWidths(2))));
 		
 		return pane;
@@ -605,6 +613,13 @@ public class Spectrum extends Application {
 			}
 		}
 		return isVisible;
+	}
+	
+	private void firePropertyButtonIfInFocus() {
+		Node focusOwner = currentView.getRoot().getScene().getFocusOwner();
+		if(focusOwner instanceof Button && isPropertiesVisible()) {
+			((Button) focusOwner).fire();
+		}
 	}
 	
 	public static void main(String[] args) {
