@@ -26,7 +26,7 @@ import mb.spectrum.prop.ConfigurableProperty;
 
 public class StereoLevelsLedView extends AbstractView {
 	
-	private enum Channel {
+	public enum Channel {
 		LEFT, RIGHT
 	}
 	
