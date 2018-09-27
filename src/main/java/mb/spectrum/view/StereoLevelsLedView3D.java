@@ -10,6 +10,7 @@ import static mb.spectrum.Utils.rmsLevel;
 import java.util.Arrays;
 import java.util.List;
 
+import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
@@ -297,33 +298,25 @@ public class StereoLevelsLedView3D extends AbstractView {
         			return Double.valueOf(propCameraZRotate.getProp().get()); 
         			}, propCameraZRotate.getProp()));
         
-        Rotate xRotateAuto = new Rotate(0, Rotate.Y_AXIS);
+        Rotate xRotateAuto = new Rotate(0, Rotate.X_AXIS);
+        Rotate yRotateAuto = new Rotate(0, Rotate.Y_AXIS);
 		
         PerspectiveCamera camera = new PerspectiveCamera(true);
         camera.setNearClip(0.1);
         camera.setFarClip(10000);
-        camera.getTransforms().addAll(
-                pivot,
-                yRotate,
-                xRotate,
-                zRotate,
-                position,
-                xRotateAuto
-        );
-        
         
         Timeline timeline = new Timeline(
-//                new KeyFrame(
-//                        Duration.seconds(0), 
-//                        new KeyValue(yRotate.angleProperty(), 0)
-//                ),
-//                new KeyFrame(
-//                        Duration.seconds(15), 
-//                        new KeyValue(yRotate.angleProperty(), 360)
-//                ),
                 new KeyFrame(
                         Duration.seconds(0), 
-                        new KeyValue(xRotateAuto.angleProperty(), 0)
+                        new KeyValue(yRotateAuto.angleProperty(), 0)
+                ),
+                new KeyFrame(
+                        Duration.seconds(15), 
+                        new KeyValue(yRotateAuto.angleProperty(), 360)
+                ),
+                new KeyFrame(
+                        Duration.seconds(0), 
+                        new KeyValue(xRotateAuto.angleProperty(), 0, Interpolator.EASE_BOTH)
                 ),
                 new KeyFrame(
                         Duration.seconds(15), 
@@ -331,13 +324,25 @@ public class StereoLevelsLedView3D extends AbstractView {
                 )
         );
         timeline.setCycleCount(Timeline.INDEFINITE);
-        //timeline.play();
         
-        propAutoRotateCamera.getProp().addListener((obs, newVal, oldVal) -> {
+        // Initialize the camera play/stop state
+        if(propAutoRotateCamera.getProp().get()) {
+			camera.getTransforms().addAll(pivot, xRotateAuto, yRotateAuto, position);
+        	timeline.play();
+        } else {
+			camera.getTransforms().addAll(pivot, yRotate, xRotate, zRotate, position);
+        }
+        
+        // Define what happens when the play toggle is switched
+        propAutoRotateCamera.getProp().addListener((obs, oldVal, newVal) -> {
         	if(newVal) {
+        		camera.getTransforms().clear();
+        		camera.getTransforms().addAll(pivot, xRotateAuto, yRotateAuto, position);
         		timeline.play();
         	} else {
         		timeline.stop();
+        		camera.getTransforms().clear();
+        		camera.getTransforms().addAll(pivot, yRotate, xRotate, zRotate, position);
         	}
         }); 
         
