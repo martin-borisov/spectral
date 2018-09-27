@@ -10,7 +10,6 @@ import static mb.spectrum.Utils.rmsLevel;
 import java.util.Arrays;
 import java.util.List;
 
-import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
@@ -62,7 +61,13 @@ public class StereoLevelsLedView3D extends AbstractView {
 	private ConfigurableColorProperty propLedColorNormal;
 	private ConfigurableColorProperty propLedColorMid;
 	private ConfigurableColorProperty propLedColorClip;
-	private ConfigurableBooleanProperty propAutoRotateCamera;
+	private ConfigurableBooleanProperty propCameraAutoRotate;
+	private ConfigurableBooleanProperty propCameraAutoRotateX;
+	private ConfigurableBooleanProperty propCameraAutoRotateY;
+	private ConfigurableBooleanProperty propCameraAutoRotateZ;
+	
+	// TODO Properties for auto rotate cycle time, interpolation for each axis
+	
 	private ConfigurableBooleanProperty propLineMode;
 	private ConfigurableBooleanProperty propRms;
 	
@@ -93,7 +98,10 @@ public class StereoLevelsLedView3D extends AbstractView {
 				propLedColorNormal,
 				propLedColorMid,
 				propLedColorClip,
-				propAutoRotateCamera,
+				propCameraAutoRotate,
+				propCameraAutoRotateX,
+				propCameraAutoRotateY,
+				propCameraAutoRotateZ,
 				propLineMode,
 				propRms
 				);
@@ -142,8 +150,14 @@ public class StereoLevelsLedView3D extends AbstractView {
 				keyPrefix + "middleLevelColor", "Middle Level Color", Color.YELLOW);
 		propLedColorClip = createConfigurableColorProperty(
 				keyPrefix + "clipLevelColor", "Clip Level Color", Color.RED);
-		propAutoRotateCamera = createConfigurableBooleanProperty(
-				keyPrefix + "autoRotateCamera", "Auto Rotate Camera", false);
+		propCameraAutoRotate = createConfigurableBooleanProperty(
+				keyPrefix + "cameraAutoRotate", "Auto Rotate Camera", false);
+		propCameraAutoRotateX = createConfigurableBooleanProperty(
+				keyPrefix + "cameraAutoRotateX", "Auto Rotate Camera X", false);
+		propCameraAutoRotateY = createConfigurableBooleanProperty(
+				keyPrefix + "cameraAutoRotateY", "Auto Rotate Camera Y", false);
+		propCameraAutoRotateZ = createConfigurableBooleanProperty(
+				keyPrefix + "cameraAutoRotateZ", "Auto Rotate Camera Z", false);
 		propLineMode = createConfigurableBooleanProperty(
 				keyPrefix + "lineMode", "Line Mode", false);
 		propRms = createConfigurableBooleanProperty(
@@ -300,6 +314,7 @@ public class StereoLevelsLedView3D extends AbstractView {
         
         Rotate xRotateAuto = new Rotate(0, Rotate.X_AXIS);
         Rotate yRotateAuto = new Rotate(0, Rotate.Y_AXIS);
+        Rotate zRotateAuto = new Rotate(0, Rotate.Z_AXIS);
 		
         PerspectiveCamera camera = new PerspectiveCamera(true);
         camera.setNearClip(0.1);
@@ -316,17 +331,25 @@ public class StereoLevelsLedView3D extends AbstractView {
                 ),
                 new KeyFrame(
                         Duration.seconds(0), 
-                        new KeyValue(xRotateAuto.angleProperty(), 0, Interpolator.EASE_BOTH)
+                        new KeyValue(xRotateAuto.angleProperty(), 0)
                 ),
                 new KeyFrame(
                         Duration.seconds(15), 
                         new KeyValue(xRotateAuto.angleProperty(), 360)
+                ),
+                new KeyFrame(
+                        Duration.seconds(0), 
+                        new KeyValue(zRotateAuto.angleProperty(), 0)
+                ),
+                new KeyFrame(
+                        Duration.seconds(15), 
+                        new KeyValue(zRotateAuto.angleProperty(), 360)
                 )
         );
         timeline.setCycleCount(Timeline.INDEFINITE);
         
         // Initialize the camera play/stop state
-        if(propAutoRotateCamera.getProp().get()) {
+        if(propCameraAutoRotate.getProp().get()) {
 			camera.getTransforms().addAll(pivot, xRotateAuto, yRotateAuto, position);
         	timeline.play();
         } else {
@@ -334,10 +357,23 @@ public class StereoLevelsLedView3D extends AbstractView {
         }
         
         // Define what happens when the play toggle is switched
-        propAutoRotateCamera.getProp().addListener((obs, oldVal, newVal) -> {
+        propCameraAutoRotate.getProp().addListener((obs, oldVal, newVal) -> {
         	if(newVal) {
         		camera.getTransforms().clear();
-        		camera.getTransforms().addAll(pivot, xRotateAuto, yRotateAuto, position);
+        		camera.getTransforms().addAll(pivot);
+        		
+        		if(propCameraAutoRotateX.getProp().get()) {
+        			camera.getTransforms().add(xRotateAuto);
+        		}
+        		if(propCameraAutoRotateY.getProp().get()) {
+        			camera.getTransforms().add(yRotateAuto);
+        		}
+        		if(propCameraAutoRotateZ.getProp().get()) {
+        			camera.getTransforms().add(zRotateAuto);
+        		}
+        		
+        		camera.getTransforms().add(position);
+        		
         		timeline.play();
         	} else {
         		timeline.stop();
