@@ -16,6 +16,8 @@ import javafx.animation.Timeline;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.scene.Camera;
 import javafx.scene.Group;
 import javafx.scene.Node;
@@ -61,7 +63,6 @@ public class StereoLevelsLedView3D extends AbstractView {
 	private ConfigurableColorProperty propLedColorNormal;
 	private ConfigurableColorProperty propLedColorMid;
 	private ConfigurableColorProperty propLedColorClip;
-	private ConfigurableBooleanProperty propCameraAutoRotate;
 	private ConfigurableBooleanProperty propCameraAutoRotateX;
 	private ConfigurableBooleanProperty propCameraAutoRotateY;
 	private ConfigurableBooleanProperty propCameraAutoRotateZ;
@@ -98,7 +99,6 @@ public class StereoLevelsLedView3D extends AbstractView {
 				propLedColorNormal,
 				propLedColorMid,
 				propLedColorClip,
-				propCameraAutoRotate,
 				propCameraAutoRotateX,
 				propCameraAutoRotateY,
 				propCameraAutoRotateZ,
@@ -150,8 +150,6 @@ public class StereoLevelsLedView3D extends AbstractView {
 				keyPrefix + "middleLevelColor", "Middle Level Color", Color.YELLOW);
 		propLedColorClip = createConfigurableColorProperty(
 				keyPrefix + "clipLevelColor", "Clip Level Color", Color.RED);
-		propCameraAutoRotate = createConfigurableBooleanProperty(
-				keyPrefix + "cameraAutoRotate", "Auto Rotate Camera", false);
 		propCameraAutoRotateX = createConfigurableBooleanProperty(
 				keyPrefix + "cameraAutoRotateX", "Auto Rotate Camera X", false);
 		propCameraAutoRotateY = createConfigurableBooleanProperty(
@@ -175,8 +173,6 @@ public class StereoLevelsLedView3D extends AbstractView {
 		currentDbLProp.set(currentDbL);
 		currentDbRProp.set(currentDbR);
 	}
-	
-	
 
 	@Override
 	public void dataAvailable(float[] left, float[] right) {
@@ -221,6 +217,7 @@ public class StereoLevelsLedView3D extends AbstractView {
 		box.setDepth(width);
 		box.setLayoutX(channel == Channel.LEFT ? 0 - width - width / 2 : width / 2);
 		
+		// Maintain dimensions when updating the led count and gap
 		box.heightProperty().bind(Bindings.createDoubleBinding(
 				() -> {
 					int ledCount = propLedCount.getProp().get();
@@ -237,6 +234,7 @@ public class StereoLevelsLedView3D extends AbstractView {
 					return ledGap + idx * (ledGap + box.heightProperty().get()) * -1;
 				}, propLedCount.getProp(), propLedGapRatio.getProp(), box.heightProperty()));
 		
+		// Make colors configurable
 		PhongMaterial off = new PhongMaterial(Color.rgb(30, 30, 30));
 		PhongMaterial onNorm = new PhongMaterial();
 		onNorm.diffuseColorProperty().bind(propLedColorNormal.getProp());
@@ -269,6 +267,7 @@ public class StereoLevelsLedView3D extends AbstractView {
 				}, propMinDbValue.getProp(), propClipDbValue.getProp(), propMidDbValue.getProp(), 
 				propLedCount.getProp(), currentDbProp));
 		
+		// Make line mode configurable
 		box.drawModeProperty().bind(Bindings.createObjectBinding(
 				() -> {
 					return propLineMode.getProp().get() ? DrawMode.LINE : DrawMode.FILL;
@@ -348,40 +347,55 @@ public class StereoLevelsLedView3D extends AbstractView {
         );
         timeline.setCycleCount(Timeline.INDEFINITE);
         
-        // Initialize the camera play/stop state
-        if(propCameraAutoRotate.getProp().get()) {
-			camera.getTransforms().addAll(pivot, xRotateAuto, yRotateAuto, position);
-        	timeline.play();
-        } else {
-			camera.getTransforms().addAll(pivot, yRotate, xRotate, zRotate, position);
-        }
-        
         // Define what happens when the play toggle is switched
-        propCameraAutoRotate.getProp().addListener((obs, oldVal, newVal) -> {
-        	if(newVal) {
-        		camera.getTransforms().clear();
-        		camera.getTransforms().addAll(pivot);
-        		
-        		if(propCameraAutoRotateX.getProp().get()) {
-        			camera.getTransforms().add(xRotateAuto);
-        		}
-        		if(propCameraAutoRotateY.getProp().get()) {
-        			camera.getTransforms().add(yRotateAuto);
-        		}
-        		if(propCameraAutoRotateZ.getProp().get()) {
-        			camera.getTransforms().add(zRotateAuto);
-        		}
-        		
-        		camera.getTransforms().add(position);
-        		
-        		timeline.play();
-        	} else {
-        		timeline.stop();
-        		camera.getTransforms().clear();
-        		camera.getTransforms().addAll(pivot, yRotate, xRotate, zRotate, position);
-        	}
-        }); 
+        ChangeListener<Boolean> playStopChangeListener = new ChangeListener<Boolean>() {
+			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+	        	if(shouldCameraRotate()) {
+	        		camera.getTransforms().clear();
+	        		camera.getTransforms().add(pivot);
+	        		
+	        		if(propCameraAutoRotateX.getProp().get()) {
+	        			camera.getTransforms().add(xRotateAuto);
+	        		} else {
+	        			camera.getTransforms().remove(xRotateAuto);
+	        		}
+	        		
+	        		if(propCameraAutoRotateY.getProp().get()) {
+	        			camera.getTransforms().add(yRotateAuto);
+	        		} else {
+	        			camera.getTransforms().remove(yRotateAuto);
+	        		}
+	        		
+	        		if(propCameraAutoRotateZ.getProp().get()) {
+	        			camera.getTransforms().add(zRotateAuto);
+	        		} else {
+	        			camera.getTransforms().remove(zRotateAuto);
+	        		}
+	        		
+	        		camera.getTransforms().add(position);
+	        		
+	        		timeline.play();
+	        	} else {
+	        		timeline.stop();
+	        		camera.getTransforms().clear();
+	        		camera.getTransforms().addAll(pivot, yRotate, xRotate, zRotate, position);
+	        	}
+			}
+        };
+        
+        propCameraAutoRotateX.getProp().addListener(playStopChangeListener);
+        propCameraAutoRotateY.getProp().addListener(playStopChangeListener); 
+        propCameraAutoRotateZ.getProp().addListener(playStopChangeListener);
+        
+        // Initialize the camera play/stop state
+        playStopChangeListener.changed(null, null, null);
         
         return camera;
+	}
+	
+	private boolean shouldCameraRotate() {
+		return propCameraAutoRotateX.getProp().get() 
+				|| propCameraAutoRotateY.getProp().get()
+				|| propCameraAutoRotateZ.getProp().get();
 	}
 }
