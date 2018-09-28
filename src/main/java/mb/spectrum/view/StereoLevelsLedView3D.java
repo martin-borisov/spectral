@@ -66,6 +66,7 @@ public class StereoLevelsLedView3D extends AbstractView {
 	private ConfigurableBooleanProperty propCameraAutoRotateX;
 	private ConfigurableBooleanProperty propCameraAutoRotateY;
 	private ConfigurableBooleanProperty propCameraAutoRotateZ;
+	private ConfigurableDoubleProperty propAutoRotateSpeed;
 	
 	// TODO Properties for auto rotate cycle time, interpolation for each axis
 	
@@ -102,6 +103,7 @@ public class StereoLevelsLedView3D extends AbstractView {
 				propCameraAutoRotateX,
 				propCameraAutoRotateY,
 				propCameraAutoRotateZ,
+				propAutoRotateSpeed,
 				propLineMode,
 				propRms
 				);
@@ -156,6 +158,8 @@ public class StereoLevelsLedView3D extends AbstractView {
 				keyPrefix + "cameraAutoRotateY", "Auto Rotate Camera Y", false);
 		propCameraAutoRotateZ = createConfigurableBooleanProperty(
 				keyPrefix + "cameraAutoRotateZ", "Auto Rotate Camera Z", false);
+		propAutoRotateSpeed = createConfigurableDoubleProperty(
+				keyPrefix + "autoRotateSpeed", "Auto Rotate Speed", 0.1, 10.0, 1.0, 0.1);
 		propLineMode = createConfigurableBooleanProperty(
 				keyPrefix + "lineMode", "Line Mode", false);
 		propRms = createConfigurableBooleanProperty(
@@ -351,6 +355,9 @@ public class StereoLevelsLedView3D extends AbstractView {
                 )
         );
         timeline.setCycleCount(Timeline.INDEFINITE);
+        
+        // Make the auto-rotation speed configurable
+        timeline.rateProperty().bind(propAutoRotateSpeed.getProp());
         
         // Define what happens when the play toggle is switched
         ChangeListener<Boolean> playStopChangeListener = new ChangeListener<Boolean>() {
