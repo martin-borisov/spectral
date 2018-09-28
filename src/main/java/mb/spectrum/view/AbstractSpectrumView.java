@@ -11,6 +11,8 @@ import ddf.minim.analysis.FourierTransform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.Node;
+import javafx.scene.SceneAntialiasing;
+import javafx.scene.SubScene;
 import javafx.scene.control.Label;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
@@ -50,7 +52,11 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 	private double[] trailOpValues;
 	
 	protected abstract String getBasePropertyKey();
-
+	
+	// #
+	private AnalogMeterView analogMeterView;
+	// #
+	
 	@Override
 	public List<ConfigurableProperty<? extends Object>> getProperties() {
 		return Arrays.asList(propGridColor);
@@ -61,6 +67,10 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 		propGridColor = UiUtils.createConfigurableColorProperty(getBasePropertyKey() + ".gridColor", "Grid Color", Color.web("#fd4a11"));
 		bandValues = new ArrayList<>();
 		trailValues = new ArrayList<>();
+		
+		// #
+		analogMeterView = new AnalogMeterView();
+		// #
 	}
 
 	@Override
@@ -115,6 +125,14 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 		shapes.addAll(vLabels);
 		shapes.addAll(hLines);
 		shapes.addAll(hLabels);
+		
+		// #
+		SubScene peep = new SubScene(analogMeterView.getRoot(), pane.getWidth() / 4, pane.getHeight() / 4, true, SceneAntialiasing.BALANCED);
+		peep.widthProperty().bind(pane.widthProperty().divide(4));
+		peep.heightProperty().bind(pane.heightProperty().divide(4));
+		shapes.add(peep);
+		// #
+		
 		return shapes;
 	}
 	
@@ -133,6 +151,10 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 				bandValuesDB[i] = bandDB;
 			}
 		}
+		
+		// #
+		analogMeterView.dataAvailable(data);
+		// #
 	}
 	
 	@Override
@@ -160,6 +182,10 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 			}
 			trailValues.get(i).set(trailValuesDB[i]);
 		}
+		
+		// #
+		analogMeterView.nextFrame();
+		// #
 	}
 	
 	private void createHzLineAndLabel(int barIdx, int hz) {
