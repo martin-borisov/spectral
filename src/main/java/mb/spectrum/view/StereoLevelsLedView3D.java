@@ -51,18 +51,18 @@ public class StereoLevelsLedView3D extends AbstractView {
 	
 	// Not requiring reset
 	private ConfigurableIntegerProperty propMinDbValue;
-	private ConfigurableIntegerProperty propClipDbValue;
 	private ConfigurableIntegerProperty propMidDbValue;
+	private ConfigurableIntegerProperty propClipDbValue;
 	private ConfigurableDoubleProperty propLedGapRatio;
-	private ConfigurableIntegerProperty propCameraDistance;
-	private ConfigurableIntegerProperty propCameraVPan;
-	private ConfigurableIntegerProperty propCameraHPan;
-	private ConfigurableIntegerProperty propCameraXRotate;
-	private ConfigurableIntegerProperty propCameraYRotate;
-	private ConfigurableIntegerProperty propCameraZRotate;
 	private ConfigurableColorProperty propLedColorNormal;
 	private ConfigurableColorProperty propLedColorMid;
 	private ConfigurableColorProperty propLedColorClip;
+	private ConfigurableIntegerProperty propCameraDistance;
+	private ConfigurableIntegerProperty propCameraVPan;
+	private ConfigurableIntegerProperty propCameraHPan;
+	private ConfigurableIntegerProperty propXRotate;
+	private ConfigurableIntegerProperty propYRotate;
+	private ConfigurableIntegerProperty propZRotate;
 	private ConfigurableBooleanProperty propCameraAutoRotateX;
 	private ConfigurableBooleanProperty propCameraAutoRotateY;
 	private ConfigurableBooleanProperty propCameraAutoRotateZ;
@@ -86,19 +86,19 @@ public class StereoLevelsLedView3D extends AbstractView {
 	public List<ConfigurableProperty<? extends Object>> getProperties() {
 		return Arrays.asList(
 				propMinDbValue,
-				propClipDbValue,
 				propMidDbValue,
+				propClipDbValue,
 				propLedCount,
 				propLedGapRatio,
-				propCameraDistance,
-				propCameraVPan,
-				propCameraHPan,
-				propCameraXRotate,
-				propCameraYRotate,
-				propCameraZRotate,
 				propLedColorNormal,
 				propLedColorMid,
 				propLedColorClip,
+				propCameraDistance,
+				propCameraVPan,
+				propCameraHPan,
+				propXRotate,
+				propYRotate,
+				propZRotate,
 				propCameraAutoRotateX,
 				propCameraAutoRotateY,
 				propCameraAutoRotateZ,
@@ -126,30 +126,30 @@ public class StereoLevelsLedView3D extends AbstractView {
 		// Not requiring reset
 		propMinDbValue = createConfigurableIntegerProperty(
 				keyPrefix + "minDbValue", "Min. dB Value", -100, -10, -60, 1);
-		propClipDbValue = createConfigurableIntegerProperty(
-				keyPrefix + "clipDbValue", "Clip dB Value", -100, 0, -15, 1);
 		propMidDbValue = createConfigurableIntegerProperty(
 				keyPrefix + "midDbValue", "Middle dB Value", -100, 0, -20, 1);
+		propClipDbValue = createConfigurableIntegerProperty(
+				keyPrefix + "clipDbValue", "Clip dB Value", -100, 0, -15, 1);
 		propLedGapRatio = createConfigurableDoubleProperty(
 				keyPrefix + "ledGapRatio", "LED Gap Ratio", 0.01, 0.5, 0.2, 0.01);
-		propCameraDistance = createConfigurableIntegerProperty(
-				keyPrefix + "cameraDistance", "Camera Distance", 0, 1000, 200, 10);
-		propCameraVPan = createConfigurableIntegerProperty(
-				keyPrefix + "cameraVPan", "Camera Vert. Pan", -200, 200, -10, 1);
-		propCameraHPan = createConfigurableIntegerProperty(
-				keyPrefix + "cameraHPan", "Camera Hor. Pan", -200, 200, -44, 1);
-		propCameraXRotate = createConfigurableIntegerProperty(
-				keyPrefix + "cameraXRotate", "Camera X Rotate", 0, 360, 325, 5);
-		propCameraYRotate = createConfigurableIntegerProperty(
-				keyPrefix + "cameraYRotate", "Camera Y Rotate", 0, 360, 335, 5);
-		propCameraZRotate = createConfigurableIntegerProperty(
-				keyPrefix + "cameraZRotate", "Camera Z Rotate", 0, 360, 270, 5);
 		propLedColorNormal = createConfigurableColorProperty(
 				keyPrefix + "normalLevelColor", "Normal Level Color", Color.LAWNGREEN);
 		propLedColorMid = createConfigurableColorProperty(
 				keyPrefix + "middleLevelColor", "Middle Level Color", Color.YELLOW);
 		propLedColorClip = createConfigurableColorProperty(
 				keyPrefix + "clipLevelColor", "Clip Level Color", Color.RED);
+		propCameraDistance = createConfigurableIntegerProperty(
+				keyPrefix + "cameraDistance", "Camera Distance", 0, 1000, 200, 10);
+		propCameraVPan = createConfigurableIntegerProperty(
+				keyPrefix + "cameraVPan", "Camera Vert. Pan", -200, 200, -10, 1);
+		propCameraHPan = createConfigurableIntegerProperty(
+				keyPrefix + "cameraHPan", "Camera Hor. Pan", -200, 200, -44, 1);
+		propXRotate = createConfigurableIntegerProperty(
+				keyPrefix + "xRotate", "Rotate X", 0, 360, 325, 5);
+		propYRotate = createConfigurableIntegerProperty(
+				keyPrefix + "yRotate", "Rotate Y", 0, 360, 335, 5);
+		propZRotate = createConfigurableIntegerProperty(
+				keyPrefix + "zRotate", "Rotate Z", 0, 360, 270, 5);
 		propCameraAutoRotateX = createConfigurableBooleanProperty(
 				keyPrefix + "cameraAutoRotateX", "Auto Rotate Camera X", false);
 		propCameraAutoRotateY = createConfigurableBooleanProperty(
@@ -195,11 +195,33 @@ public class StereoLevelsLedView3D extends AbstractView {
 		
 		Group root = new Group();
 		
+		// Collect all "leds" and add them to a group
 		for (int i = 0; i < propLedCount.getProp().get(); i++) {
 			root.getChildren().add(createLed(Channel.LEFT, i));
 			root.getChildren().add(createLed(Channel.RIGHT, i));
 		}
 		
+		// Make rotation configurable
+        Rotate yRotate = new Rotate(0, Rotate.Y_AXIS);
+        yRotate.angleProperty().bind(Bindings.createDoubleBinding(
+        		() -> { 
+        			return Double.valueOf(propYRotate.getProp().get()); 
+        			}, propYRotate.getProp()));
+        
+        Rotate xRotate = new Rotate(0, Rotate.X_AXIS);
+        xRotate.angleProperty().bind(Bindings.createDoubleBinding(
+        		() -> { 
+        			return Double.valueOf(propXRotate.getProp().get()); 
+        			}, propXRotate.getProp()));
+        
+        Rotate zRotate = new Rotate(0, Rotate.Z_AXIS);
+        zRotate.angleProperty().bind(Bindings.createDoubleBinding(
+        		() -> { 
+        			return Double.valueOf(propZRotate.getProp().get()); 
+        			}, propZRotate.getProp()));
+		root.getTransforms().addAll(xRotate, yRotate, zRotate);
+		
+		// Create sub-scene for 3d content
 		SubScene scene = new SubScene(root, pane.getWidth(), pane.getHeight(), 
 				true, SceneAntialiasing.BALANCED);
 		scene.widthProperty().bind(pane.widthProperty());
@@ -293,23 +315,6 @@ public class StereoLevelsLedView3D extends AbstractView {
         			}, propCameraHPan.getProp()));
         
 		Translate pivot = new Translate();
-        Rotate yRotate = new Rotate(0, Rotate.Y_AXIS);
-        yRotate.angleProperty().bind(Bindings.createDoubleBinding(
-        		() -> { 
-        			return Double.valueOf(propCameraYRotate.getProp().get()); 
-        			}, propCameraYRotate.getProp()));
-        
-        Rotate xRotate = new Rotate(0, Rotate.X_AXIS);
-        xRotate.angleProperty().bind(Bindings.createDoubleBinding(
-        		() -> { 
-        			return Double.valueOf(propCameraXRotate.getProp().get()); 
-        			}, propCameraXRotate.getProp()));
-        
-        Rotate zRotate = new Rotate(0, Rotate.Z_AXIS);
-        zRotate.angleProperty().bind(Bindings.createDoubleBinding(
-        		() -> { 
-        			return Double.valueOf(propCameraZRotate.getProp().get()); 
-        			}, propCameraZRotate.getProp()));
         
         Rotate xRotateAuto = new Rotate(0, Rotate.X_AXIS);
         Rotate yRotateAuto = new Rotate(0, Rotate.Y_AXIS);
@@ -378,7 +383,7 @@ public class StereoLevelsLedView3D extends AbstractView {
 	        	} else {
 	        		timeline.stop();
 	        		camera.getTransforms().clear();
-	        		camera.getTransforms().addAll(pivot, yRotate, xRotate, zRotate, position);
+	        		camera.getTransforms().addAll(pivot, position);
 	        	}
 			}
         };
