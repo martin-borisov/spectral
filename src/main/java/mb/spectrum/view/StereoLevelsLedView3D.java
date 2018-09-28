@@ -9,15 +9,19 @@ import static mb.spectrum.Utils.rmsLevel;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
 
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.beans.binding.Bindings;
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.geometry.Point3D;
 import javafx.scene.Camera;
 import javafx.scene.Group;
 import javafx.scene.Node;
@@ -33,6 +37,7 @@ import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Translate;
 import javafx.util.Duration;
 import mb.spectrum.Utils;
+import mb.spectrum.Utils3D;
 import mb.spectrum.prop.ConfigurableBooleanProperty;
 import mb.spectrum.prop.ConfigurableColorProperty;
 import mb.spectrum.prop.ConfigurableDoubleProperty;
@@ -67,16 +72,17 @@ public class StereoLevelsLedView3D extends AbstractView {
 	private ConfigurableBooleanProperty propCameraAutoRotateY;
 	private ConfigurableBooleanProperty propCameraAutoRotateZ;
 	private ConfigurableDoubleProperty propAutoRotateSpeed;
-	
-	// TODO Properties for auto rotate cycle time, interpolation for each axis
-	
 	private ConfigurableBooleanProperty propLineMode;
 	private ConfigurableBooleanProperty propRms;
 	
 	/* Operational Properties */
 	private DoubleProperty currentDbLProp, currentDbRProp;
+	private BooleanProperty effectTriggerProp;
 	
 	private double currentDbL, currentDbR;
+	private Random random = new Random();
+	private int effectTriggerCounter;
+	private Group root;
 	
 	@Override
 	public String getName() {
@@ -168,6 +174,15 @@ public class StereoLevelsLedView3D extends AbstractView {
 		/* Operational properties */
 		currentDbLProp = new SimpleDoubleProperty(propMinDbValue.getProp().get());
 		currentDbRProp = new SimpleDoubleProperty(propMinDbValue.getProp().get());
+		effectTriggerProp = new SimpleBooleanProperty(false);
+		
+		// Trigger effect
+		effectTriggerProp.addListener((obs, oldVal, newVal) -> {
+			if(newVal) {
+				onTriggerEffect();
+				effectTriggerProp.set(false);
+			}
+		});
 	}
 
 	@Override
@@ -192,12 +207,26 @@ public class StereoLevelsLedView3D extends AbstractView {
 		
 		currentDbL = Utils.toDB(levelLeft);
 		currentDbR = Utils.toDB(levelRight);
+		
+		// Update effect trigger counter and trigger the effect
+		if(effectTriggerCounter == 0) {
+			effectTriggerProp.set(true);
+			effectTriggerCounter =  random.nextInt((100 - 1) + 1) + 1;
+		}
+		effectTriggerCounter--;
 	}
 	
 	@Override
 	protected List<Node> collectNodes() {
 		
-		Group root = new Group();
+		root = new Group();
+		
+		// Display the x, y and z axes if the debug property is set
+		if(Boolean.getBoolean("spectrumDebug")) {
+			root.getChildren().add(Utils3D.createLine(new Point3D(-100, 0, 0), new Point3D(100, 0, 0), Color.RED));
+			root.getChildren().add(Utils3D.createLine(new Point3D(0, -100, 0), new Point3D(0, 100, 0), Color.BLUE));
+			root.getChildren().add(Utils3D.createLine(new Point3D(0, 0, -100), new Point3D(0, 0, 100), Color.GREEN));
+		}
 		
 		// Collect all "leds" and add them to a group
 		for (int i = 0; i < propLedCount.getProp().get(); i++) {
@@ -241,7 +270,7 @@ public class StereoLevelsLedView3D extends AbstractView {
 		Box box = new Box();
 		box.setWidth(width);
 		box.setDepth(width);
-		box.setLayoutX(channel == Channel.LEFT ? 0 - width - width / 2 : width / 2);
+		box.setTranslateX(channel == Channel.LEFT ? (width) * -1 : width);
 		
 		// Maintain dimensions when updating the led count and gap
 		box.heightProperty().bind(Bindings.createDoubleBinding(
@@ -249,7 +278,8 @@ public class StereoLevelsLedView3D extends AbstractView {
 					int ledCount = propLedCount.getProp().get();
 					double ledGapRatio = propLedGapRatio.getProp().get();
 					double ledGap = (BAR_HEIGHT / ledCount) * ledGapRatio;
-					return BAR_HEIGHT / ledCount - ledGap - ledGap / ledCount;
+					double ledGapTotal = (ledCount - 1) * ledGap;
+					return (BAR_HEIGHT - ledGapTotal) / ledCount;
 				}, propLedCount.getProp(), propLedGapRatio.getProp()));
 		
 		box.layoutYProperty().bind(Bindings.createDoubleBinding(
@@ -257,7 +287,7 @@ public class StereoLevelsLedView3D extends AbstractView {
 					int ledCount = propLedCount.getProp().get();
 					double ledGapRatio = propLedGapRatio.getProp().get();
 					double ledGap = (BAR_HEIGHT / ledCount) * ledGapRatio;
-					return ledGap + idx * (ledGap + box.heightProperty().get()) * -1;
+					return (idx * (box.heightProperty().get() + ledGap) + box.heightProperty().get() / 2) * -1;
 				}, propLedCount.getProp(), propLedGapRatio.getProp(), box.heightProperty()));
 		
 		// Make colors configurable
@@ -409,5 +439,9 @@ public class StereoLevelsLedView3D extends AbstractView {
 		return propCameraAutoRotateX.getProp().get() 
 				|| propCameraAutoRotateY.getProp().get()
 				|| propCameraAutoRotateZ.getProp().get();
+	}
+	
+	private void onTriggerEffect() {
+		// TODO
 	}
 }

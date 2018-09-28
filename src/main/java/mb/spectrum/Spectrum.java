@@ -587,7 +587,6 @@ public class Spectrum extends Application {
 		}
 	}
 	
-	
 	private boolean isPropertySliderInFocusAndNotLast() {
 		boolean isVisible = false;
 		Node focusOwner = currentView.getRoot().getScene().getFocusOwner();
