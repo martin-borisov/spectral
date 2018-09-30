@@ -5,10 +5,13 @@ import static org.apache.commons.lang3.math.NumberUtils.isCreatable;
 
 import java.text.MessageFormat;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import javafx.animation.FadeTransition;
 import javafx.animation.SequentialTransition;
 import javafx.animation.Transition;
+import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -80,9 +83,14 @@ public class UiUtils {
 	
 	public static Transition createFadeOutTransition(Node node, double fadeInMs, 
 			EventHandler<ActionEvent> handler) {
+		return createFadeOutTransition(node, fadeInMs, 0.0, handler);
+	}
+	
+	public static Transition createFadeOutTransition(Node node, double fadeInMs, double toValue,
+			EventHandler<ActionEvent> handler) {
 		FadeTransition fadeOut = new FadeTransition(Duration.millis(fadeInMs), node);
 		fadeOut.setFromValue(node.getOpacity());
-		fadeOut.setToValue(0.0f);
+		fadeOut.setToValue(toValue);
 		fadeOut.setCycleCount(1);
 		fadeOut.setAutoReverse(false);
 		fadeOut.setOnFinished(handler);
@@ -192,5 +200,14 @@ public class UiUtils {
 	
 	public static boolean isDouble(String string) {
 		return isCreatable(string) && string.contains(".");
+	}
+	
+	public static void runAfter(long seconds, Runnable runnable) {
+		Timer timer = new Timer();
+		timer.schedule(new TimerTask() {
+			public void run() {
+				Platform.runLater(runnable);
+			}
+		}, seconds * 1000);
 	}
 }

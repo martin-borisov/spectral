@@ -14,6 +14,8 @@ import ddf.minim.AudioListener;
 import ddf.minim.Minim;
 import ddf.minim.javasound.JSMinim;
 import javafx.animation.AnimationTimer;
+import javafx.animation.PauseTransition;
+import javafx.animation.SequentialTransition;
 import javafx.animation.Transition;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -44,6 +46,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 import mb.spectrum.gpio.StageGpioController;
 import mb.spectrum.prop.ActionProperty;
 import mb.spectrum.prop.ConfigurableBooleanProperty;
@@ -96,6 +99,7 @@ public class Spectrum extends Application {
 	private List<ConfigurableProperty<? extends Object>> currentPropertyList;
 	private int currentPropIdx;
 	private BorderPane currentPropertyNode;
+	private Transition currentPropertyTransition;
 	
 	/* Global Properties */
 	List<ConfigurableProperty<? extends Object>> globalPropertyList;
@@ -242,6 +246,9 @@ public class Spectrum extends Application {
 			if(isPropertiesVisible()) {
 				if(!isPropertySliderInFocusAndNotLast()) {
 					nextProperty();
+				} else {
+					cancelPropertyFadeOut();
+					schedulePropertyFadeOut();
 				}
 			} else {
 				nextView();
@@ -252,6 +259,9 @@ public class Spectrum extends Application {
 			if(isPropertiesVisible()) {
 				if(!isPropertySliderInFocusAndNotFirst()) {
 					prevProperty();
+				} else {
+					cancelPropertyFadeOut();
+					schedulePropertyFadeOut();
 				}
 			} else {
 				prevView();
@@ -293,6 +303,31 @@ public class Spectrum extends Application {
 		}
 	}
 	
+	/**
+	 * Triggers the current property pane fade out after two seconds
+	 */
+	private void schedulePropertyFadeOut() {
+		if(isPropertiesVisible()) {
+			currentPropertyTransition = new SequentialTransition(
+					new PauseTransition(Duration.seconds(2)), 
+					UiUtils.createFadeOutTransition(currentPropertyNode, 1000, 0.5, null));
+			currentPropertyTransition.play();
+		}
+	}
+	
+	/**
+	 * Cancels the current property's transition
+	 */
+	private void cancelPropertyFadeOut() {
+		if(isPropertiesVisible()) {
+			currentPropertyTransition.stop();
+			currentPropertyNode.setOpacity(1);
+		}
+	}
+	
+	/**
+	 * Toggles on the global properties pane
+	 */
 	private void toggleGlobalPropertiesOn() {
 		if(!isPropertiesVisible()) {
 			currentPropertyList = globalPropertyList;
@@ -470,6 +505,7 @@ public class Spectrum extends Application {
 			currentView.getRoot().getChildren().add(
 					currentPropertyNode = createPropertyPane(prop.getName(), control));
 			UiUtils.createFadeInTransition(currentPropertyNode, 1000, null).play();
+			schedulePropertyFadeOut();
 		}
 	}
 	
@@ -546,6 +582,7 @@ public class Spectrum extends Application {
 	
 	private void changeCurrentPropertyValue(boolean increment) {
 		if(isPropertiesVisible()) {
+			cancelPropertyFadeOut();
 			ConfigurableProperty<? extends Object> prop = 
 					currentPropertyList.get(currentPropIdx);
 			if (increment) {
@@ -553,6 +590,7 @@ public class Spectrum extends Application {
 			} else {
 				prop.decrement();
 			}
+			schedulePropertyFadeOut();
 		}
 	}
 	
@@ -614,7 +652,9 @@ public class Spectrum extends Application {
 	private void firePropertyButtonIfInFocus() {
 		Node focusOwner = currentView.getRoot().getScene().getFocusOwner();
 		if(focusOwner instanceof Button && isPropertiesVisible()) {
+			cancelPropertyFadeOut();
 			((Button) focusOwner).fire();
+			schedulePropertyFadeOut();
 		}
 	}
 	
