@@ -57,6 +57,7 @@ import mb.spectrum.prop.ConfigurableProperty;
 import mb.spectrum.view.AnalogMeterView;
 import mb.spectrum.view.SpectrumAreaView;
 import mb.spectrum.view.SpectrumBarView;
+import mb.spectrum.view.StereoAnalogMetersView;
 import mb.spectrum.view.StereoLevelsLedView;
 import mb.spectrum.view.StereoLevelsLedView3D;
 import mb.spectrum.view.StereoLevelsView;
@@ -83,6 +84,7 @@ public class Spectrum extends Application {
 	private Minim minim;
 	private AudioInput in;
 	private View[] views = new View[] {
+			new StereoAnalogMetersView(),
 			new StereoLevelsLedView3D(),
 			//new CubeView(),
 			new AnalogMeterView(),
@@ -340,7 +342,7 @@ public class Spectrum extends Application {
 	 * Resets the property index and shows first property of current view
 	 */
 	private void toggleCurrentViewPropertiesOn() {
-		if(!isPropertiesVisible()) {
+		if(!isPropertiesVisible() && !currentView.getProperties().isEmpty()) {
 			currentPropertyList = currentView.getProperties();
 			currentPropIdx = 0;
 			showProperty(currentPropIdx);
