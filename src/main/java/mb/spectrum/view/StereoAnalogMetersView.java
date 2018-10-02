@@ -1,15 +1,19 @@
 package mb.spectrum.view;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
+import javafx.beans.binding.Bindings;
 import javafx.scene.Node;
 import javafx.scene.SceneAntialiasing;
 import javafx.scene.SubScene;
+import mb.spectrum.UiUtils;
+import mb.spectrum.prop.ConfigurableDoubleProperty;
 import mb.spectrum.prop.ConfigurableProperty;
 
 public class StereoAnalogMetersView extends AbstractView {
+	
+	private ConfigurableDoubleProperty propBorderSizeRatio;
 	
 	private AnalogMeterView leftMeterView, rightMeterView;
 
@@ -20,13 +24,18 @@ public class StereoAnalogMetersView extends AbstractView {
 	
 	@Override
 	protected void initProperties() {
+		final String keyPrefix = "stereoAnalogMetersView.";
+		
+		propBorderSizeRatio = UiUtils.createConfigurableDoubleProperty(
+				keyPrefix + "borderSizeRatio", "Border Size Ratio", 0.0, 0.5, 0.05, 0.01);
+		
 		leftMeterView = new AnalogMeterView();
 		rightMeterView = new AnalogMeterView();
 	}
 
 	@Override
 	public List<ConfigurableProperty<? extends Object>> getProperties() {
-		return Collections.emptyList();
+		return Arrays.asList(propBorderSizeRatio);
 	}
 
 	@Override
@@ -46,17 +55,25 @@ public class StereoAnalogMetersView extends AbstractView {
 		
 		SubScene left = new SubScene(leftMeterView.getRoot(), 
 				pane.getWidth() / 2, pane.getHeight(), true, SceneAntialiasing.BALANCED);
-		left.widthProperty().bind(pane.widthProperty().divide(2));
+		left.widthProperty().bind(Bindings.createDoubleBinding(
+				() -> {
+					double totalWidth = pane.widthProperty().get() / 2;
+					return totalWidth - totalWidth * propBorderSizeRatio.getProp().get();
+				}, pane.widthProperty(), propBorderSizeRatio.getProp()));
 		left.heightProperty().bind(left.widthProperty().divide(1.8));
+		left.layoutXProperty().bind(Bindings.createDoubleBinding(
+				() -> {
+					double totalWidth = pane.widthProperty().get() / 2;
+					return totalWidth * (propBorderSizeRatio.getProp().get() / 2);
+				}, pane.widthProperty(), propBorderSizeRatio.getProp()));
 		left.layoutYProperty().bind(pane.heightProperty().subtract(left.heightProperty()).divide(2));
-		
 		
 		SubScene right = new SubScene(rightMeterView.getRoot(), 
 				pane.getWidth() / 2, pane.getHeight(), true, SceneAntialiasing.BALANCED);
-		right.widthProperty().bind(pane.widthProperty().divide(2));
-		right.heightProperty().bind(right.widthProperty().divide(1.8));
-		right.layoutXProperty().bind(pane.widthProperty().divide(2));
-		right.layoutYProperty().bind(pane.heightProperty().subtract(right.heightProperty()).divide(2));
+		right.widthProperty().bind(left.widthProperty());
+		right.heightProperty().bind(left.heightProperty());
+		right.layoutXProperty().bind(pane.widthProperty().divide(2).add(left.layoutXProperty()));
+		right.layoutYProperty().bind(left.layoutYProperty());
 		
 		return Arrays.asList(left, right);
 	}
