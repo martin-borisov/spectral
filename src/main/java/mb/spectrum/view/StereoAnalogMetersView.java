@@ -29,8 +29,8 @@ public class StereoAnalogMetersView extends AbstractView {
 		propBorderSizeRatio = UiUtils.createConfigurableDoubleProperty(
 				keyPrefix + "borderSizeRatio", "Border Size Ratio", 0.0, 0.5, 0.01, 0.01);
 		
-		leftMeterView = new AnalogMeterView();
-		rightMeterView = new AnalogMeterView();
+		leftMeterView = new AnalogMeterView("Left Channel");
+		rightMeterView = new AnalogMeterView("Right Channel");
 	}
 
 	@Override

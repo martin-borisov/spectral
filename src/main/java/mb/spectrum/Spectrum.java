@@ -87,7 +87,7 @@ public class Spectrum extends Application {
 			new StereoAnalogMetersView(),
 			new StereoLevelsLedView3D(),
 			//new CubeView(),
-			new AnalogMeterView(),
+			new AnalogMeterView("Analog Meter"),
 			new StereoLevelsLedView(),
 			new SpectrumBarView(),
 			new SpectrumAreaView(),
@@ -216,6 +216,8 @@ public class Spectrum extends Application {
         scene.setFill(Color.BLACK);
         
         currentView.onShow();
+        
+        stage.setMaximized(true);
         stage.show();
         
         // Event handlers

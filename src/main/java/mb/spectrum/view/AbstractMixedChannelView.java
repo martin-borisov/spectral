@@ -1,6 +1,13 @@
 package mb.spectrum.view;
 
 public abstract class AbstractMixedChannelView extends AbstractView {
+	
+	public AbstractMixedChannelView() {
+	}
+
+	public AbstractMixedChannelView(boolean skipInit) {
+		super(skipInit);
+	}
 
 	@Override
 	public final void dataAvailable(float[] left, float[] right) {

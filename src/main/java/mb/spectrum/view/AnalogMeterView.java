@@ -68,13 +68,19 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 		radiusProp, centerXProp, centerYProp, currentLevelRadProp;
 	private ObjectProperty<Color> darkerPeakColorProp;
 	
-	
 	private double currentDbRms, currentDbPeak;
 	private double lingerLevelDb, lingerOpValDb = LINGER_STAY_FACTOR;
+	private String name;
+	
+	public AnalogMeterView(String name) {
+		super(true);
+		this.name = name;
+		init();
+	}
 
 	@Override
 	public String getName() {
-		return "Analog Meter";
+		return name;
 	}
 	
 	@Override
@@ -406,7 +412,7 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 	}
 	
 	private void createDecorativeElements(List<Node> nodes, Effect effect) {		
-		Label centerLabel = new Label("Analog Meter");
+		Label centerLabel = new Label(name);
 		centerLabel.textFillProperty().bind(propNormalLevelDigitsColor.getProp());
 		centerLabel.layoutXProperty().bind(getRoot().widthProperty().divide(2).subtract(
 				centerLabel.widthProperty().divide(2)));
