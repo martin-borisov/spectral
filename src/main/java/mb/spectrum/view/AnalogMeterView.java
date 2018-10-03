@@ -76,12 +76,13 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 	
 	private double currentDbRms, currentDbPeak;
 	private double lingerLevelDb, lingerOpValDb = LINGER_STAY_FACTOR;
-	private String name;
+	private String name, peakLabel;
 	private Orientation orientation;
 	
-	public AnalogMeterView(String name, Orientation orientation) {
+	public AnalogMeterView(String name, String peakLabel, Orientation orientation) {
 		super(true);
 		this.name = name;
+		this.peakLabel = peakLabel;
 		this.orientation = orientation;
 		init();
 	}
@@ -398,16 +399,17 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 		
 		peak.setEffect(peakEffect);
 		
-		Label peakLabel = new Label("Peak");
+		Label peakLabel = new Label(this.peakLabel);
 		peakLabel.textFillProperty().bind(propNormalLevelDigitsColor.getProp());
 		peakLabel.layoutXProperty().bind(peak.centerXProperty().add(peak.radiusProperty()));
 		peakLabel.layoutYProperty().bind(peak.centerYProperty());
+		bindFontSizeToParentWidth(peakLabel, 1.2, "Alex Brush");
 		peakLabel.setCache(true);
-		peakLabel.styleProperty().bind(Bindings.concat(
-				"-fx-font-size: ", Bindings.createDoubleBinding(
-						() -> (getRoot().widthProperty().get() * SCENE_MARGIN_RATIO) / 1.2,
-						getRoot().widthProperty()),
-				"; -fx-font-family: 'Alex Brush'"));
+		
+		if(orientation == Orientation.VERTICAL) {
+			peakLabel.setRotate(90);
+		}
+		
 //		peakLabel.effectProperty().bind(Bindings.createObjectBinding(
 //				() -> {
 //					return propVisualEnableExtras.getProp().get() ? effect : null;
@@ -424,12 +426,13 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 		centerLabel.layoutXProperty().bind(getRoot().widthProperty().divide(2).subtract(
 				centerLabel.widthProperty().divide(2)));
 		centerLabel.layoutYProperty().bind(getRoot().heightProperty().divide(2).subtract(centerLabel.heightProperty().divide(2)));
+		bindFontSizeToParentWidth(centerLabel, 1.2, "Alex Brush");
 		centerLabel.setCache(true);
-		centerLabel.styleProperty().bind(Bindings.concat(
-				"-fx-font-size: ", Bindings.createDoubleBinding(
-						() -> (getRoot().widthProperty().get() * SCENE_MARGIN_RATIO) / 1.2,
-						getRoot().widthProperty()),
-				"; -fx-font-family: 'Alex Brush'"));
+		
+		if(orientation == Orientation.VERTICAL) {
+			centerLabel.setRotate(90);
+		}
+		
 //		centerLabel.effectProperty().bind(Bindings.createObjectBinding(
 //				() -> {
 //					return propVisualEnableExtras.getProp().get() ? effect : null;
@@ -581,11 +584,12 @@ public class AnalogMeterView extends AbstractMixedChannelView {
  	    		}, propMinDbValue.getProp(), propMaxDbuValue.getProp(), 
 	    			propNormalLevelDigitsColor.getProp(), propHighLevelDigitsColor.getProp()));
 	    
-		label.styleProperty().bind(Bindings.concat(
-				"-fx-font-size: ", Bindings.createDoubleBinding(
-						() -> (getRoot().widthProperty().get() * SCENE_MARGIN_RATIO) / 2.5,
-						getRoot().widthProperty())));
+		bindFontSizeToParentWidth(label, 2.5, null);
 		label.setCache(true);
+		
+		if(orientation == Orientation.VERTICAL) {
+			label.setRotate(90);
+		}
 		
 //		label.effectProperty().bind(Bindings.createObjectBinding(
 //				() -> {
@@ -620,12 +624,13 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 	    			return color;
  	    		}, propMinDbValue.getProp(), propMaxDbuValue.getProp(), 
 	    			propNormalLevelDigitsColor.getProp(), propHighLevelDigitsColor.getProp()));
-	    
-		label.styleProperty().bind(Bindings.concat(
-				"-fx-font-size: ", Bindings.createDoubleBinding(
-						() -> (getRoot().widthProperty().get() * SCENE_MARGIN_RATIO) / 3.5,
-						getRoot().widthProperty())));
+		
+		bindFontSizeToParentWidth(label, 3.5, null);
 		label.setCache(true);
+		
+		if(orientation == Orientation.VERTICAL) {
+			label.setRotate(90);
+		}
 		
 //		label.effectProperty().bind(Bindings.createObjectBinding(
 //				() -> {
@@ -633,6 +638,14 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 //				}, propVisualEnableExtras.getProp()));
 		
 	    return label;
+	}
+	
+	/* Utilities */
+	private void bindFontSizeToParentWidth(Label label, double ratio, String family) {
+		label.fontProperty().bind(Bindings.createObjectBinding(
+				() -> {
+					return Font.font(family, (getRoot().widthProperty().get() * SCENE_MARGIN_RATIO) / ratio);
+				}, getRoot().widthProperty()));
 	}
 
 }

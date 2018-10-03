@@ -73,8 +73,8 @@ public class Spectrum extends Application {
 	private static final boolean ENABLE_GPIO = Boolean.valueOf(
 			ConfigService.getInstance().getProperty("mb.enable-gpio"));
 	
-	private static final int INIT_SCENE_WIDTH = 1280;
-	private static final int INIT_SCENE_HEIGHT = 720;
+	private static final int INIT_SCENE_WIDTH = 800;
+	private static final int INIT_SCENE_HEIGHT = 600;
 	private static final String VIEW_LABEL_COLOR = "#00aeff";
 	private static final double VIEW_LABEL_FADE_IN_MS = 1000;
 	private static final double VIEW_LABEL_LINGER_MS = 1000;
@@ -88,7 +88,7 @@ public class Spectrum extends Application {
 			new StereoAnalogMetersView(),
 			new StereoLevelsLedView3D(),
 			//new CubeView(),
-			new AnalogMeterView("Analog Meter", Orientation.HORIZONTAL),
+			new AnalogMeterView("Analog Meter", "Peak", Orientation.HORIZONTAL),
 			new StereoLevelsLedView(),
 			new SpectrumBarView(),
 			new SpectrumAreaView(),
@@ -217,7 +217,9 @@ public class Spectrum extends Application {
         scene.setFill(Color.BLACK);
         
         currentView.onShow();
+        stage.setMaximized(true);
         stage.show();
+        
         
         // Event handlers
         stage.addEventFilter(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {

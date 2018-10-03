@@ -31,8 +31,8 @@ public class StereoAnalogMetersView extends AbstractView {
 		propBorderSizeRatio = UiUtils.createConfigurableDoubleProperty(
 				keyPrefix + "borderSizeRatio", "Border Size Ratio", 0.0, 0.5, 0.01, 0.01);
 		
-		leftMeterView = new AnalogMeterView("Left Channel", Orientation.VERTICAL);
-		rightMeterView = new AnalogMeterView("Right Channel", Orientation.HORIZONTAL);
+		leftMeterView = new AnalogMeterView("Left Channel", "Peak L.", Orientation.VERTICAL);
+		rightMeterView = new AnalogMeterView("Right Channel", "Peak R.",  Orientation.VERTICAL);
 	}
 
 	@Override
@@ -57,30 +57,16 @@ public class StereoAnalogMetersView extends AbstractView {
 		
 		// Evenly align the two "analog" meters
 		SubScene left = new SubScene(leftMeterView.getRoot(), 0, 0, true, SceneAntialiasing.BALANCED);
-		
-		/*
-		left.widthProperty().bind(Bindings.createDoubleBinding(
-				() -> {
-					double totalWidth = pane.widthProperty().get() / 2;
-					return totalWidth - totalWidth * propBorderSizeRatio.getProp().get() * 1.5;
-				}, pane.widthProperty(), propBorderSizeRatio.getProp()));
+		left.widthProperty().bind(pane.heightProperty());
+		left.layoutYProperty().bind(pane.heightProperty().divide(2).subtract(left.heightProperty().divide(2)));
 		left.heightProperty().bind(left.widthProperty().divide(1.8));
 		left.layoutXProperty().bind(Bindings.createDoubleBinding(
 				() -> {
-					double totalWidth = pane.widthProperty().get() / 2;
-					return totalWidth * propBorderSizeRatio.getProp().get();
-				}, pane.widthProperty(), propBorderSizeRatio.getProp()));
-		left.layoutYProperty().bind(pane.heightProperty().subtract(left.heightProperty()).divide(2));
-		*/
-		
-		left.widthProperty().bind(pane.heightProperty());
-		left.layoutYProperty().bind(pane.heightProperty().divide(2).subtract(left.heightProperty().divide(2)));
-		
-		left.heightProperty().bind(left.widthProperty().divide(1.8));
-		left.layoutXProperty().bind(
-				pane.widthProperty().divide(2)
-					.subtract(left.widthProperty().divide(2))
-					.subtract(left.heightProperty().divide(2)));
+					double width = pane.widthProperty().get() / 2;
+					return width - left.widthProperty().get() / 2 
+							- left.heightProperty().get() / 2 
+							- width * propBorderSizeRatio.getProp().get() / 2;
+				}, pane.widthProperty(), left.widthProperty(), left.heightProperty(), propBorderSizeRatio.getProp()));
 		
 		left.setRotate(90);
 		left.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
@@ -88,12 +74,14 @@ public class StereoAnalogMetersView extends AbstractView {
 		SubScene right = new SubScene(rightMeterView.getRoot(), 0, 0, true, SceneAntialiasing.BALANCED);
 		right.widthProperty().bind(left.widthProperty());
 		right.layoutYProperty().bind(left.layoutYProperty());
-		
 		right.heightProperty().bind(left.heightProperty());
-		right.layoutXProperty().bind(
-				pane.widthProperty().divide(2)
-					.subtract(right.widthProperty().divide(2))
-					.add(right.heightProperty().divide(2)));
+		right.layoutXProperty().bind(Bindings.createDoubleBinding(
+				() -> {
+					double width = pane.widthProperty().get() / 2;
+					return width - right.widthProperty().get() / 2 
+							+ right.heightProperty().get() / 2 
+							+ width * propBorderSizeRatio.getProp().get() / 2;
+				}, pane.widthProperty(), right.widthProperty(), right.heightProperty(), propBorderSizeRatio.getProp()));
 		right.setRotate(270);
 		
 		return Arrays.asList(left, right);
