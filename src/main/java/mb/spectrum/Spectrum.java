@@ -72,8 +72,8 @@ public class Spectrum extends Application {
 	private static final boolean ENABLE_GPIO = Boolean.valueOf(
 			ConfigService.getInstance().getProperty("mb.enable-gpio"));
 	
-	private static final int INIT_SCENE_WIDTH = 800;
-	private static final int INIT_SCENE_HEIGHT = 480;
+	private static final int INIT_SCENE_WIDTH = 1280;
+	private static final int INIT_SCENE_HEIGHT = 720;
 	private static final String VIEW_LABEL_COLOR = "#00aeff";
 	private static final double VIEW_LABEL_FADE_IN_MS = 1000;
 	private static final double VIEW_LABEL_LINGER_MS = 1000;
@@ -216,8 +216,6 @@ public class Spectrum extends Application {
         scene.setFill(Color.BLACK);
         
         currentView.onShow();
-        
-        stage.setMaximized(true);
         stage.show();
         
         // Event handlers
@@ -297,6 +295,13 @@ public class Spectrum extends Application {
 		case C:
 			if(event.isControlDown()) {
 				Platform.exit();
+			}
+			break;
+			
+		case F:
+			if(event.isControlDown()) {
+				Stage stage = (Stage) scene.getWindow();
+				stage.setFullScreen(true);
 			}
 			break;
 			
