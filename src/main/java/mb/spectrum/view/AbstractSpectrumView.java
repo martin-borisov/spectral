@@ -20,6 +20,7 @@ import mb.spectrum.ConfigService;
 import mb.spectrum.UiUtils;
 import mb.spectrum.Utils;
 import mb.spectrum.prop.ConfigurableProperty;
+import mb.spectrum.view.AnalogMeterView.Orientation;
 
 public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 	
@@ -69,7 +70,7 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 		trailValues = new ArrayList<>();
 		
 		// #
-		analogMeterView = new AnalogMeterView("Analog Meter");
+		analogMeterView = new AnalogMeterView("Analog Meter", Orientation.HORIZONTAL);
 		// #
 	}
 

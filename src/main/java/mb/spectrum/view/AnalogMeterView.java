@@ -38,6 +38,8 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 	
 	private static final int MIN_DB_ANGLE_DEGREES = 130;
 	private static final int MAX_DB_ANGLE_DEGREES = 50;
+	//private static final int MIN_DB_ANGLE_DEGREES = 220;
+	//private static final int MAX_DB_ANGLE_DEGREES = 140;
 	private static final double MIN_DB_ANGLE_RAD = Math.toRadians(MIN_DB_ANGLE_DEGREES);
 	private static final double MAX_DB_ANGLE_RAD = Math.toRadians(MAX_DB_ANGLE_DEGREES);
 	private static final double DIV_LENGTH_RATIO_BIG = 0.02;
@@ -46,6 +48,10 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 	private static final double LINGER_ACCELARATION_FACTOR = 1.15;
 	private static final double BACK_CIRCLE_RADIUS_TO_SCENE_WIDTH_RATIO = 0.05;
 	private static final double ELEMENT_WIDTH_TO_CIRCLE_RADIUS_RATIO = 2.5;
+	
+	public enum Orientation {
+		HORIZONTAL, VERTICAL
+	}
 	
 	/* Configurable properties */
 	
@@ -71,10 +77,12 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 	private double currentDbRms, currentDbPeak;
 	private double lingerLevelDb, lingerOpValDb = LINGER_STAY_FACTOR;
 	private String name;
+	private Orientation orientation;
 	
-	public AnalogMeterView(String name) {
+	public AnalogMeterView(String name, Orientation orientation) {
 		super(true);
 		this.name = name;
+		this.orientation = orientation;
 		init();
 	}
 
@@ -320,7 +328,6 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 	    		() -> {
 	    			return getRoot().heightProperty().get() - Math.sin(currentLevelRadProp.get()) * radiusProp.get();
 	    		}, currentLevelRadProp,  radiusProp, getRoot().heightProperty()));
-		
 		
 		indicator.endXProperty().bind(getRoot().widthProperty().divide(2));
 		indicator.endYProperty().bind(getRoot().heightProperty());

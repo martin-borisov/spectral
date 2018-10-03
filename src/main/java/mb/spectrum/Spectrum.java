@@ -55,6 +55,7 @@ import mb.spectrum.prop.ConfigurableDoubleProperty;
 import mb.spectrum.prop.ConfigurableIntegerProperty;
 import mb.spectrum.prop.ConfigurableProperty;
 import mb.spectrum.view.AnalogMeterView;
+import mb.spectrum.view.AnalogMeterView.Orientation;
 import mb.spectrum.view.SpectrumAreaView;
 import mb.spectrum.view.SpectrumBarView;
 import mb.spectrum.view.StereoAnalogMetersView;
@@ -87,7 +88,7 @@ public class Spectrum extends Application {
 			new StereoAnalogMetersView(),
 			new StereoLevelsLedView3D(),
 			//new CubeView(),
-			new AnalogMeterView("Analog Meter"),
+			new AnalogMeterView("Analog Meter", Orientation.HORIZONTAL),
 			new StereoLevelsLedView(),
 			new SpectrumBarView(),
 			new SpectrumAreaView(),
@@ -216,8 +217,6 @@ public class Spectrum extends Application {
         scene.setFill(Color.BLACK);
         
         currentView.onShow();
-        
-        stage.setMaximized(true);
         stage.show();
         
         // Event handlers
