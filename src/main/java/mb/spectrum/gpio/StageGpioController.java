@@ -31,6 +31,7 @@ public class StageGpioController implements GpioPinListenerDigital {
 	private volatile Direction rotaryADirectionFlag, rotaryBDirectionFlag;
 	private ButtonState buttonAState = RELEASED, buttonBState = RELEASED;
 	private Timer bothButtonsHoldTimer, buttonBHoldTimer;
+	private boolean buttonBHoldEventWasJustExecuted;
 	
 	public StageGpioController(Stage stage) {
 		this.stage = stage;
@@ -68,12 +69,12 @@ public class StageGpioController implements GpioPinListenerDigital {
 			public void run() {
 				
 				if(rotaryADirectionFlag != null) {
-					fireLeftRightRotaryTurnEvent(rotaryADirectionFlag);
+					fireUpDownRotaryTurnEvent(rotaryADirectionFlag);
 					rotaryADirectionFlag = null;
 				}
 				
 				if(rotaryBDirectionFlag != null) {
-					fireUpDownRotaryTurnEvent(rotaryBDirectionFlag);
+					fireLeftRightRotaryTurnEvent(rotaryBDirectionFlag);
 					rotaryBDirectionFlag = null;
 				}
 			}
@@ -92,7 +93,6 @@ public class StageGpioController implements GpioPinListenerDigital {
 			break;
 		}
 	}
-	
 	
 	private void handleHighEvent(GpioPin pin) {
 		if(RaspiPin.GPIO_23.equals(pin.getPin())) {
@@ -136,21 +136,26 @@ public class StageGpioController implements GpioPinListenerDigital {
 	}
 	
 	private void onButtonAReleased() {
-		triggerKeyPress(KeyCode.ESCAPE, false);
+		triggerKeyPress(KeyCode.ENTER, true);
 	}
 	
 	private void onButtonBPressed() {
 		buttonBHoldTimer = new Timer(true);
 		buttonBHoldTimer.schedule(new TimerTask() {
 			public void run() {
-				triggerKeyPress(KeyCode.ENTER, false);
+				triggerKeyPress(KeyCode.SPACE, true, false);
+				buttonBHoldEventWasJustExecuted = true;
 			}
-		}, 3000);
+		}, 2000);
 	}
 	
 	private void onButtonBReleased() {
 		cancelButtonBHoldTimer();
-		triggerKeyPress(KeyCode.SPACE, true);
+		if(!buttonBHoldEventWasJustExecuted) {
+			triggerKeyPress(KeyCode.SPACE, false);
+		} else {
+			buttonBHoldEventWasJustExecuted = false;
+		}
 	}
 	
 	private void onBothButtonsPressed() {
@@ -166,6 +171,7 @@ public class StageGpioController implements GpioPinListenerDigital {
 	private void cancelBothButtonsPressedTimer() {
 		if(bothButtonsHoldTimer != null) {
 			bothButtonsHoldTimer.cancel();
+			bothButtonsHoldTimer.purge();
 			bothButtonsHoldTimer = null;
 		}
 	}
@@ -173,13 +179,18 @@ public class StageGpioController implements GpioPinListenerDigital {
 	private void cancelButtonBHoldTimer() {
 		if(buttonBHoldTimer != null) {
 			buttonBHoldTimer.cancel();
+			buttonBHoldTimer.purge();
 			buttonBHoldTimer = null;
 		}
 	}
 	
 	private void triggerKeyPress(KeyCode code, boolean focused) {
+		triggerKeyPress(code, false, focused);
+	}
+	
+	private void triggerKeyPress(KeyCode code, boolean controlDown, boolean focused) {
 		KeyEvent event = new KeyEvent(KeyEvent.KEY_PRESSED, null, null, 
-				code, false, false, false, false);
+				code, false, controlDown, false, false);
 		
 		// Check if a button is currently in focus
 		// as we want to be able to dispatch the event directly to it and not the stage

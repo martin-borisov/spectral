@@ -272,19 +272,21 @@ public class Spectrum extends Application {
 			break;
 		
 		case SPACE:
-			if(isPropertiesVisible()) {
-				firePropertyButtonIfInFocus();
+			if(event.isControlDown()) {
+				toggleGlobalPropertiesOn();
 			} else {
-				toggleCurrentViewPropertiesOn();
-			}
-			break;
-			
-		case ESCAPE:
-			togglePropertiesOff();
+				if(isPropertiesVisible()) {
+					togglePropertiesOff();
+				} else {
+					toggleCurrentViewPropertiesOn();
+				}
+			}		
 			break;
 			
 		case ENTER:
-			toggleGlobalPropertiesOn();
+			if(isPropertiesVisible()) {
+				firePropertyButtonIfInFocus();
+			}
 			break;
 			
 		case UP:

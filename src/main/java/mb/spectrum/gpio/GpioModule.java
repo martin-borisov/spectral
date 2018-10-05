@@ -39,7 +39,7 @@ public class GpioModule {
     }
     
     public GpioPinDigitalInput createDigitalSoftwareDebouncedInputPinForRotary(Pin pin, String name, GpioPinListenerDigital listener) {
-    	return createDigitalSoftwareDebouncedInputPin(pin, name, 50, listener);
+    	return createDigitalSoftwareDebouncedInputPin(pin, name, 10, listener);
     }
     
     public GpioPinDigitalInput createDigitalSoftwareDebouncedInputPin(Pin pin, String name, int delay, GpioPinListenerDigital listener) {
