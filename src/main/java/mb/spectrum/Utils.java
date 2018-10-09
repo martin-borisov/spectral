@@ -22,7 +22,7 @@ public class Utils {
 	}
 	
 	public static double toDB(double value) {
-		return 20 * ( (float) Math.log10(value) );
+		return 20 * (Math.log10(value));
 	}
 	
 	public static float rmsLevel(float[] samples) {

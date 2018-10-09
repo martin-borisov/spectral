@@ -39,6 +39,8 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 			ConfigService.getInstance().getProperty("mb.buffer-size"));
 	private ConfigurableProperty<Color> propGridColor;
 	
+	// TODO Property for min amplitude, i.e. MIN_DB_VALUE
+	
 	private List<Line> vLines, hLines;
 	private List<Label> vLabels, hLabels;
 	
@@ -145,7 +147,14 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 		
 		// Update band values
 		for (int i = 0; i < bandCount; i++) {
-			double bandDB = Utils.toDB(fft.getAvg(i), fft.timeSize());
+			
+			// TODO Implement smoother transition of amplitudes
+			
+			// This might not be correct as it might not show the correct value
+			//double bandDB = Utils.toDB(fft.getAvg(i), fft.timeSize());
+			
+			// This is too "twitchy" and might have to be smoothed out a bit
+			double bandDB = Utils.toDB(fft.getAvg(i));
 			
 			bandDB = bandDB < MIN_DB_VALUE ? MIN_DB_VALUE : bandDB;
 			if(bandDB > bandValuesDB[i]) {
