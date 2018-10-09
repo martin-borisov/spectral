@@ -88,7 +88,7 @@ public class Spectrum extends Application {
 			new StereoAnalogMetersView(),
 			new StereoLevelsLedView3D(),
 			//new CubeView(),
-			new AnalogMeterView("Analog Meter", "Peak", Orientation.HORIZONTAL),
+			new AnalogMeterView("Analog Meter", "analogMeterView", "Peak", Orientation.HORIZONTAL),
 			new StereoLevelsLedView(),
 			new SpectrumBarView(),
 			new SpectrumAreaView(),

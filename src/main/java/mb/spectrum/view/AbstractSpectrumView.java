@@ -70,7 +70,7 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 		trailValues = new ArrayList<>();
 		
 		// #
-		analogMeterView = new AnalogMeterView("Analog Meter", "Peak", Orientation.HORIZONTAL);
+		analogMeterView = new AnalogMeterView("Analog Meter", "analogMeterView", "Peak", Orientation.HORIZONTAL);
 		// #
 	}
 

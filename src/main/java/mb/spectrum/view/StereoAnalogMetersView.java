@@ -1,9 +1,11 @@
 package mb.spectrum.view;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import javafx.beans.binding.Bindings;
+import javafx.beans.property.ObjectProperty;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
 import javafx.scene.SceneAntialiasing;
@@ -25,19 +27,30 @@ public class StereoAnalogMetersView extends AbstractView {
 	}
 	
 	@Override
+	@SuppressWarnings({ "rawtypes", "unchecked" })
 	protected void initProperties() {
 		final String keyPrefix = "stereoAnalogMetersView.";
 		
 		propBorderSizeRatio = UiUtils.createConfigurableDoubleProperty(
 				keyPrefix + "borderSizeRatio", "Border Size Ratio", 0.0, 0.5, 0.01, 0.01);
 		
-		leftMeterView = new AnalogMeterView("Left Channel", "Peak L.", Orientation.VERTICAL);
-		rightMeterView = new AnalogMeterView("Right Channel", "Peak R.",  Orientation.VERTICAL);
+		leftMeterView = new AnalogMeterView("Left Channel", "stereoAnalogMetersView", "Peak L.", Orientation.VERTICAL);
+		rightMeterView = new AnalogMeterView("Right Channel", "stereoAnalogMetersView", "Peak R.",  Orientation.VERTICAL);
+		
+		// Bind the properties of the two sub views. The left set of properties is exposed for user input.
+		List<ConfigurableProperty<? extends Object>> leftProps = leftMeterView.getProperties();
+		List<ConfigurableProperty<? extends Object>> rightProps = rightMeterView.getProperties();
+		for (int i = 0; i < rightProps.size(); i++) {
+			rightProps.get(i).getProp().bind((ObjectProperty) leftProps.get(i).getProp());
+		}
 	}
 
 	@Override
 	public List<ConfigurableProperty<? extends Object>> getProperties() {
-		return Arrays.asList(propBorderSizeRatio);
+		List<ConfigurableProperty<? extends Object>> props = new ArrayList<>();
+		props.add(propBorderSizeRatio);
+		props.addAll(leftMeterView.getProperties());
+		return props;
 	}
 
 	@Override

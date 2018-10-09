@@ -38,8 +38,6 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 	
 	private static final int MIN_DB_ANGLE_DEGREES = 130;
 	private static final int MAX_DB_ANGLE_DEGREES = 50;
-	//private static final int MIN_DB_ANGLE_DEGREES = 220;
-	//private static final int MAX_DB_ANGLE_DEGREES = 140;
 	private static final double MIN_DB_ANGLE_RAD = Math.toRadians(MIN_DB_ANGLE_DEGREES);
 	private static final double MAX_DB_ANGLE_RAD = Math.toRadians(MAX_DB_ANGLE_DEGREES);
 	private static final double DIV_LENGTH_RATIO_BIG = 0.02;
@@ -76,12 +74,13 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 	
 	private double currentDbRms, currentDbPeak;
 	private double lingerLevelDb, lingerOpValDb = LINGER_STAY_FACTOR;
-	private String name, peakLabel;
+	private String name, peakLabel, propKeyPrefix;
 	private Orientation orientation;
 	
-	public AnalogMeterView(String name, String peakLabel, Orientation orientation) {
+	public AnalogMeterView(String name, String propKeyPrefix, String peakLabel, Orientation orientation) {
 		super(true);
 		this.name = name;
+		this.propKeyPrefix = propKeyPrefix;
 		this.peakLabel = peakLabel;
 		this.orientation = orientation;
 		init();
@@ -96,7 +95,7 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 	protected void initProperties() {
 		super.initProperties();
 		
-		final String keyPrefix = "analogMeterView.";
+		final String keyPrefix = propKeyPrefix + ".";
 		
 		/* Configuration properties */
 		
@@ -121,9 +120,9 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 		propLightColor = createConfigurableColorProperty(
 				keyPrefix + "lightColor", "Light Color", Color.ANTIQUEWHITE);
 		propIndicatorColor = createConfigurableColorProperty(
-				keyPrefix + "indicatorColor", "Indicator Color", Color.BLACK);
+				keyPrefix + "indicatorColor", "Indicator Color", Color.WHITE);
 		propNormalLevelDigitsColor = createConfigurableColorProperty(
-				keyPrefix + "normLevelDigitsColor", "Normal Level Digits Color", Color.BLACK);
+				keyPrefix + "normLevelDigitsColor", "Normal Level Digits Color", Color.WHITE);
 		propHighLevelDigitsColor = createConfigurableColorProperty(
 				keyPrefix + "highLevelDigitsColor", "High Level Digits Color", Color.RED);
 		propLightSurfaceScale = UiUtils.createConfigurableDoubleProperty(
