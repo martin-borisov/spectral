@@ -93,9 +93,9 @@ public class SpectrumBarView extends AbstractSpectrumView {
 		rect.yProperty().bind(Bindings.createDoubleBinding(
 				() -> {
 					double parentHeight = getRoot().heightProperty().get();
-					return map(bandValues.get(idx).get(), MIN_DB_VALUE, 0, 
+					return map(bandValues.get(idx).get(), propMinDbValue.getProp().get(), 0, 
 							parentHeight - parentHeight * SCENE_MARGIN_RATIO, 0);
-				}, getRoot().heightProperty(), bandValues.get(idx)));
+				}, getRoot().heightProperty(), propMinDbValue.getProp(), bandValues.get(idx)));
 		rect.heightProperty().bind(Bindings.createDoubleBinding(
 				() -> {
 					double parentHeight = getRoot().heightProperty().get();
@@ -135,11 +135,11 @@ public class SpectrumBarView extends AbstractSpectrumView {
 		line.startYProperty().bind(Bindings.createDoubleBinding(
 				() -> {
 					double parentHeight = getRoot().heightProperty().get();
-					return map(trailValues.get(idx).get(), MIN_DB_VALUE, 0, 
+					return map(trailValues.get(idx).get(), propMinDbValue.getProp().get(), 0, 
 							parentHeight - parentHeight * SCENE_MARGIN_RATIO, 0);
 				}, getRoot().heightProperty(), trailValues.get(idx)));
 		line.endYProperty().bind(line.startYProperty());
-		line.visibleProperty().bind(trailValues.get(idx).greaterThan(MIN_DB_VALUE));
+		line.visibleProperty().bind(trailValues.get(idx).greaterThan(propMinDbValue.getProp().get()));
 		line.strokeProperty().bind(propTrailColor.getProp());
 		line.setStrokeWidth(2);
 		trails.add(line);

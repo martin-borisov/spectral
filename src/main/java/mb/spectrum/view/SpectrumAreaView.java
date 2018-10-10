@@ -118,7 +118,7 @@ public class SpectrumAreaView extends AbstractSpectrumView {
 		lineTo.yProperty().bind(Bindings.createDoubleBinding(
 				() -> {
 					double parentHeight = getRoot().heightProperty().get();
-					return map(trailValues.get(idx).get(), MIN_DB_VALUE, 0, 
+					return map(trailValues.get(idx).get(), propMinDbValue.getProp().get(), 0, 
 							parentHeight - parentHeight * SCENE_MARGIN_RATIO, 0);
 				}, 
 				getRoot().heightProperty(), trailValues.get(idx))
@@ -140,7 +140,7 @@ public class SpectrumAreaView extends AbstractSpectrumView {
 		lineTo.yProperty().bind(Bindings.createDoubleBinding(
 				() -> {
 					double parentHeight = getRoot().heightProperty().get();
-					return map(bandValues.get(idx).get(), MIN_DB_VALUE, 0, 
+					return map(bandValues.get(idx).get(), propMinDbValue.getProp().get(), 0, 
 							parentHeight - parentHeight * SCENE_MARGIN_RATIO, 0);
 				}, 
 				getRoot().heightProperty(), bandValues.get(idx))

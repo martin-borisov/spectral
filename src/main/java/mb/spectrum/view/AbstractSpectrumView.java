@@ -1,5 +1,9 @@
 package mb.spectrum.view;
 
+import static mb.spectrum.UiUtils.createConfigurableBooleanProperty;
+import static mb.spectrum.UiUtils.createConfigurableChoiceProperty;
+import static mb.spectrum.UiUtils.createConfigurableDoubleProperty;
+import static mb.spectrum.UiUtils.createConfigurableIntegerProperty;
 import static mb.spectrum.Utils.map;
 
 import java.util.ArrayList;
@@ -19,36 +23,42 @@ import javafx.scene.shape.Line;
 import mb.spectrum.ConfigService;
 import mb.spectrum.UiUtils;
 import mb.spectrum.Utils;
+import mb.spectrum.prop.ConfigurableBooleanProperty;
+import mb.spectrum.prop.ConfigurableChoiceProperty;
+import mb.spectrum.prop.ConfigurableColorProperty;
+import mb.spectrum.prop.ConfigurableDoubleProperty;
+import mb.spectrum.prop.ConfigurableIntegerProperty;
 import mb.spectrum.prop.ConfigurableProperty;
 import mb.spectrum.view.AnalogMeterView.Orientation;
 
 public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 	
-	protected static final int MIN_DB_VALUE = -100;
-	private static final int FREQ_LINE_PER_BAR_COUNT = 5;
-	private static final int DB_LINES_COUNT = 4;
 	private static final double GRID_LABELS_MARGIN_RATIO = 0.1;
-	private static final int BAND_DROP_RATE_DB = 2;
-	private static final double LINGER_STAY_FACTOR = 0.01;
-	private static final double LINGER_ACCELARATION_FACTOR = 1.08;
 	
-	// Configurable properties
 	private static final int SAMPLING_RATE = Integer.valueOf(
 			ConfigService.getInstance().getProperty("mb.sampling-rate"));
 	private static final int BUFFER_SIZE = Integer.valueOf(
 			ConfigService.getInstance().getProperty("mb.buffer-size"));
-	private ConfigurableProperty<Color> propGridColor;
 	
-	// TODO Property for min amplitude, i.e. MIN_DB_VALUE
+	/* Configuration properties */
+	protected ConfigurableIntegerProperty propMinDbValue;
+	private ConfigurableDoubleProperty propSensitivity;
+	private ConfigurableDoubleProperty propTrailStayFactor;
+	private ConfigurableDoubleProperty propTrailAccelerationFactor;
+	private ConfigurableIntegerProperty propDbLinesCount;
+	private ConfigurableIntegerProperty propHzLineOnNthBar;
+	private ConfigurableColorProperty propGridColor;
+	private ConfigurableBooleanProperty propShowPip;
+	private ConfigurableChoiceProperty propPipViewType;
+	
+	/* Operational properties */
+	protected List<SimpleDoubleProperty> bandValues;
+	protected List<SimpleDoubleProperty> trailValues;
 	
 	private List<Line> vLines, hLines;
 	private List<Label> vLabels, hLabels;
-	
 	private FFT fft;
-	
-	// Operational properties
-	protected List<SimpleDoubleProperty> bandValues;
-	protected List<SimpleDoubleProperty> trailValues;
+	private SubScene pip;
 	
 	protected int bandCount;
 	private double[] bandValuesDB, trailValuesDB;
@@ -62,12 +72,52 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 	
 	@Override
 	public List<ConfigurableProperty<? extends Object>> getProperties() {
-		return Arrays.asList(propGridColor);
+		return Arrays.asList(propMinDbValue, 
+				propSensitivity,
+				propTrailStayFactor,
+				propTrailAccelerationFactor,
+				propDbLinesCount,
+				propHzLineOnNthBar,
+				propShowPip,
+				propPipViewType,
+				propGridColor);
 	}
 	
 	@Override
 	protected void initProperties() {
-		propGridColor = UiUtils.createConfigurableColorProperty(getBasePropertyKey() + ".gridColor", "Grid Color", Color.web("#fd4a11"));
+		
+		/* Configuration Properties */
+		propMinDbValue = createConfigurableIntegerProperty(
+				getBasePropertyKey() + ".minDbValue", "Min. DB Value", -100, 0, -60, 1);
+		propSensitivity = createConfigurableDoubleProperty(
+				getBasePropertyKey() + ".sensitivity", "Sensitivity", 1.0, 5.0, 1.0, 0.1);
+		propTrailStayFactor = createConfigurableDoubleProperty(
+				getBasePropertyKey() + ".trailStayFactor", "Trail Stay", 0.001, 0.05, 0.01, 0.001);
+		propTrailAccelerationFactor = createConfigurableDoubleProperty(
+				getBasePropertyKey() + ".trailAccelerationFactor", "Trail Acceleration", 1.0, 1.2, 1.08, 0.01);
+		propDbLinesCount = createConfigurableIntegerProperty(
+				getBasePropertyKey() + ".dbLineCount", "dB Lines Count", 1, 20, 4, 1);
+		propDbLinesCount.getProp().addListener((obs, oldVal, newVal) -> {
+			if(newVal != oldVal) {
+				reset();
+			}
+		});
+		propHzLineOnNthBar = createConfigurableIntegerProperty(
+				getBasePropertyKey() + ".hzLineOnNthBar", "Hz Line on Nth Bar", 1, 20, 5, 1);
+		propHzLineOnNthBar.getProp().addListener((obs, oldVal, newVal) -> {
+			if(newVal != oldVal) {
+				reset();
+			}
+		});
+		propShowPip = createConfigurableBooleanProperty(
+				getBasePropertyKey() + ".showPip", "Show Pip", true);
+		propPipViewType = createConfigurableChoiceProperty(
+				getBasePropertyKey() + ".pipViewType", "PIP View Type", 
+				Arrays.asList("View A", "View B", "View C"), "View B");
+		
+		propGridColor = UiUtils.createConfigurableColorProperty(
+				getBasePropertyKey() + ".gridColor", "Grid Color", Color.web("#fd4a11"));
+		
 		bandValues = new ArrayList<>();
 		trailValues = new ArrayList<>();
 		
@@ -94,24 +144,24 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 		bandCount = fft.avgSize();
 				
 		bandValuesDB = new double[bandCount];
-		Arrays.fill(bandValuesDB, MIN_DB_VALUE);
+		Arrays.fill(bandValuesDB, propMinDbValue.getProp().get());
 		for (int i = 0; i < bandCount; i++) {
-			bandValues.add(new SimpleDoubleProperty(MIN_DB_VALUE));
+			bandValues.add(new SimpleDoubleProperty(propMinDbValue.getProp().get()));
 		}
 				
 		trailValuesDB = new double[bandCount];
-		Arrays.fill(trailValuesDB, MIN_DB_VALUE);
+		Arrays.fill(trailValuesDB, propMinDbValue.getProp().get());
 		for (int i = 0; i < bandCount; i++) {
-			trailValues.add(new SimpleDoubleProperty(MIN_DB_VALUE));
+			trailValues.add(new SimpleDoubleProperty(propMinDbValue.getProp().get()));
 		}
 				
 		trailOpValues = new double[bandCount];
-		Arrays.fill(trailOpValues, LINGER_STAY_FACTOR);
+		Arrays.fill(trailOpValues, propTrailStayFactor.getProp().get());
 		
 		for (int i = 0; i < bandCount; i++) {
 			
 			// Create grid lines and labels
-			if(i % FREQ_LINE_PER_BAR_COUNT == 0) {
+			if(i % propHzLineOnNthBar.getProp().get() == 0) {
 				createHzLineAndLabel(i, Math.round(fft.getAverageCenterFrequency(i) - fft.getAverageBandWidth(i) / 2));
 			} else if(i == bandCount - 1) {
 				createHzLineAndLabel(i + 1, Math.round(fft.getAverageCenterFrequency(i + 1) - fft.getAverageBandWidth(i + 1) / 2));
@@ -119,7 +169,7 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 		}
 		
 		// DB lines and labels (horizontal)
-		for (int i = 0; i <= DB_LINES_COUNT; i++) {
+		for (int i = 0; i <= propDbLinesCount.getProp().get(); i++) {
 			createDbGridLineAndLabel(i);
 		}
 		
@@ -129,12 +179,16 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 		shapes.addAll(hLines);
 		shapes.addAll(hLabels);
 		
-		// #
-		SubScene peep = new SubScene(analogMeterView.getRoot(), pane.getWidth() / 4, pane.getHeight() / 4, true, SceneAntialiasing.BALANCED);
-		peep.widthProperty().bind(pane.widthProperty().divide(4));
-		peep.heightProperty().bind(pane.heightProperty().divide(4));
-		shapes.add(peep);
-		// #
+		// Pip view
+		// Preserve the sub scene due to issues when resetting the view (the same root has to be added to different sub scene instances)
+		if(pip == null) {
+			pip = new SubScene(analogMeterView.getRoot(), pane.getWidth() / 4, pane.getHeight() / 4, true, SceneAntialiasing.BALANCED);
+			pip.widthProperty().bind(pane.widthProperty().divide(4));
+			pip.heightProperty().bind(pane.heightProperty().divide(4));
+			pip.visibleProperty().bind(propShowPip.getProp());
+			pip.setMouseTransparent(true);
+		}
+		shapes.add(pip);
 		
 		return shapes;
 	}
@@ -145,18 +199,13 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 		// Perform forward FFT
 		fft.forward(data);
 		
+		int minDbValue = propMinDbValue.getProp().get();
+		
 		// Update band values
 		for (int i = 0; i < bandCount; i++) {
+			double bandDB = Utils.toDB(fft.getAvg(i), fft.avgSize());
 			
-			// TODO Implement smoother transition of amplitudes
-			
-			// This might not be correct as it might not show the correct value
-			//double bandDB = Utils.toDB(fft.getAvg(i), fft.timeSize());
-			
-			// This is too "twitchy" and might have to be smoothed out a bit
-			double bandDB = Utils.toDB(fft.getAvg(i));
-			
-			bandDB = bandDB < MIN_DB_VALUE ? MIN_DB_VALUE : bandDB;
+			bandDB = bandDB < minDbValue ? minDbValue : bandDB;
 			if(bandDB > bandValuesDB[i]) {
 				bandValuesDB[i] = bandDB;
 			}
@@ -169,26 +218,28 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 	
 	@Override
 	public void nextFrame() {
+		
+		int minDbValue = propMinDbValue.getProp().get();
 		for (int i = 0; i < bandValuesDB.length; i++) {
 
 			bandValues.get(i).set(bandValuesDB[i]);
 			
 			// Curve drop
-			if(bandValuesDB[i] > MIN_DB_VALUE) {
-				bandValuesDB[i] -= BAND_DROP_RATE_DB;
-				bandValuesDB[i] = bandValuesDB[i] < MIN_DB_VALUE ? MIN_DB_VALUE : bandValuesDB[i];
+			if(bandValuesDB[i] > minDbValue) {
+				bandValuesDB[i] -= propSensitivity.getProp().get();
+				bandValuesDB[i] = bandValuesDB[i] < minDbValue ? minDbValue : bandValuesDB[i];
 			}
 			
 			// Trail drop			
 			trailValuesDB[i] = trailValuesDB[i] - trailOpValues[i];
-			trailOpValues[i] = trailOpValues[i] * LINGER_ACCELARATION_FACTOR;
+			trailOpValues[i] = trailOpValues[i] * propTrailAccelerationFactor.getProp().get();
 			
 			if(bandValuesDB[i] > trailValuesDB[i]) {
 				trailValuesDB[i] = bandValuesDB[i];
-				trailOpValues[i] = LINGER_STAY_FACTOR;
+				trailOpValues[i] = propTrailStayFactor.getProp().get();
 			}
-			if(trailValuesDB[i] < MIN_DB_VALUE) {
-				trailValuesDB[i] = MIN_DB_VALUE;
+			if(trailValuesDB[i] < minDbValue) {
+				trailValuesDB[i] = minDbValue;
 			}
 			trailValues.get(i).set(trailValuesDB[i]);
 		}
@@ -233,8 +284,6 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 	
 	private void createDbGridLineAndLabel(int idx) {
 		
-		double dBVal = map(idx, 0, DB_LINES_COUNT, MIN_DB_VALUE, 0);
-		
 		// Create line
 		Line line = new Line();
 		line.startXProperty().bind(getRoot().widthProperty().multiply(SCENE_MARGIN_RATIO));
@@ -242,12 +291,13 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 				getRoot().widthProperty().multiply(SCENE_MARGIN_RATIO)));
 		line.startYProperty().bind(
 				Bindings.createDoubleBinding(() -> {
+					double dbVal = map(idx, 0, propDbLinesCount.getProp().get(), propMinDbValue.getProp().get(), 0);
 					double parentHeigth = getRoot().heightProperty().get();
-					return map(dBVal, MIN_DB_VALUE, 0,  
+					return map(dbVal, propMinDbValue.getProp().get(), 0,  
 							parentHeigth - parentHeigth * SCENE_MARGIN_RATIO,
 							parentHeigth * SCENE_MARGIN_RATIO);
 				}, 
-				getRoot().heightProperty()));
+				getRoot().heightProperty(), propMinDbValue.getProp(), propDbLinesCount.getProp()));
 		line.endYProperty().bind(line.startYProperty());
 		line.strokeProperty().bind(propGridColor.getProp());
 		line.getStrokeDashArray().addAll(2d);
@@ -255,7 +305,12 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 		hLines.add(line);
 		
 		// Create label
-		Label label = UiUtils.createLabel(Math.round(dBVal) + "dB", hLabels);
+		Label label = UiUtils.createLabel("", hLabels);
+		label.textProperty().bind(Bindings.createStringBinding(
+				() -> {
+					double dBVal = map(idx, 0, propDbLinesCount.getProp().get(), propMinDbValue.getProp().get(), 0);
+					return Math.round(dBVal) + "dB";
+				}, propMinDbValue.getProp(), propDbLinesCount.getProp()));
 		label.layoutXProperty().bind(
 				line.startXProperty().subtract(
 						label.widthProperty().add(

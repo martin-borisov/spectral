@@ -27,6 +27,7 @@ import javafx.scene.shape.Line;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.util.Duration;
 import mb.spectrum.prop.ConfigurableBooleanProperty;
+import mb.spectrum.prop.ConfigurableChoiceProperty;
 import mb.spectrum.prop.ConfigurableColorProperty;
 import mb.spectrum.prop.ConfigurableDoubleProperty;
 import mb.spectrum.prop.ConfigurableIntegerProperty;
@@ -192,6 +193,18 @@ public class UiUtils {
 		ConfigurableIntegerProperty prop = 
 				new ConfigurableIntegerProperty(name, minValue, maxValue, 
 						Integer.valueOf(cs.getOrCreateProperty(key, String.valueOf(defaultValue))), increment);
+		prop.getProp().addListener((obs, oldVal, newVal) -> {
+			cs.setProperty(key, String.valueOf(newVal));
+		});
+		return prop;
+	}
+	
+	public static ConfigurableChoiceProperty createConfigurableChoiceProperty(String key, String name, 
+			List<String> values, String defaultValue) {
+		ConfigService cs = ConfigService.getInstance();
+		ConfigurableChoiceProperty prop = 
+				new ConfigurableChoiceProperty(
+						name, values, cs.getOrCreateProperty(key, defaultValue));
 		prop.getProp().addListener((obs, oldVal, newVal) -> {
 			cs.setProperty(key, String.valueOf(newVal));
 		});

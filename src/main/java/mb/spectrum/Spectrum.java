@@ -50,6 +50,7 @@ import javafx.util.Duration;
 import mb.spectrum.gpio.StageGpioController;
 import mb.spectrum.prop.ActionProperty;
 import mb.spectrum.prop.ConfigurableBooleanProperty;
+import mb.spectrum.prop.ConfigurableChoiceProperty;
 import mb.spectrum.prop.ConfigurableColorProperty;
 import mb.spectrum.prop.ConfigurableDoubleProperty;
 import mb.spectrum.prop.ConfigurableIntegerProperty;
@@ -489,7 +490,8 @@ public class Spectrum extends Application {
 				control = picker;
 				
 			} else if(prop instanceof ConfigurableDoubleProperty || 
-					prop instanceof ConfigurableIntegerProperty) {
+					prop instanceof ConfigurableIntegerProperty || 
+					prop instanceof ConfigurableChoiceProperty) {
 				Label label = UiUtils.createNumberPropertyLabel(
 						String.valueOf(prop.getProp().getValue()), currentView.getRoot());
 				label.textProperty().bind(Bindings.createStringBinding(

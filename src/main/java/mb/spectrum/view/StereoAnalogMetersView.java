@@ -68,6 +68,9 @@ public class StereoAnalogMetersView extends AbstractView {
 	@Override
 	protected List<Node> collectNodes() {
 		
+		// NB: setMouseTransparent(true) is called for each sub-view to prevent
+		// a null pointer when the mouse is over the subscene and the view is switched
+		
 		// Evenly align the two "analog" meters
 		SubScene left = new SubScene(leftMeterView.getRoot(), 0, 0, true, SceneAntialiasing.BALANCED);
 		left.widthProperty().bind(pane.heightProperty());
@@ -83,6 +86,7 @@ public class StereoAnalogMetersView extends AbstractView {
 		
 		left.setRotate(90);
 		left.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
+		left.setMouseTransparent(true);
 		
 		SubScene right = new SubScene(rightMeterView.getRoot(), 0, 0, true, SceneAntialiasing.BALANCED);
 		right.widthProperty().bind(left.widthProperty());
@@ -96,6 +100,7 @@ public class StereoAnalogMetersView extends AbstractView {
 							+ width * propBorderSizeRatio.getProp().get() / 2;
 				}, pane.widthProperty(), right.widthProperty(), right.heightProperty(), propBorderSizeRatio.getProp()));
 		right.setRotate(270);
+		right.setMouseTransparent(true);
 		
 		return Arrays.asList(left, right);
 	}

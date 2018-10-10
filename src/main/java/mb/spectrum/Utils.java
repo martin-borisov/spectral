@@ -13,14 +13,25 @@ public class Utils {
 		return val;
 	}
 	
+	/**
+	 * Converts the magnitude of a FFT band or average to dB
+	 * @param value Magnitude
+	 * @param bufferSize Buffer/time size
+	 * @return Magnitude in dB
+	 */
 	public static double toDB(double value, int bufferSize) {
 		double valueDb = 0;
 		if(value > 0) {
-			valueDb = 20 * Math.log( 2 * value / bufferSize);
+			valueDb = 20 * Math.log(2 * value / bufferSize);
 		}
 		return valueDb;
 	}
 	
+	/**
+	 * Converts linear magnitude to dB
+	 * @param value Magnitude
+	 * @return Magnitude in dB
+	 */
 	public static double toDB(double value) {
 		return 20 * (Math.log10(value));
 	}
