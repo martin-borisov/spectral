@@ -132,8 +132,8 @@ public class UiUtils {
 		
 		// TODO Play a bit with the values below to find the best fit
 		label.styleProperty().bind(Bindings.concat(
-				"-fx-font-size: ", parent.widthProperty().divide(20), ";", 
-				"-fx-padding: ", parent.widthProperty().divide(50), ";"));
+				"-fx-font-size: ", parent.widthProperty().divide(20), ";"));
+		label.maxWidthProperty().bind(parent.widthProperty());
 		return label;
 	}
 	

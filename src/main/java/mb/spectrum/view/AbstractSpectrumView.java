@@ -8,7 +8,9 @@ import static mb.spectrum.Utils.map;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import ddf.minim.analysis.FFT;
 import ddf.minim.analysis.FourierTransform;
@@ -64,11 +66,26 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 	private double[] bandValuesDB, trailValuesDB;
 	private double[] trailOpValues;
 	
+	private Map<String, View> subViews;
+	
+	public AbstractSpectrumView() {
+		super(true);
+		createSubViews();
+		bandValues = new ArrayList<>();
+		trailValues = new ArrayList<>();
+		init();
+	}
+	
 	protected abstract String getBasePropertyKey();
 	
-	// #
-	private AnalogMeterView analogMeterView;
-	// #
+	private void createSubViews() {
+		subViews = new LinkedHashMap<>();
+		subViews.put("Analog Meter", 
+				new AnalogMeterView("Analog Meter", "analogMeterView", "Peak", Orientation.HORIZONTAL));
+		subViews.put("Stereo Analog Meters", new StereoAnalogMetersView());
+		subViews.put("Stereo Levels LED", new StereoLevelsLedView());
+		subViews.put("Stereo Levels", new StereoLevelsView());
+	}
 	
 	@Override
 	public List<ConfigurableProperty<? extends Object>> getProperties() {
@@ -113,17 +130,10 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 				getBasePropertyKey() + ".showPip", "Show Pip", true);
 		propPipViewType = createConfigurableChoiceProperty(
 				getBasePropertyKey() + ".pipViewType", "PIP View Type", 
-				Arrays.asList("View A", "View B", "View C"), "View B");
+				new ArrayList<>(subViews.keySet()), subViews.keySet().iterator().next());
 		
 		propGridColor = UiUtils.createConfigurableColorProperty(
 				getBasePropertyKey() + ".gridColor", "Grid Color", Color.web("#fd4a11"));
-		
-		bandValues = new ArrayList<>();
-		trailValues = new ArrayList<>();
-		
-		// #
-		analogMeterView = new AnalogMeterView("Analog Meter", "analogMeterView", "Peak", Orientation.HORIZONTAL);
-		// #
 	}
 
 	@Override
@@ -179,14 +189,25 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 		shapes.addAll(hLines);
 		shapes.addAll(hLabels);
 		
-		// Pip view
-		// Preserve the sub scene due to issues when resetting the view (the same root has to be added to different sub scene instances)
+		// Get initial sub view, preventing erroneous configuration property values
+		View view = subViews.get(propPipViewType.getProp().get());
+		if(view == null) {
+			view = subViews.get(subViews.keySet().iterator().next());
+		}
+		
+		// Preserve the sub scene due to issues when resetting the view (the same root has to be added to a new sub scene instance,
+		// which results in an exception)
 		if(pip == null) {
-			pip = new SubScene(analogMeterView.getRoot(), pane.getWidth() / 4, pane.getHeight() / 4, true, SceneAntialiasing.BALANCED);
+			pip = new SubScene(view.getRoot(), 
+					pane.getWidth() / 4, pane.getHeight() / 4, true, SceneAntialiasing.BALANCED);
 			pip.widthProperty().bind(pane.widthProperty().divide(4));
 			pip.heightProperty().bind(pane.heightProperty().divide(4));
 			pip.visibleProperty().bind(propShowPip.getProp());
 			pip.setMouseTransparent(true);
+			pip.rootProperty().bind(Bindings.createObjectBinding(
+					() -> {
+						return subViews.get(propPipViewType.getProp().get()).getRoot();
+					}, propPipViewType.getProp()));
 		}
 		shapes.add(pip);
 		
@@ -210,12 +231,19 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 				bandValuesDB[i] = bandDB;
 			}
 		}
-		
-		// #
-		analogMeterView.dataAvailable(data);
-		// #
 	}
 	
+	@Override
+	public void dataAvailable(float[] left, float[] right) {
+		super.dataAvailable(left, right);
+		
+		// Update the sub view, which is the only purpose this override exists
+		View view = subViews.get(propPipViewType.getProp().get());
+		if(view.getRoot().isVisible()) {
+			view.dataAvailable(left, right);
+		}
+	}
+
 	@Override
 	public void nextFrame() {
 		
@@ -244,9 +272,11 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 			trailValues.get(i).set(trailValuesDB[i]);
 		}
 		
-		// #
-		analogMeterView.nextFrame();
-		// #
+		// Update the sub view
+		View view = subViews.get(propPipViewType.getProp().get());
+		if(view.getRoot().isVisible()) {
+			view.nextFrame();
+		}
 	}
 	
 	private void createHzLineAndLabel(int barIdx, int hz) {

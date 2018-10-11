@@ -281,7 +281,10 @@ public class Spectrum extends Application {
 				} else {
 					toggleCurrentViewPropertiesOn();
 				}
-			}		
+			}
+			
+			// Prevents checkbox selection if the currently visible property is a boolean
+			event.consume();
 			break;
 			
 		case ENTER:
