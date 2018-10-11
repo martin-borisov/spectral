@@ -137,7 +137,7 @@ public class SpectrumBarView extends AbstractSpectrumView {
 					double parentHeight = getRoot().heightProperty().get();
 					return map(trailValues.get(idx).get(), propMinDbValue.getProp().get(), 0, 
 							parentHeight - parentHeight * SCENE_MARGIN_RATIO, 0);
-				}, getRoot().heightProperty(), trailValues.get(idx)));
+				}, getRoot().heightProperty(), propMinDbValue.getProp(), trailValues.get(idx)));
 		line.endYProperty().bind(line.startYProperty());
 		line.visibleProperty().bind(trailValues.get(idx).greaterThan(propMinDbValue.getProp().get()));
 		line.strokeProperty().bind(propTrailColor.getProp());

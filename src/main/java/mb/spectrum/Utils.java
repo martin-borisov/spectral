@@ -22,7 +22,7 @@ public class Utils {
 	public static double toDB(double value, int bufferSize) {
 		double valueDb = 0;
 		if(value > 0) {
-			valueDb = 20 * Math.log(2 * value / bufferSize);
+			valueDb = 20 * Math.log10(2 * value / bufferSize);
 		}
 		return valueDb;
 	}

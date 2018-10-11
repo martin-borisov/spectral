@@ -203,7 +203,7 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 		
 		// Update band values
 		for (int i = 0; i < bandCount; i++) {
-			double bandDB = Utils.toDB(fft.getAvg(i), fft.avgSize());
+			double bandDB = Utils.toDB(fft.getAvg(i), fft.timeSize());
 			
 			bandDB = bandDB < minDbValue ? minDbValue : bandDB;
 			if(bandDB > bandValuesDB[i]) {

@@ -121,7 +121,7 @@ public class SpectrumAreaView extends AbstractSpectrumView {
 					return map(trailValues.get(idx).get(), propMinDbValue.getProp().get(), 0, 
 							parentHeight - parentHeight * SCENE_MARGIN_RATIO, 0);
 				}, 
-				getRoot().heightProperty(), trailValues.get(idx))
+				getRoot().heightProperty(), propMinDbValue.getProp(), trailValues.get(idx))
 				);
 		
 		trailPath.getElements().add(lineTo);
@@ -143,7 +143,7 @@ public class SpectrumAreaView extends AbstractSpectrumView {
 					return map(bandValues.get(idx).get(), propMinDbValue.getProp().get(), 0, 
 							parentHeight - parentHeight * SCENE_MARGIN_RATIO, 0);
 				}, 
-				getRoot().heightProperty(), bandValues.get(idx))
+				getRoot().heightProperty(), propMinDbValue.getProp(), bandValues.get(idx))
 				);
 		
 		curvePath.getElements().add(lineTo);
