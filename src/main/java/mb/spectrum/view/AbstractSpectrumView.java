@@ -36,6 +36,7 @@ import mb.spectrum.view.AnalogMeterView.Orientation;
 public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 	
 	private static final double GRID_LABELS_MARGIN_RATIO = 0.1;
+	private static final double PIP_MARGIN_RATIO = 0.05;
 	
 	private static final int SAMPLING_RATE = Integer.valueOf(
 			ConfigService.getInstance().getProperty("mb.sampling-rate"));
@@ -52,6 +53,7 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 	private ConfigurableColorProperty propGridColor;
 	private ConfigurableBooleanProperty propShowPip;
 	private ConfigurableChoiceProperty propPipViewType;
+	private ConfigurableDoubleProperty propPipOpacity;
 	
 	/* Operational properties */
 	protected List<SimpleDoubleProperty> bandValues;
@@ -97,6 +99,7 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 				propHzLineOnNthBar,
 				propShowPip,
 				propPipViewType,
+				propPipOpacity,
 				propGridColor);
 	}
 	
@@ -131,6 +134,8 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 		propPipViewType = createConfigurableChoiceProperty(
 				getBasePropertyKey() + ".pipViewType", "PIP View Type", 
 				new ArrayList<>(subViews.keySet()), subViews.keySet().iterator().next());
+		propPipOpacity =  createConfigurableDoubleProperty(
+				getBasePropertyKey() + ".pipOpacity", "PIP Opacity", 0.0, 1.0, 0.8, 0.05);
 		
 		propGridColor = UiUtils.createConfigurableColorProperty(
 				getBasePropertyKey() + ".gridColor", "Grid Color", Color.web("#fd4a11"));
@@ -183,11 +188,7 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 			createDbGridLineAndLabel(i);
 		}
 		
-		List<Node> shapes = new ArrayList<>();
-		shapes.addAll(vLines);
-		shapes.addAll(vLabels);
-		shapes.addAll(hLines);
-		shapes.addAll(hLabels);
+		/* PIP View */
 		
 		// Get initial sub view, preventing erroneous configuration property values
 		View view = subViews.get(propPipViewType.getProp().get());
@@ -200,6 +201,8 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 		if(pip == null) {
 			pip = new SubScene(view.getRoot(), 
 					pane.getWidth() / 4, pane.getHeight() / 4, true, SceneAntialiasing.BALANCED);
+			pip.layoutXProperty().bind(pane.heightProperty().multiply(PIP_MARGIN_RATIO));
+			pip.layoutYProperty().bind(pip.layoutXProperty());
 			pip.widthProperty().bind(pane.widthProperty().divide(4));
 			pip.heightProperty().bind(pane.heightProperty().divide(4));
 			pip.visibleProperty().bind(propShowPip.getProp());
@@ -208,7 +211,14 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 					() -> {
 						return subViews.get(propPipViewType.getProp().get()).getRoot();
 					}, propPipViewType.getProp()));
+			pip.opacityProperty().bind(propPipOpacity.getProp());
 		}
+		
+		List<Node> shapes = new ArrayList<>();
+		shapes.addAll(vLines);
+		shapes.addAll(vLabels);
+		shapes.addAll(hLines);
+		shapes.addAll(hLabels);
 		shapes.add(pip);
 		
 		return shapes;
