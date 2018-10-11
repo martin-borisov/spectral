@@ -15,8 +15,10 @@ import javafx.beans.binding.Bindings;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.Node;
+import javafx.scene.control.Label;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.text.Font;
 import mb.spectrum.Utils;
 import mb.spectrum.prop.ConfigurableBooleanProperty;
 import mb.spectrum.prop.ConfigurableColorProperty;
@@ -29,6 +31,8 @@ public class StereoLevelsLedView extends AbstractView {
 	public enum Channel {
 		LEFT, RIGHT
 	}
+	
+	private static final double LABEL_WIDTH_RATIO = 0.05;
 	
 	/* Configuration Properties */
 	
@@ -147,11 +151,35 @@ public class StereoLevelsLedView extends AbstractView {
 	protected List<Node> collectNodes() {
 		
 		List<Node> nodes = new ArrayList<>();
+		nodes.add(createLabel(Channel.LEFT));
+		nodes.add(createLabel(Channel.RIGHT));
+		
 		for (int i = 0; i < propLedCount.getProp().get(); i++) {
 			nodes.add(createLed(Channel.LEFT, i));
 			nodes.add(createLed(Channel.RIGHT, i));
 		}
 		return nodes;
+	}
+	
+	private Node createLabel(Channel channel) {
+		Label label = new Label(channel == Channel.LEFT ? "L" : "R");
+		
+		label.textFillProperty().bind(propLedColorNormal.getProp());
+		
+		label.layoutXProperty().bind(Bindings.createDoubleBinding(
+				() -> {
+					double parentWidth = getRoot().widthProperty().get();
+					double labelAreaWidth = parentWidth * LABEL_WIDTH_RATIO;
+					return labelAreaWidth / 2 - label.widthProperty().get() / 2;
+				}, getRoot().widthProperty(), label.widthProperty()));
+		
+		label.layoutYProperty().bind(
+				getRoot().heightProperty().multiply(channel == Channel.LEFT ? 0.25 : 0.75)
+					.subtract(label.heightProperty().divide(2)));
+		
+		bindFontSizeToParentWidth(label, LABEL_WIDTH_RATIO, "Alex Brush");
+		label.setCache(true);
+		return label;
 	}
 	
 	private Rectangle createLed(Channel channel, int col) {
@@ -162,18 +190,21 @@ public class StereoLevelsLedView extends AbstractView {
 				() -> {
 					int ledCount = propLedCount.getProp().get();
 					double parentWidth = getRoot().widthProperty().get();
+					double ledAreaWidth = parentWidth - parentWidth * LABEL_WIDTH_RATIO;
 					double ledGapRatio = propHGapLedRatio.getProp().get();
-					double ledGap = (parentWidth / ledCount) * ledGapRatio;
-					return parentWidth / ledCount - ledGap - ledGap / ledCount;
+					double ledGap = (ledAreaWidth / ledCount) * ledGapRatio;
+					return ledAreaWidth / ledCount - ledGap - ledGap / ledCount;
 				}, propLedCount.getProp(), getRoot().widthProperty(), propHGapLedRatio.getProp()));
 		
 		led.xProperty().bind(Bindings.createDoubleBinding(
 				() -> {
 					int ledCount = propLedCount.getProp().get();
 					double parentWidth = getRoot().widthProperty().get();
+					double labelAreaWidth = parentWidth * LABEL_WIDTH_RATIO;
+					double ledAreaWidth = parentWidth - labelAreaWidth;
 					double ledGapRatio = propHGapLedRatio.getProp().get();
-					double ledGap = (parentWidth / ledCount) * ledGapRatio;
-					return ledGap + col * (ledGap + led.widthProperty().get());
+					double ledGap = (ledAreaWidth / ledCount) * ledGapRatio;
+					return labelAreaWidth + ledGap + col * (ledGap + led.widthProperty().get());
 				}, propLedCount.getProp(), getRoot().widthProperty(), propHGapLedRatio.getProp(), led.widthProperty()));
 		
 		led.heightProperty().bind(Bindings.createDoubleBinding(
@@ -229,5 +260,13 @@ public class StereoLevelsLedView extends AbstractView {
 				propLedColorClip.getProp(), propMinDbValue.getProp(), 
 				propLedCount.getProp(), propClipDbValue.getProp(), propMidDbValue.getProp()));
 		return led;
+	}
+	
+	/* Utilities */
+	private void bindFontSizeToParentWidth(Label label, double ratio, String family) {
+		label.fontProperty().bind(Bindings.createObjectBinding(
+				() -> {
+					return Font.font(family, getRoot().widthProperty().get() * ratio);
+				}, getRoot().widthProperty()));
 	}
 }
