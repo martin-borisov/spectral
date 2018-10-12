@@ -177,6 +177,16 @@ public class StereoLevelsLedView extends AbstractView {
 				getRoot().heightProperty().multiply(channel == Channel.LEFT ? 0.25 : 0.75)
 					.subtract(label.heightProperty().divide(2)));
 		
+		label.layoutYProperty().bind(Bindings.createDoubleBinding(
+				() -> {
+					double parentHeight = getRoot().heightProperty().get();
+					double ledGap = (parentHeight / 2) * propVGapLedRatio.getProp().get();
+					double ledHalfHeight = (parentHeight / 2 - ledGap - ledGap / 2) / 2;
+					double labelHalfHeight = label.heightProperty().get() / 2;
+					return channel == Channel.LEFT ? (ledGap + ledHalfHeight - labelHalfHeight) : 
+						(parentHeight - ledGap - ledHalfHeight - labelHalfHeight);
+				}, getRoot().heightProperty(), propVGapLedRatio.getProp(), label.heightProperty()));
+		
 		bindFontSizeToParentWidth(label, LABEL_WIDTH_RATIO, "Alex Brush");
 		label.setCache(true);
 		return label;
@@ -191,8 +201,7 @@ public class StereoLevelsLedView extends AbstractView {
 					int ledCount = propLedCount.getProp().get();
 					double parentWidth = getRoot().widthProperty().get();
 					double ledAreaWidth = parentWidth - parentWidth * LABEL_WIDTH_RATIO;
-					double ledGapRatio = propHGapLedRatio.getProp().get();
-					double ledGap = (ledAreaWidth / ledCount) * ledGapRatio;
+					double ledGap = (ledAreaWidth / ledCount) * propHGapLedRatio.getProp().get();
 					return ledAreaWidth / ledCount - ledGap - ledGap / ledCount;
 				}, propLedCount.getProp(), getRoot().widthProperty(), propHGapLedRatio.getProp()));
 		
@@ -202,24 +211,21 @@ public class StereoLevelsLedView extends AbstractView {
 					double parentWidth = getRoot().widthProperty().get();
 					double labelAreaWidth = parentWidth * LABEL_WIDTH_RATIO;
 					double ledAreaWidth = parentWidth - labelAreaWidth;
-					double ledGapRatio = propHGapLedRatio.getProp().get();
-					double ledGap = (ledAreaWidth / ledCount) * ledGapRatio;
+					double ledGap = (ledAreaWidth / ledCount) * propHGapLedRatio.getProp().get();
 					return labelAreaWidth + ledGap + col * (ledGap + led.widthProperty().get());
 				}, propLedCount.getProp(), getRoot().widthProperty(), propHGapLedRatio.getProp(), led.widthProperty()));
 		
 		led.heightProperty().bind(Bindings.createDoubleBinding(
 				() -> {
 					double parentHeight = getRoot().heightProperty().get();
-					double ledGapRatio = propVGapLedRatio.getProp().get();
-					double ledGap = (parentHeight / 2) * ledGapRatio;
+					double ledGap = (parentHeight / 2) * propVGapLedRatio.getProp().get();
 					return parentHeight / 2 - ledGap - ledGap / 2 ;
 				}, getRoot().heightProperty(), propVGapLedRatio.getProp()));
 		
 		led.yProperty().bind(Bindings.createDoubleBinding(
 				() -> {
 					double parentHeight = getRoot().heightProperty().get();
-					double ledGapRatio = propVGapLedRatio.getProp().get();
-					double ledGap = (parentHeight / 2) * ledGapRatio;
+					double ledGap = (parentHeight / 2) * propVGapLedRatio.getProp().get();
 					return ledGap + channel.ordinal() * (ledGap + led.heightProperty().get());
 				}, getRoot().heightProperty(), propVGapLedRatio.getProp(), led.heightProperty()));
 		
