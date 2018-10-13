@@ -10,6 +10,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
+import javafx.animation.Timeline;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -26,6 +29,7 @@ import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
+import javafx.util.Duration;
 import mb.spectrum.UiUtils;
 import mb.spectrum.Utils;
 import mb.spectrum.prop.ConfigurableBooleanProperty;
@@ -42,8 +46,6 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 	private static final double MAX_DB_ANGLE_RAD = Math.toRadians(MAX_DB_ANGLE_DEGREES);
 	private static final double DIV_LENGTH_RATIO_BIG = 0.02;
 	private static final double DIV_LENGTH_RATIO_SMALL = DIV_LENGTH_RATIO_BIG / 3;
-	private static final double LINGER_STAY_FACTOR = 0.05;
-	private static final double LINGER_ACCELARATION_FACTOR = 1.15;
 	private static final double BACK_CIRCLE_RADIUS_TO_SCENE_WIDTH_RATIO = 0.05;
 	private static final double ELEMENT_WIDTH_TO_CIRCLE_RADIUS_RATIO = 2.5;
 	
@@ -57,7 +59,7 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 	private ConfigurableIntegerProperty propDivCount;
 	
 	// Not requiring reset
-	private ConfigurableIntegerProperty propMinDbValue, propSensitivity, propMaxDbuValue, 
+	private ConfigurableIntegerProperty propReactionTime, propMinDbValue, propMaxDbuValue, 
 		propBgCenterX, propBgCenterY, propBgRadius, propBgFocusDistance, propBgFocusAngle,
 		propLightXPosition, propLightYPosition;
 	private ConfigurableColorProperty propBgColorA, propBgColorB, propLightColor, 
@@ -73,7 +75,6 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 	private ObjectProperty<Color> darkerPeakColorProp;
 	
 	private double currentDbRms, currentDbPeak;
-	private double lingerLevelDb, lingerOpValDb = LINGER_STAY_FACTOR;
 	private String name, peakLabel, propKeyPrefix;
 	private Orientation orientation;
 	
@@ -109,6 +110,8 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 		});
 		
 		// Not requiring reset
+		propReactionTime = createConfigurableIntegerProperty(
+				keyPrefix + "reactionTime", "Reaction Time", 100, 1000, 320, 10);
 		propMinDbValue = createConfigurableIntegerProperty(
 				keyPrefix + "minDbValue", "Min. DB Value", -100, -10, -24, 1);
 		propMaxDbuValue = createConfigurableIntegerProperty(
@@ -139,8 +142,6 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 				keyPrefix + "lightYPosition", "Light Y Position", 1, 20, 16, 1);
 		propLightZPosition = UiUtils.createConfigurableDoubleProperty(
 				keyPrefix + "lightZPosition", "Light Z Position", 1.0, 10.0, 6.0, 0.2);
-		propSensitivity = createConfigurableIntegerProperty(
-				keyPrefix + "sensitivity", "Sensitivity", 1, 10, 3, 1);
 		propVisualEnableExtras = createConfigurableBooleanProperty(
 				keyPrefix + "enableExtras", "Enable Visual Extras", false);
 		propIndicatorWidthRatio = UiUtils.createConfigurableDoubleProperty(
@@ -192,16 +193,19 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 		darkerPeakColorProp = new SimpleObjectProperty<>();
 		darkerPeakColorProp.bind(Bindings.createObjectBinding(
 				() -> {
-					return propPeakColor.getProp().get().darker().darker();
+					return propPeakColor.getProp().get().deriveColor(0.0, 1.0, 0.15, 1.0);
 				}, propPeakColor.getProp()));
 		
-		// This value controls the starting position of the indicator
-		lingerLevelDb = propMinDbValue.getProp().get();
+		// This is the indicator animation timeline
+		tl = new Timeline();
 	}
 
 	@Override
 	public List<ConfigurableProperty<? extends Object>> getProperties() {
 		return Arrays.asList(
+				propReactionTime,
+				propMinDbValue, 
+				propMaxDbuValue,
 				propBgColorA,
 				propBgColorB,
 				propBgCenterX,
@@ -215,10 +219,7 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 				propPeakColor, 
 				propRotorColor, 
 				propRotorPlateColor,
-				propDivCount, 
-				propMinDbValue, 
-				propMaxDbuValue, 
-				propSensitivity, 
+				propDivCount,  
 				propIndicatorWidthRatio, 
 				propDivisionWidthRatio,
 				propVisualEnableExtras, 
@@ -275,6 +276,8 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 		return nodes;
 	}
 	
+	private Timeline tl;
+	
 	@Override
 	public void dataAvailable(float[] data) {
 		Integer minDbValue = propMinDbValue.getProp().get();
@@ -282,37 +285,23 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 		currentDbRms = currentDbRms < minDbValue ? minDbValue : currentDbRms;
 		currentDbPeak = Utils.toDB(peakLevel(data));
 		currentDbPeak = currentDbPeak < minDbValue ? minDbValue : currentDbPeak;
+		
+		// Update indicator
+		tl.stop();
+		tl.getKeyFrames().clear();
+		tl.getKeyFrames().addAll(
+				new KeyFrame(Duration.millis(0), new KeyValue(lingerLevelDbProp, lingerLevelDbProp.get())),
+				new KeyFrame(Duration.millis(propReactionTime.getProp().get()), 
+						new KeyValue(lingerLevelDbProp, currentDbPeak))
+				);
+		tl.play();
+		
+		// Update peak
+		currentDbPeakProp.set(currentDbPeak);
 	}
 
 	@Override
 	public void nextFrame() {
-		
-		// Update operational properties from UI thread
-		currentDbRmsProp.set(currentDbRms);
-		currentDbPeakProp.set(currentDbPeak);
-		
-		// Update indicator levels		
-		if(lingerLevelDb < currentDbRms) {
-			
-			// TODO Accelerate, don't increase linearly
-			lingerLevelDb += propSensitivity.getProp().get();
-			lingerOpValDb = LINGER_STAY_FACTOR;
-			
-			if(lingerLevelDb > 0) {
-				lingerLevelDb = 0;
-			}
-			
-		} else {
-			lingerLevelDb = lingerLevelDb - lingerOpValDb;
-			lingerOpValDb = lingerOpValDb * LINGER_ACCELARATION_FACTOR;
-			
-			Integer minDbValue = propMinDbValue.getProp().get();
-			if(lingerLevelDb < minDbValue) {
-				lingerLevelDb = minDbValue;
-			}
-		}
-		
-		lingerLevelDbProp.set(lingerLevelDb);
 	}
 	
 	private void createIndicator(List<Node> nodes) {

@@ -72,17 +72,20 @@ public class SoundWaveView extends AbstractView {
 
 	@Override
 	public void nextFrame() {
-		gc.clearRect(0, 0, getRoot().getWidth(), getRoot().getHeight());
-		drawWaveForBuffer(bufferL, getRoot().getHeight() * 0.25, getRoot().getHeight() / 2);
-		drawWaveForBuffer(bufferR, getRoot().getHeight() * 0.75, getRoot().getHeight() / 2);
+		double rootHeight = getRoot().getHeight();
+		double rootHalfHeight = rootHeight / 2;
+		gc.clearRect(0, 0, getRoot().getWidth(), rootHeight);
+		drawWaveForBuffer(bufferL, rootHeight * 0.25, rootHalfHeight);
+		drawWaveForBuffer(bufferR, rootHeight * 0.75, rootHalfHeight);
 
 	}
 	
 	private void drawWaveForBuffer(float[] buffer, double center, double maxSize) {
+		double pointWidth = getRoot().getWidth() / buffer.length;
 		for (int i = 0; i < buffer.length - 1; i++) {
-			double y = center - buffer[i] * maxSize;
-			double y1 = center - buffer[i + 1] * maxSize;
-			gc.strokeLine(i, y, i + 1, y1);
+			double y1 = center - buffer[i] * maxSize;
+			double y2 = center - buffer[i + 1] * maxSize;
+			gc.strokeLine(i * pointWidth, y1, (i + 1) * pointWidth, y2);
 		}
 	}
 }
