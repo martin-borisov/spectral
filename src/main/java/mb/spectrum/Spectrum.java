@@ -9,8 +9,9 @@ import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import ddf.minim.AudioInput;
 import ddf.minim.AudioListener;
+import ddf.minim.AudioPlayer;
+import ddf.minim.AudioSource;
 import ddf.minim.Minim;
 import ddf.minim.javasound.JSMinim;
 import javafx.animation.AnimationTimer;
@@ -57,6 +58,7 @@ import mb.spectrum.prop.ConfigurableIntegerProperty;
 import mb.spectrum.prop.ConfigurableProperty;
 import mb.spectrum.view.AnalogMeterView;
 import mb.spectrum.view.AnalogMeterView.Orientation;
+import mb.spectrum.view.SoundWaveView;
 import mb.spectrum.view.SpectrumAreaView;
 import mb.spectrum.view.SpectrumBarView;
 import mb.spectrum.view.StereoAnalogMetersView;
@@ -84,8 +86,9 @@ public class Spectrum extends Application {
 	private StageGpioController gpio;
 	private Scene scene;
 	private Minim minim;
-	private AudioInput in;
+	private AudioSource in;
 	private View[] views = new View[] {
+			new SoundWaveView(BUFFER_SIZE),
 			new StereoAnalogMetersView(),
 			new StereoLevelsLedView3D(),
 			//new CubeView(),
@@ -170,9 +173,18 @@ public class Spectrum extends Application {
 	}
 
 	private void startAudio() {
-		in = minim.getLineIn(Minim.STEREO, BUFFER_SIZE, SAMPLING_RATE, 16);
-		if(in == null) {
-			throw new RuntimeException("Audio format not supported");
+		
+		Parameters params = getParameters();
+		String path = params.getNamed().get("file");
+		
+		if(path != null) {
+			in = minim.loadFile(path, BUFFER_SIZE);
+			((AudioPlayer) in).loop();
+		} else {
+			in = minim.getLineIn(Minim.STEREO, BUFFER_SIZE, SAMPLING_RATE, 16);
+			if(in == null) {
+				throw new RuntimeException("Audio format not supported");
+			}
 		}
 		
 		in.addListener(new AudioListener() {
