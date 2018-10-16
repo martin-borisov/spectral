@@ -13,7 +13,9 @@ import mb.spectrum.prop.ConfigurableProperty;
 
 public class SoundWaveView extends AbstractView {
 	
-	private ConfigurableColorProperty propLineColor;
+	private static final double WAVE_HEIGHT_FACTOR = 0.5;
+	
+	private ConfigurableColorProperty propLineColor, propBackgroundColor;
 	
 	private float[] bufferL, bufferR; 
 	private GraphicsContext gc;
@@ -38,14 +40,13 @@ public class SoundWaveView extends AbstractView {
 		
 		propLineColor = UiUtils.createConfigurableColorProperty(
 				keyPrefix + "lineColor", "Line Color", Color.GREENYELLOW);
-		propLineColor.getProp().addListener((obs, oldValue, newValue) -> {
-			gc.setStroke(newValue);
-		});
+		propBackgroundColor = UiUtils.createConfigurableColorProperty(
+				keyPrefix + "backgroundColor", "Background Color", Color.gray(0.2));
 	}
 
 	@Override
 	public List<ConfigurableProperty<? extends Object>> getProperties() {
-		return Arrays.asList(propLineColor);
+		return Arrays.asList(propLineColor, propBackgroundColor);
 	}
 	
 	private Canvas createCanvas() {
@@ -59,7 +60,6 @@ public class SoundWaveView extends AbstractView {
 	protected List<Node> collectNodes() {
 		Canvas canvas = createCanvas();
 		gc = canvas.getGraphicsContext2D();
-		gc.setStroke(propLineColor.getProp().get());
 	    gc.setLineWidth(1);
 		return Arrays.asList(canvas);
 	}
@@ -72,11 +72,16 @@ public class SoundWaveView extends AbstractView {
 
 	@Override
 	public void nextFrame() {
+		double rootWidth = getRoot().getWidth();
 		double rootHeight = getRoot().getHeight();
 		double rootHalfHeight = rootHeight / 2;
 		gc.clearRect(0, 0, getRoot().getWidth(), rootHeight);
-		drawWaveForBuffer(bufferL, rootHeight * 0.25, rootHalfHeight);
-		drawWaveForBuffer(bufferR, rootHeight * 0.75, rootHalfHeight);
+		gc.setStroke(propBackgroundColor.getProp().get());
+		gc.strokeLine(0, rootHeight * 0.25, rootWidth, rootHeight * 0.25);
+		gc.strokeLine(0, rootHeight * 0.75, rootWidth, rootHeight * 0.75);
+		gc.setStroke(propLineColor.getProp().get());
+		drawWaveForBuffer(bufferL, rootHeight * 0.25, rootHalfHeight * WAVE_HEIGHT_FACTOR);
+		drawWaveForBuffer(bufferR, rootHeight * 0.75, rootHalfHeight * WAVE_HEIGHT_FACTOR);
 
 	}
 	

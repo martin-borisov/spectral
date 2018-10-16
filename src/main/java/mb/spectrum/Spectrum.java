@@ -57,6 +57,7 @@ import mb.spectrum.prop.ConfigurableDoubleProperty;
 import mb.spectrum.prop.ConfigurableIntegerProperty;
 import mb.spectrum.prop.ConfigurableProperty;
 import mb.spectrum.view.AnalogMeterView;
+import mb.spectrum.view.GaugeView;
 import mb.spectrum.view.AnalogMeterView.Orientation;
 import mb.spectrum.view.SoundWaveView;
 import mb.spectrum.view.SpectrumAreaView;
@@ -88,6 +89,7 @@ public class Spectrum extends Application {
 	private Minim minim;
 	private AudioSource in;
 	private View[] views = new View[] {
+			new GaugeView(),
 			new SoundWaveView(BUFFER_SIZE),
 			new StereoAnalogMetersView(),
 			new StereoLevelsLedView3D(),

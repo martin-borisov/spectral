@@ -44,4 +44,8 @@ public abstract class ConfigurableProperty<T> {
 	public T getIncrement() {
 		return increment;
 	}
+	
+	public T get() {
+		return prop.get();
+	}
 }

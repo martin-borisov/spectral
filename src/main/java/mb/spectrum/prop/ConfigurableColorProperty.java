@@ -10,13 +10,11 @@ public class ConfigurableColorProperty extends ConfigurableProperty<Color> {
 
 	@Override
 	public Color increment() {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public Color decrement() {
-		// TODO Auto-generated method stub
 		return null;
 	}
 

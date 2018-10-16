@@ -13,6 +13,7 @@ import java.util.List;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
+import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -286,18 +287,21 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 		currentDbPeak = Utils.toDB(peakLevel(data));
 		currentDbPeak = currentDbPeak < minDbValue ? minDbValue : currentDbPeak;
 		
-		// Update indicator
-		tl.stop();
-		tl.getKeyFrames().clear();
-		tl.getKeyFrames().addAll(
-				new KeyFrame(Duration.millis(0), new KeyValue(lingerLevelDbProp, lingerLevelDbProp.get())),
-				new KeyFrame(Duration.millis(propReactionTime.getProp().get()), 
-						new KeyValue(lingerLevelDbProp, currentDbPeak))
-				);
-		tl.play();
+		// Update indicator and peak
+		Platform.runLater(new Runnable() {
+			public void run() {
+				tl.stop();
+				tl.getKeyFrames().clear();
+				tl.getKeyFrames().addAll(
+						new KeyFrame(Duration.millis(0), new KeyValue(lingerLevelDbProp, lingerLevelDbProp.get())),
+						new KeyFrame(Duration.millis(propReactionTime.getProp().get()), 
+								new KeyValue(lingerLevelDbProp, currentDbPeak))
+						);
+				tl.play();
+				currentDbPeakProp.set(currentDbPeak);
+			}
+		});
 		
-		// Update peak
-		currentDbPeakProp.set(currentDbPeak);
 	}
 
 	@Override

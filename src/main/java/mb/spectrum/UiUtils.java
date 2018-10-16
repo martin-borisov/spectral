@@ -13,6 +13,9 @@ import javafx.animation.SequentialTransition;
 import javafx.animation.Transition;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.Property;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
@@ -31,6 +34,7 @@ import mb.spectrum.prop.ConfigurableChoiceProperty;
 import mb.spectrum.prop.ConfigurableColorProperty;
 import mb.spectrum.prop.ConfigurableDoubleProperty;
 import mb.spectrum.prop.ConfigurableIntegerProperty;
+import mb.spectrum.prop.ConfigurableProperty;
 
 public class UiUtils {
 	
@@ -98,14 +102,6 @@ public class UiUtils {
 		return fadeOut;
 	}
 	
-//	public static Spinner<Double> createDoubleSpinner(double min, double max, double initValue, double step) {
-//		return new Spinner<Double>(new DoubleSpinnerValueFactory(min, max, initValue, step));
-//	}
-//	
-//	public static Spinner<Integer> createIntegerSpinner(int min, int max, int initValue, int step) {
-//		return new Spinner<Integer>(new IntegerSpinnerValueFactory(min, max, initValue, step));
-//	}
-	
 	public static ColorPicker createColorPropertyColorPicker(Color color, Pane parent) {
 		ColorPicker picker = new ColorPicker(color);
 		picker.styleProperty().bind(Bindings.concat(
@@ -162,6 +158,13 @@ public class UiUtils {
 			cs.setProperty(key, colorToWeb(newVal));
 		});
 		return prop;
+	}
+	
+	public static ConfigurableDoubleProperty createConfigurableDoubleProperty(DoubleProperty property, String key, String name, 
+			Double minValue, Double maxValue, Double defaultValue, Double increment) {
+		ConfigurableDoubleProperty confProp = createConfigurableDoubleProperty(key, name, minValue, maxValue, defaultValue, increment);
+		property.bind(confProp.getProp());
+		return confProp;
 	}
 	
 	public static ConfigurableDoubleProperty createConfigurableDoubleProperty(String key, String name, 
@@ -222,5 +225,27 @@ public class UiUtils {
 				Platform.runLater(runnable);
 			}
 		}, seconds * 1000);
+	}
+	
+	@SuppressWarnings("unchecked")
+	public static <T> ConfigurableProperty<T> createConfigurableProperty(Property<T> property, String key, String name, Object...values) {
+		ConfigurableProperty<T> confProp;
+		if(property instanceof DoubleProperty) {
+			confProp = (ConfigurableProperty<T>) createConfigurableDoubleProperty(key, name, 
+					(double) values[0], (double) values[1], (double) values[2], (double) values[3]);
+			property.bind(confProp.getProp());
+		} else if(property instanceof ObjectProperty && 
+				((ObjectProperty<?>) property).get() instanceof Color) {
+			confProp = (ConfigurableProperty<T>) createConfigurableColorProperty(
+					key, name, (Color) values[0]);
+			property.bind(confProp.getProp());
+			
+			// TODO Add other supported configurable property types
+			
+		} else {
+			throw new IllegalArgumentException("Unsupported property type: "
+					+ property.getClass().getName());
+		}
+		return confProp;
 	}
 }

@@ -58,7 +58,7 @@ public class ColorControl extends GridPane {
 		int sliderIdx = sliders.indexOf(slider);
 		return (sliderIdx > 0);
 	}
-	
+
 	private void createControls() {
 		hue = createSlider(0, 360, colorProperty.get().getHue());
 		hue.setBlockIncrement(10);
