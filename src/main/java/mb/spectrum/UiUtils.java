@@ -7,6 +7,8 @@ import java.text.MessageFormat;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javafx.animation.FadeTransition;
 import javafx.animation.SequentialTransition;
@@ -200,6 +202,13 @@ public class UiUtils {
 			cs.setProperty(key, String.valueOf(newVal));
 		});
 		return prop;
+	}
+	
+	public static <T extends Enum<T>> ConfigurableChoiceProperty createConfigurableChoiceProperty(
+			String key, String name, Class<T> enumType) {
+		return UiUtils.createConfigurableChoiceProperty(key, name, 
+				Stream.of(enumType.getEnumConstants()).map(String::valueOf).collect(Collectors.toList()), 
+				enumType.getEnumConstants()[0].toString());
 	}
 	
 	public static ConfigurableChoiceProperty createConfigurableChoiceProperty(String key, String name, 
