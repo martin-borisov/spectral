@@ -23,21 +23,25 @@ import javafx.scene.text.Font;
 import javafx.util.Duration;
 import mb.spectrum.UiUtils;
 import mb.spectrum.Utils;
+import mb.spectrum.prop.ConfigurableBooleanProperty;
 import mb.spectrum.prop.ConfigurableChoiceProperty;
 import mb.spectrum.prop.ConfigurableColorProperty;
+import mb.spectrum.prop.ConfigurableDoubleProperty;
 import mb.spectrum.prop.ConfigurableIntegerProperty;
 import mb.spectrum.prop.ConfigurableProperty;
 
 public class GaugeView extends AbstractView {
 	
-	private ConfigurableIntegerProperty propMinDbValue;
+	private ConfigurableIntegerProperty propMinDbValue, propSensitivity;
 	private ConfigurableChoiceProperty propType, propNeedleSize, propNeedleShape, propKnobType, 
 		propMajorTickMarkType, propMediumTickMarkType, propMinorTickMarkType;
 	private ConfigurableColorProperty propDialColor, propNeedleColor, propKnobColor, 
-		propMediumTickMarkColor, propMinorTickMarkColor;
+		propMediumTickMarkColor, propMinorTickMarkColor, propMovingAverageColor;
+	private ConfigurableDoubleProperty propMajorTickLength, propMediumTickLength, propMinorTickLength;
+	private ConfigurableBooleanProperty propShowMovingAverage;
 	
 	private Gauge gauge;
-	private double currentDbL, currentDbR;
+	private double currentDb;
 	private Timeline tl;
 	
 	public GaugeView() {
@@ -48,7 +52,7 @@ public class GaugeView extends AbstractView {
 
 	@Override
 	public String getName() {
-		return "Gauge View";
+		return "Simple Analog Meter View";
 	}
 	
 	@Override
@@ -62,8 +66,11 @@ public class GaugeView extends AbstractView {
 		propMinDbValue.getProp().addListener((obs, oldVal, newVal) -> {
 			reset();
 		});
+		propSensitivity = UiUtils.createConfigurableIntegerProperty(
+				keyPrefix + "sensitivity", "Sensitivity (ms)" , 100, 1000, 220, 10);
 		propType = UiUtils.createConfigurableChoiceProperty(
-				keyPrefix + "type", "Type", SkinType.class);
+				keyPrefix + "type", "Type", 
+				Arrays.asList("HORIZONTAL", "VERTICAL", "QUARTER"), "HORIZONTAL");
 		propType.getProp().addListener((obs, oldVal, newVal) -> {
 			reset();
 		});
@@ -90,6 +97,16 @@ public class GaugeView extends AbstractView {
 				keyPrefix + "mediumTickMarkColor", "Med. Tick Mark Color", Color.LIGHTGRAY);
 		propMinorTickMarkColor = UiUtils.createConfigurableColorProperty( 
 				keyPrefix + "minorTickMarkColor", "Min. Tick Mark Color", Color.LIGHTGRAY);
+		propMajorTickLength = UiUtils.createConfigurableDoubleProperty(
+				keyPrefix + "majorTickLength", "Major Tick Length", 0.1, 1.0, 0.4, 0.1);
+		propMediumTickLength = UiUtils.createConfigurableDoubleProperty(
+				keyPrefix + "mediumTickLength", "Med. Tick Length", 0.1, 1.0, 0.3, 0.1);
+		propMinorTickLength = UiUtils.createConfigurableDoubleProperty(
+				keyPrefix + "minorTickLength", "Minor Tick Length", 0.1, 1.0, 0.2, 0.1);
+		propShowMovingAverage = UiUtils.createConfigurableBooleanProperty(
+				keyPrefix + "showMovingAverage", "Show Moving Average", true);
+		propMovingAverageColor = UiUtils.createConfigurableColorProperty( 
+				keyPrefix + "movingAverageColor", "Moving Average Color", Color.RED);
 		
 	}
 
@@ -97,6 +114,7 @@ public class GaugeView extends AbstractView {
 	public List<ConfigurableProperty<? extends Object>> getProperties() {
 		return Arrays.asList(
 				propMinDbValue, 
+				propSensitivity,
 				propType,
 				propDialColor,
 				propNeedleColor,
@@ -108,12 +126,17 @@ public class GaugeView extends AbstractView {
 				propMediumTickMarkType,
 				propMinorTickMarkType,
 				propMediumTickMarkColor,
-				propMinorTickMarkColor);
+				propMinorTickMarkColor,
+				propMajorTickLength,
+				propMediumTickLength,
+				propMinorTickLength,
+				propShowMovingAverage,
+				propMovingAverageColor);
 	}
 
 	@Override
 	public void dataAvailable(float[] left, float[] right) {
-		currentDbL = Utils.toDB(peakLevel(left));
+		currentDb = Utils.toDB(peakLevel(left));
 		
 		// Update indicator
 		Platform.runLater(new Runnable() {
@@ -122,8 +145,8 @@ public class GaugeView extends AbstractView {
 				tl.getKeyFrames().clear();
 				tl.getKeyFrames().addAll(
 						new KeyFrame(Duration.millis(0), new KeyValue(gauge.valueProperty(), gauge.valueProperty().get())),
-						new KeyFrame(Duration.millis(220), 
-								new KeyValue(gauge.valueProperty(), currentDbL))
+						new KeyFrame(Duration.millis(propSensitivity.get()), 
+								new KeyValue(gauge.valueProperty(), currentDb))
 						);
 				tl.play();
 			}
@@ -149,9 +172,7 @@ public class GaugeView extends AbstractView {
                 .backgroundPaint(Color.BLACK)
                 .valueVisible(false) // Hide current value label
                 .angleRange(135) // TODO
-                .averageVisible(true) // TODO
-                .averagingEnabled(true) // TODO Linked with previous
-                .averagingPeriod(100) // TODO
+                .averagingPeriod(100) // If averaging is enabled
                 
                 // TODO Try to set a custom font, which doesn't work for some reason
                 .title("Analog Meter")
@@ -173,8 +194,8 @@ public class GaugeView extends AbstractView {
  
                 
                 // Applicable to only some gauge types
-                .maxMeasuredValueVisible(true) // Doesn't have effect
-                .minMeasuredValueVisible(true) // Doesn't have effect
+                //.maxMeasuredValueVisible(true) // Doesn't have effect
+                //.minMeasuredValueVisible(true) // Doesn't have effect
                 //.sectionsVisible(true)
                 //.sections(new Section(0, 33, Color.rgb(34, 180, 11)),
                 //          new Section(33, 66, Color.rgb(255, 146, 0)),
@@ -225,6 +246,12 @@ public class GaugeView extends AbstractView {
         		}, propMinorTickMarkType.getProp()));
         gauge.mediumTickMarkColorProperty().bind(propMediumTickMarkColor.getProp());
         gauge.minorTickMarkColorProperty().bind(propMinorTickMarkColor.getProp());
+        gauge.majorTickMarkLengthFactorProperty().bind(propMajorTickLength.getProp());
+        gauge.mediumTickMarkLengthFactorProperty().bind(propMediumTickLength.getProp());
+        gauge.minorTickMarkLengthFactorProperty().bind(propMinorTickLength.getProp());
+        gauge.averageVisibleProperty().bind(propShowMovingAverage.getProp());
+        gauge.averagingEnabledProperty().bind(propShowMovingAverage.getProp());
+        gauge.averageColorProperty().bind(propMovingAverageColor.getProp());
         
 		return Arrays.asList(gauge);
 	}
