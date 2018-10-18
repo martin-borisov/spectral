@@ -63,6 +63,7 @@ import mb.spectrum.view.SoundWaveView;
 import mb.spectrum.view.SpectrumAreaView;
 import mb.spectrum.view.SpectrumBarView;
 import mb.spectrum.view.StereoAnalogMetersView;
+import mb.spectrum.view.StereoGaugeView;
 import mb.spectrum.view.StereoLevelsLedView;
 import mb.spectrum.view.StereoLevelsLedView3D;
 import mb.spectrum.view.StereoLevelsView;
@@ -70,6 +71,8 @@ import mb.spectrum.view.View;
 
 public class Spectrum extends Application {
 	
+	private static final boolean EMBEDDED = Boolean.valueOf(
+			ConfigService.getInstance().getProperty("embedded"));
 	private static final int SAMPLING_RATE = Integer.valueOf(
 			ConfigService.getInstance().getProperty("mb.sampling-rate"));
 	private static final int BUFFER_SIZE = Integer.valueOf(
@@ -88,18 +91,20 @@ public class Spectrum extends Application {
 	private Scene scene;
 	private Minim minim;
 	private AudioSource in;
-	private View[] views = new View[] {
-			new GaugeView(),
-			new SoundWaveView(BUFFER_SIZE),
-			new StereoAnalogMetersView(),
-			new StereoLevelsLedView3D(),
-			//new CubeView(),
-			new AnalogMeterView("Analog Meter", "analogMeterView", "Peak", Orientation.HORIZONTAL),
-			new StereoLevelsLedView(),
-			new SpectrumBarView(),
-			new SpectrumAreaView(),
-			new StereoLevelsView(),
-			};
+	private List<View> views = new ArrayList<>(
+			Arrays.asList(
+					new StereoGaugeView(),
+					new GaugeView("Analog Meter", "gaugeView", false),
+					new SoundWaveView(BUFFER_SIZE),
+					new StereoLevelsLedView3D(),
+					//new CubeView(),
+					new AnalogMeterView("Analog Meter", "analogMeterView", "Peak", Orientation.HORIZONTAL),
+					new StereoLevelsLedView(),
+					new SpectrumBarView(),
+					new SpectrumAreaView(),
+					new StereoLevelsView()
+			)
+		);
 	private View currentView;
 	private int currentViewIdx;
 	private Timer viewRotateTimer;
@@ -118,8 +123,12 @@ public class Spectrum extends Application {
 	
 	public Spectrum() {
 		currentViewIdx = 0;
-		currentView = views[currentViewIdx];
+		currentView = views.get(currentViewIdx);
 		minim = new Minim(new JSMinim(new MinimInitializer()));
+		
+		if(!EMBEDDED) {
+			views.add(new StereoAnalogMetersView());
+		}
 	}
 
 	@Override
@@ -220,9 +229,9 @@ public class Spectrum extends Application {
 	private void setupStage(Stage stage) {
 		
 		// This is necessary for the fade out/in transitions when switching views 
-		for (int i = 0; i < views.length; i++) {
+		for (int i = 0; i < views.size(); i++) {
 			if(i != currentViewIdx) {
-				views[i].getRoot().setOpacity(0);
+				views.get(i).getRoot().setOpacity(0);
 			}
 		}
 		
@@ -393,8 +402,8 @@ public class Spectrum extends Application {
 	 */
 	private void nextView() {
 		int idx = currentViewIdx + 1;
-		if(idx > views.length - 1) {
-			idx = views.length - 1;
+		if(idx > views.size() - 1) {
+			idx = views.size() - 1;
 		}
 		switchView(idx);
 	}
@@ -424,7 +433,7 @@ public class Spectrum extends Application {
 					currentView.onHide();
 					
 					// Set new current view and add to scene
-					currentView = views[currentViewIdx];
+					currentView = views.get(currentViewIdx);
 					scene.setRoot(currentView.getRoot());
 					
 					UiUtils.createFadeInTransition(currentView.getRoot(), 500, new EventHandler<ActionEvent>() {
@@ -634,7 +643,7 @@ public class Spectrum extends Application {
 				// Don't switch views if a property is currently visible
 				if(currentPropertyNode == null) {
 					final int idx;
-					if(currentViewIdx + 1 > views.length - 1) {
+					if(currentViewIdx + 1 > views.size() - 1) {
 						idx = 0;
 					} else {
 						idx = currentViewIdx + 1;

@@ -5,7 +5,10 @@ import static java.text.MessageFormat.format;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Enumeration;
 import java.util.Properties;
+import java.util.TreeSet;
 
 public class ConfigService {
 
@@ -58,7 +61,14 @@ public class ConfigService {
 				FileInputStream fis = null;
 				try {
 					fis = new FileInputStream("config.properties");
-					properties = new Properties();
+					properties = new Properties()  {
+						private static final long serialVersionUID = 2309880819740125962L;
+						
+						// Order alphabetically
+						public synchronized Enumeration<Object> keys() {
+					        return Collections.enumeration(new TreeSet<Object>(super.keySet()));
+					    }
+					};
 					properties.load(fis);
 				} catch (Exception e) {
 					throw new RuntimeException("Failed to load properties file", e);

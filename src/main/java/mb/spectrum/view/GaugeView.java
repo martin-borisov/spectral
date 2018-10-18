@@ -9,14 +9,17 @@ import eu.hansolo.medusa.Gauge;
 import eu.hansolo.medusa.Gauge.KnobType;
 import eu.hansolo.medusa.Gauge.NeedleShape;
 import eu.hansolo.medusa.Gauge.NeedleSize;
+import eu.hansolo.medusa.Gauge.ScaleDirection;
 import eu.hansolo.medusa.Gauge.SkinType;
 import eu.hansolo.medusa.GaugeBuilder;
+import eu.hansolo.medusa.TickLabelOrientation;
 import eu.hansolo.medusa.TickMarkType;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
@@ -30,36 +33,45 @@ import mb.spectrum.prop.ConfigurableDoubleProperty;
 import mb.spectrum.prop.ConfigurableIntegerProperty;
 import mb.spectrum.prop.ConfigurableProperty;
 
-public class GaugeView extends AbstractView {
+public class GaugeView extends AbstractMixedChannelView {
 	
 	private ConfigurableIntegerProperty propMinDbValue, propSensitivity;
-	private ConfigurableChoiceProperty propType, propNeedleSize, propNeedleShape, propKnobType, 
+	
+	// This is with default package access for the benefit of StereoGaugeView
+	ConfigurableChoiceProperty propType;
+	
+	private ConfigurableChoiceProperty propNeedleSize, propNeedleShape, propLabelOrientation, propKnobType, 
 		propMajorTickMarkType, propMediumTickMarkType, propMinorTickMarkType;
-	private ConfigurableColorProperty propDialColor, propNeedleColor, propKnobColor, 
+	private ConfigurableColorProperty propDialColor, propNeedleColor, propKnobColor, propMajorTickMarkColor,
 		propMediumTickMarkColor, propMinorTickMarkColor, propMovingAverageColor;
 	private ConfigurableDoubleProperty propMajorTickLength, propMediumTickLength, propMinorTickLength;
 	private ConfigurableBooleanProperty propShowMovingAverage;
 	
+	private String name, propKeyPrefix;
+	private boolean mirrored;
 	private Gauge gauge;
 	private double currentDb;
 	private Timeline tl;
 	
-	public GaugeView() {
+	public GaugeView(String name, String propKeyPrefix, boolean mirrored) {
 		super(true);
+		this.name = name;
+		this.propKeyPrefix = propKeyPrefix;
+		this.mirrored = mirrored;
 		tl = new Timeline();
 		init();
 	}
 
 	@Override
 	public String getName() {
-		return "Simple Analog Meter View";
+		return "Simple Analog Meter - Mono";
 	}
 	
 	@Override
 	protected void initProperties() {
 		super.initProperties();
 		
-		final String keyPrefix = "gaugeView.";
+		final String keyPrefix = propKeyPrefix + ".";
 		
 		propMinDbValue = UiUtils.createConfigurableIntegerProperty(
 				keyPrefix + "minDbValue", "Min. DB Value", -100, -20, -60, 5);
@@ -78,6 +90,8 @@ public class GaugeView extends AbstractView {
 				keyPrefix + "needleSize", "Needle Size", NeedleSize.class);
 		propNeedleShape = UiUtils.createConfigurableChoiceProperty(
 				keyPrefix + "needleShape", "Needle Shape", NeedleShape.class);
+		propLabelOrientation = UiUtils.createConfigurableChoiceProperty(
+				keyPrefix + "labelOrientation", "Label Orientation", TickLabelOrientation.class);
 		propDialColor = UiUtils.createConfigurableColorProperty( 
 				keyPrefix + "dialColor", "Dial Color", Color.WHITE);
 		propNeedleColor = UiUtils.createConfigurableColorProperty( 
@@ -93,6 +107,8 @@ public class GaugeView extends AbstractView {
 				keyPrefix + "mediumTickMarkType", "Medium Tick Type", TickMarkType.class);
 		propMinorTickMarkType = UiUtils.createConfigurableChoiceProperty(
 				keyPrefix + "minorTickMarkType", "Minor Tick Type", TickMarkType.class);
+		propMajorTickMarkColor = UiUtils.createConfigurableColorProperty( 
+				keyPrefix + "majorTickMarkColor", "Maj. Tick Mark Color", Color.RED);
 		propMediumTickMarkColor = UiUtils.createConfigurableColorProperty( 
 				keyPrefix + "mediumTickMarkColor", "Med. Tick Mark Color", Color.LIGHTGRAY);
 		propMinorTickMarkColor = UiUtils.createConfigurableColorProperty( 
@@ -116,15 +132,17 @@ public class GaugeView extends AbstractView {
 				propMinDbValue, 
 				propSensitivity,
 				propType,
-				propDialColor,
-				propNeedleColor,
 				propNeedleSize,
 				propNeedleShape,
+				propLabelOrientation,
 				propKnobType,
+				propDialColor,
+				propNeedleColor,
 				propKnobColor,
 				propMajorTickMarkType,
 				propMediumTickMarkType,
 				propMinorTickMarkType,
+				propMajorTickMarkColor,
 				propMediumTickMarkColor,
 				propMinorTickMarkColor,
 				propMajorTickLength,
@@ -133,10 +151,10 @@ public class GaugeView extends AbstractView {
 				propShowMovingAverage,
 				propMovingAverageColor);
 	}
-
+	
 	@Override
-	public void dataAvailable(float[] left, float[] right) {
-		currentDb = Utils.toDB(peakLevel(left));
+	public void dataAvailable(float[] data) {
+		currentDb = Utils.toDB(peakLevel(data));
 		
 		// Update indicator
 		Platform.runLater(new Runnable() {
@@ -163,7 +181,6 @@ public class GaugeView extends AbstractView {
         gauge = GaugeBuilder.create()
         		.skinType(SkinType.valueOf(propType.get())) // AMP, HORIZONTAL, KPI, LINEAR, MODERN, QUARTER, SECTION, SIMPLE, SPACE_X, TILE_KPI, VERTICAL
         		
-        		
         		// Mandatory
                 .unit("dB")
                 .decimals(0)
@@ -172,10 +189,10 @@ public class GaugeView extends AbstractView {
                 .backgroundPaint(Color.BLACK)
                 .valueVisible(false) // Hide current value label
                 .angleRange(135) // TODO
-                .averagingPeriod(100) // If averaging is enabled
+                .averagingPeriod(100) // Applicable when averaging is enabled
                 
                 // TODO Try to set a custom font, which doesn't work for some reason
-                .title("Analog Meter")
+                .title(name)
                 .customFont(Font.loadFont(GaugeView.class.getResource(
                 		"/AlexBrush-Regular.ttf").toExternalForm(), 10))
                 .customFontEnabled(true)
@@ -183,14 +200,15 @@ public class GaugeView extends AbstractView {
                 // Covered
                 //.unitColor(Color.WHITE)
                 //.titleColor(Color.WHITE)
-                //.majorTickMarkColor(Color.WHITE) // ->
-                //.mediumTickMarkColor(Color.RED) // ->
-                //.minorTickMarkColor(Color.WHITE) // ->
-                //.minorTickMarkType(TickMarkType.LINE) // ->
-                //.needleSize(NeedleSize.THIN) // ->
-                //.needleShape(NeedleShape.ANGLED) // ->
-                //.tickLabelColor(Color.WHITE) // ->
-                //.knobType(KnobType.METAL) // ->
+                //.majorTickMarkColor(Color.WHITE)
+                //.mediumTickMarkColor(Color.RED)
+                //.minorTickMarkColor(Color.WHITE)
+                //.minorTickMarkType(TickMarkType.LINE)
+                //.needleSize(NeedleSize.THIN)
+                //.needleShape(NeedleShape.ANGLED)
+                //.tickLabelColor(Color.WHITE)
+                //.knobType(KnobType.METAL)
+                //.tickLabelOrientation(TickLabelOrientation.HORIZONTAL)
  
                 
                 // Applicable to only some gauge types
@@ -216,7 +234,6 @@ public class GaugeView extends AbstractView {
         // Configurable properties
         gauge.unitColorProperty().bind(propDialColor.getProp());
         gauge.titleColorProperty().bind(propDialColor.getProp());
-        gauge.majorTickMarkColorProperty().bind(propDialColor.getProp());
         gauge.tickLabelColorProperty().bind(propDialColor.getProp());
         gauge.needleColorProperty().bind(propNeedleColor.getProp());
         gauge.needleSizeProperty().bind(Bindings.createObjectBinding(
@@ -227,6 +244,10 @@ public class GaugeView extends AbstractView {
         		() -> {
         			return NeedleShape.valueOf(propNeedleShape.get());
         		}, propNeedleShape.getProp()));
+        gauge.tickLabelOrientationProperty().bind(Bindings.createObjectBinding(
+        		() -> {
+        			return TickLabelOrientation.valueOf(propLabelOrientation.get());
+        		}, propLabelOrientation.getProp()));
         gauge.knobTypeProperty().bind(Bindings.createObjectBinding(
         		() -> {
         			return KnobType.valueOf(propKnobType.get());
@@ -244,6 +265,7 @@ public class GaugeView extends AbstractView {
         		() -> {
         			return TickMarkType.valueOf(propMinorTickMarkType.get());
         		}, propMinorTickMarkType.getProp()));
+        gauge.majorTickMarkColorProperty().bind(propMajorTickMarkColor.getProp());
         gauge.mediumTickMarkColorProperty().bind(propMediumTickMarkColor.getProp());
         gauge.minorTickMarkColorProperty().bind(propMinorTickMarkColor.getProp());
         gauge.majorTickMarkLengthFactorProperty().bind(propMajorTickLength.getProp());
@@ -253,7 +275,17 @@ public class GaugeView extends AbstractView {
         gauge.averagingEnabledProperty().bind(propShowMovingAverage.getProp());
         gauge.averageColorProperty().bind(propMovingAverageColor.getProp());
         
+		if(mirrored) {
+			if("VERTICAL".equals(propType.get())) {
+				gauge.setKnobPosition(Pos.CENTER_LEFT);
+				gauge.setScaleDirection(ScaleDirection.COUNTER_CLOCKWISE);
+			} else if("QUARTER".equals(propType.get())) {
+				gauge.setKnobPosition(Pos.BOTTOM_LEFT);
+				gauge.setScaleDirection(ScaleDirection.COUNTER_CLOCKWISE);
+			}
+		}
+		
+        
 		return Arrays.asList(gauge);
 	}
-
 }
