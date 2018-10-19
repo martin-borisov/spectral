@@ -71,7 +71,7 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 	private ConfigurableBooleanProperty propVisualEnableExtras;
 	
 	/* Operational and optimization properties */
-	private DoubleProperty currentDbRmsProp, currentDbPeakProp, lingerLevelDbProp, 
+	private DoubleProperty currentDbPeakProp, lingerLevelDbProp, 
 		radiusProp, centerXProp, centerYProp, currentLevelRadProp;
 	private ObjectProperty<Color> darkerPeakColorProp;
 	
@@ -167,7 +167,6 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 				keyPrefix + "bgFocusDistance", "Basic Light Dist.", 0, 100, 0, 1);
 		
 		/* Operational properties */
-		currentDbRmsProp = new SimpleDoubleProperty(propMinDbValue.getProp().get());
 		currentDbPeakProp = new SimpleDoubleProperty(propMinDbValue.getProp().get());
 		lingerLevelDbProp = new SimpleDoubleProperty(propMinDbValue.getProp().get());
 		

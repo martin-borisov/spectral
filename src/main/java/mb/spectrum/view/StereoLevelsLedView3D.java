@@ -442,6 +442,6 @@ public class StereoLevelsLedView3D extends AbstractView {
 	}
 	
 	private void onTriggerEffect() {
-		// TODO
+		// TODO Implement random effects like flashes or color changes
 	}
 }

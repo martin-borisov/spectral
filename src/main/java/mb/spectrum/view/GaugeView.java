@@ -36,10 +36,7 @@ import mb.spectrum.prop.ConfigurableProperty;
 public class GaugeView extends AbstractMixedChannelView {
 	
 	private ConfigurableIntegerProperty propMinDbValue, propSensitivity;
-	
-	// This is with default package access for the benefit of StereoGaugeView
-	ConfigurableChoiceProperty propType;
-	
+	private ConfigurableChoiceProperty propType;
 	private ConfigurableChoiceProperty propNeedleSize, propNeedleShape, propLabelOrientation, propKnobType, 
 		propMajorTickMarkType, propMediumTickMarkType, propMinorTickMarkType;
 	private ConfigurableColorProperty propDialColor, propNeedleColor, propKnobColor, propMajorTickMarkColor,

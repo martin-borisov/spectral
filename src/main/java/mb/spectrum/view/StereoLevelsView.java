@@ -189,21 +189,6 @@ public class StereoLevelsView extends AbstractView {
 		nodes.addAll(Arrays.asList(
 				leftDrBar, rightDrBar, leftBar, rightBar, leftLingerLevel, rightLingerLevel, 
 				leftMinLevel, leftMaxLevel, rightMinLevel, rightMaxLevel));
-		
-		/*
-		Image image = new Image(getClass().getResourceAsStream("/resources/page-bg-2.jpg"));
-		
-		BackgroundImage myBI= new BackgroundImage(image,
-		        BackgroundRepeat.REPEAT, BackgroundRepeat.REPEAT, BackgroundPosition.DEFAULT,
-		          BackgroundSize.DEFAULT);
-		
-		Region region = new Region();
-		region.setBackground(new Background(myBI));
-		region.prefWidthProperty().bind(getRoot().widthProperty());
-		region.prefHeightProperty().bind(getRoot().heightProperty());
-		nodes.add(region);
-		*/
-		
 		return nodes;
 	}
 	

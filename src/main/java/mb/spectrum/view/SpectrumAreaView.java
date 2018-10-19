@@ -14,9 +14,6 @@ import javafx.scene.shape.Path;
 import mb.spectrum.UiUtils;
 import mb.spectrum.prop.ConfigurableProperty;
 
-/**
- * TODO: Check if the DB lines show real values
- */
 public class SpectrumAreaView extends AbstractSpectrumView {
 	
 	private ConfigurableProperty<Color> propAreaColor;

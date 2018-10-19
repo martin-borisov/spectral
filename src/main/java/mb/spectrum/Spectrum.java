@@ -97,7 +97,6 @@ public class Spectrum extends Application {
 					new GaugeView("Analog Meter", "gaugeView", false),
 					new SoundWaveView(BUFFER_SIZE),
 					new StereoLevelsLedView3D(),
-					//new CubeView(),
 					new AnalogMeterView("Analog Meter", "analogMeterView", "Peak", Orientation.HORIZONTAL),
 					new StereoLevelsLedView(),
 					new SpectrumBarView(),
@@ -444,18 +443,6 @@ public class Spectrum extends Application {
 							
 							// Show view label with animation
 							Pane parent = currentView.getRoot();
-							
-							/*
-							Label title = new Label(currentView.getName());
-							title.styleProperty().bind(Bindings.concat(
-									"-fx-font-size: ", parent.widthProperty().divide(20), ";", 
-									"-fx-text-fill: ", VIEW_LABEL_COLOR, ";",
-									"-fx-stroke: white;",
-								    "-fx-stroke-width: 5;"));
-							title.layoutXProperty().bind(parent.widthProperty().subtract(title.widthProperty()).divide(2));
-							title.layoutYProperty().bind(parent.heightProperty().subtract(title.heightProperty()).divide(2));
-							parent.getChildren().add(title);
-							*/
 							
 							BorderPane title = createViewTitlePane(currentView.getName());
 							parent.getChildren().add(title);
