@@ -43,6 +43,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+import mb.spectrum.embedded.EmbeddedStrategy;
 import mb.spectrum.prop.ActionProperty;
 import mb.spectrum.prop.ConfigurableBooleanProperty;
 import mb.spectrum.prop.ConfigurableChoiceProperty;
@@ -65,8 +66,6 @@ import mb.spectrum.view.View;
 
 public class Spectrum extends Application {
 	
-	private static final boolean EMBEDDED = Boolean.valueOf(
-			ConfigService.getInstance().getProperty("embedded"));
 	private static final int SAMPLING_RATE = Integer.valueOf(
 			ConfigService.getInstance().getProperty("mb.sampling-rate"));
 	private static final int BUFFER_SIZE = Integer.valueOf(
@@ -115,7 +114,7 @@ public class Spectrum extends Application {
 		currentView = views.get(currentViewIdx);
 		strategy = StrategyLoader.getInstance().getStrategy();
 		
-		if(!EMBEDDED) {
+		if(strategy instanceof EmbeddedStrategy) {
 			views.add(new StereoAnalogMetersView());
 		}
 	}
