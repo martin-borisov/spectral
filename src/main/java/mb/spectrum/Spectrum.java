@@ -9,11 +9,6 @@ import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import ddf.minim.AudioListener;
-import ddf.minim.AudioPlayer;
-import ddf.minim.AudioSource;
-import ddf.minim.Minim;
-import ddf.minim.javasound.JSMinim;
 import javafx.animation.AnimationTimer;
 import javafx.animation.PauseTransition;
 import javafx.animation.SequentialTransition;
@@ -48,7 +43,6 @@ import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-import mb.spectrum.gpio.StageGpioController;
 import mb.spectrum.prop.ActionProperty;
 import mb.spectrum.prop.ConfigurableBooleanProperty;
 import mb.spectrum.prop.ConfigurableChoiceProperty;
@@ -57,8 +51,8 @@ import mb.spectrum.prop.ConfigurableDoubleProperty;
 import mb.spectrum.prop.ConfigurableIntegerProperty;
 import mb.spectrum.prop.ConfigurableProperty;
 import mb.spectrum.view.AnalogMeterView;
-import mb.spectrum.view.GaugeView;
 import mb.spectrum.view.AnalogMeterView.Orientation;
+import mb.spectrum.view.GaugeView;
 import mb.spectrum.view.SoundWaveView;
 import mb.spectrum.view.SpectrumAreaView;
 import mb.spectrum.view.SpectrumBarView;
@@ -77,8 +71,6 @@ public class Spectrum extends Application {
 			ConfigService.getInstance().getProperty("mb.sampling-rate"));
 	private static final int BUFFER_SIZE = Integer.valueOf(
 			ConfigService.getInstance().getProperty("mb.buffer-size"));
-	private static final boolean ENABLE_GPIO = Boolean.valueOf(
-			ConfigService.getInstance().getProperty("mb.enable-gpio"));
 	
 	private static final int INIT_SCENE_WIDTH = 800;
 	private static final int INIT_SCENE_HEIGHT = 600;
@@ -87,10 +79,8 @@ public class Spectrum extends Application {
 	private static final double VIEW_LABEL_LINGER_MS = 1000;
 	private static final double VIEW_LABEL_FADE_OUT_MS = 1000;
 	
-	private StageGpioController gpio;
+	private PlatformStrategy strategy;
 	private Scene scene;
-	private Minim minim;
-	private AudioSource in;
 	private List<View> views = new ArrayList<>(
 			Arrays.asList(
 					new StereoGaugeView(),
@@ -123,7 +113,7 @@ public class Spectrum extends Application {
 	public Spectrum() {
 		currentViewIdx = 0;
 		currentView = views.get(currentViewIdx);
-		minim = new Minim(new JSMinim(new MinimInitializer()));
+		strategy = StrategyLoader.getInstance().getStrategy();
 		
 		if(!EMBEDDED) {
 			views.add(new StereoAnalogMetersView());
@@ -132,7 +122,7 @@ public class Spectrum extends Application {
 
 	@Override
 	public void start(Stage stage) throws Exception {
-		checkAndEnableGpio(stage);
+		strategy.initialize(stage);
 		initGlobalProperties();
 		startAudio();
         setupStage(stage);
@@ -142,23 +132,11 @@ public class Spectrum extends Application {
 	@Override
 	public void stop() throws Exception {
 		stopAudio();
-		checkAndDisableGpio();
+		strategy.close();
 	}
 	
 	public boolean isPropertiesVisible() {
 		return currentPropertyList != null;
-	}
-	
-	private void checkAndEnableGpio(Stage stage) {
-		if(ENABLE_GPIO) {
-			gpio = new StageGpioController(stage);
-		}
-	}
-	
-	private void checkAndDisableGpio() {
-		if(ENABLE_GPIO && gpio != null) {
-			gpio.close();
-		}
 	}
 	
 	private void initGlobalProperties() {
@@ -188,19 +166,15 @@ public class Spectrum extends Application {
 		String path = params.getNamed().get("file");
 		
 		if(path != null) {
-			in = minim.loadFile(path, BUFFER_SIZE);
-			((AudioPlayer) in).loop();
+			strategy.startAudio(path, BUFFER_SIZE);
 		} else {
-			in = minim.getLineIn(Minim.STEREO, BUFFER_SIZE, SAMPLING_RATE, 16);
-			if(in == null) {
-				throw new RuntimeException("Audio format not supported");
-			}
+			strategy.startAudio(true, BUFFER_SIZE, SAMPLING_RATE, 16);
 		}
 		
-		in.addListener(new AudioListener() {
+		strategy.setListener(new AudioListener() {
 			public void samples(float[] left, float[] right) {
 				
-				// Gain
+				// Global gain
 				float gain = propGlobalGain.getProp().get() / 100f;
 				for (int i = 0; i < left.length; i++) {
 					left[i] = left[i] * gain;
@@ -210,19 +184,13 @@ public class Spectrum extends Application {
 				}
 				
 				currentView.dataAvailable(left, right);
-			}
-			public void samples(float[] paramArrayOfFloat) {
+				
 			}
 		});
 	}
 	
 	private void stopAudio() {
-		if(in != null) {
-			in.close();
-		}
-		if(minim != null) {
-			minim.stop();
-		}
+		strategy.stopAudio();
 	}
 	
 	private void setupStage(Stage stage) {
