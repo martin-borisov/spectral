@@ -43,7 +43,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-import mb.spectrum.embedded.EmbeddedStrategy;
+import mb.spectrum.desktop.DesktopStrategy;
 import mb.spectrum.prop.ActionProperty;
 import mb.spectrum.prop.ConfigurableBooleanProperty;
 import mb.spectrum.prop.ConfigurableChoiceProperty;
@@ -114,7 +114,7 @@ public class Spectrum extends Application {
 		currentView = views.get(currentViewIdx);
 		strategy = StrategyLoader.getInstance().getStrategy();
 		
-		if(strategy instanceof EmbeddedStrategy) {
+		if(DesktopStrategy.class.equals(strategy.getClass())) {
 			views.add(new StereoAnalogMetersView());
 		}
 	}
