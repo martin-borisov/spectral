@@ -14,14 +14,21 @@ import java.util.Map;
 
 import ddf.minim.analysis.FFT;
 import ddf.minim.analysis.FourierTransform;
+import javafx.animation.Animation;
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
+import javafx.animation.Timeline;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.SceneAntialiasing;
 import javafx.scene.SubScene;
 import javafx.scene.control.Label;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
+import javafx.util.Duration;
 import mb.spectrum.ConfigService;
 import mb.spectrum.UiUtils;
 import mb.spectrum.Utils;
@@ -67,6 +74,7 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 	protected int bandCount;
 	private double[] bandValuesDB, trailValuesDB;
 	private double[] trailOpValues;
+	private Timeline[] timelines;
 	
 	private Map<String, View> subViews;
 	
@@ -76,6 +84,7 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 		bandValues = new ArrayList<>();
 		trailValues = new ArrayList<>();
 		init();
+		startAnimation();
 	}
 	
 	protected abstract String getBasePropertyKey();
@@ -136,7 +145,6 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 				new ArrayList<>(subViews.keySet()), subViews.keySet().iterator().next());
 		propPipOpacity =  createConfigurableDoubleProperty(
 				getBasePropertyKey() + ".pipOpacity", "PIP Opacity", 0.0, 1.0, 0.8, 0.05);
-		
 		propGridColor = UiUtils.createConfigurableColorProperty(
 				getBasePropertyKey() + ".gridColor", "Grid Color", Color.web("#fd4a11"));
 	}
@@ -172,6 +180,11 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 				
 		trailOpValues = new double[bandCount];
 		Arrays.fill(trailOpValues, propTrailStayFactor.getProp().get());
+		
+		timelines = new Timeline[bandCount];
+		for (int i = 0; i < bandValuesDB.length; i++) {
+            timelines[i] = new Timeline();
+        }
 		
 		for (int i = 0; i < bandCount; i++) {
 			
@@ -235,13 +248,33 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 		// Update band values
 		for (int i = 0; i < bandCount; i++) {
 			double bandDB = Utils.toDB(fft.getAvg(i), fft.timeSize());
-			
 			bandDB = bandDB < minDbValue ? minDbValue : bandDB;
-			if(bandDB > bandValuesDB[i]) {
-				bandValuesDB[i] = bandDB;
-			}
+			bandValuesDB[i] = bandDB;
 		}
 	}
+	
+    private void startAnimation() {
+
+        KeyFrame frame = new KeyFrame(Duration.millis(60), new EventHandler<ActionEvent>() {
+            public void handle(ActionEvent event) {
+                
+                for (int i = 0; i < bandValuesDB.length; i++) {
+
+                    Timeline tl = timelines[i];
+                    tl.stop();
+                    tl.getKeyFrames().clear();
+                    KeyValue kv = new KeyValue(bandValues.get(i), bandValuesDB[i]);
+                    KeyFrame kf = new KeyFrame(Duration.millis(60), kv);
+                    tl.getKeyFrames().add(kf);
+                    tl.playFromStart();
+                }
+            }
+        });
+        
+        Timeline timeline = new Timeline(frame);
+        timeline.setCycleCount(Animation.INDEFINITE);
+        timeline.play();
+    }
 	
 	@Override
 	public void dataAvailable(float[] left, float[] right) {
@@ -257,6 +290,7 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 	@Override
 	public void nextFrame() {
 		
+	    /*
 		int minDbValue = propMinDbValue.getProp().get();
 		for (int i = 0; i < bandValuesDB.length; i++) {
 
@@ -287,6 +321,7 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 		if(view.getRoot().isVisible()) {
 			view.nextFrame();
 		}
+		*/
 	}
 	
 	private void createHzLineAndLabel(int barIdx, int hz) {
