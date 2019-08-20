@@ -2,6 +2,7 @@ package mb.spectrum;
 
 import static mb.spectrum.UiUtils.createConfigurableBooleanProperty;
 import static mb.spectrum.UiUtils.createConfigurableIntegerProperty;
+import static mb.spectrum.UiUtils.createUtilityPane;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -21,7 +22,6 @@ import javafx.beans.binding.Bindings;
 import javafx.beans.property.ObjectProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -32,17 +32,14 @@ import javafx.scene.control.Label;
 import javafx.scene.control.Slider;
 import javafx.scene.effect.Glow;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.layout.Background;
-import javafx.scene.layout.BackgroundFill;
-import javafx.scene.layout.Border;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.BorderStroke;
-import javafx.scene.layout.BorderStrokeStyle;
-import javafx.scene.layout.BorderWidths;
-import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import mb.spectrum.desktop.DesktopStrategy;
@@ -84,7 +81,6 @@ public class Spectrum extends Application {
     private Scene scene;
     private List<View> views = new ArrayList<>(
             Arrays.asList(
-                    new SpectrumBarView(),
                     new StereoGaugeView(),
                     new GaugeView("Analog Meter", "gaugeView", false),
                     new SoundWaveView(BUFFER_SIZE),
@@ -563,24 +559,6 @@ public class Spectrum extends Application {
         lastPropertyMap.put(currentViewIdx, currentPropIdx);
     }
     
-    private BorderPane createUtilityPane(double widthRatio, double heightRatio, double opacity) {
-
-        BorderPane pane = new BorderPane();
-        Pane parent = currentView.getRoot();
-        
-        // Automatically resize pane based on the scene size
-        pane.prefWidthProperty().bind(parent.widthProperty().divide(widthRatio));
-        pane.prefHeightProperty().bind(parent.heightProperty().divide(heightRatio));
-        pane.layoutXProperty().bind(parent.widthProperty().subtract(pane.widthProperty()).divide(2));
-        pane.layoutYProperty().bind(parent.heightProperty().subtract(pane.heightProperty()).divide(2));
-        pane.setBackground(new Background(
-                new BackgroundFill(Color.rgb(140, 140, 140, opacity), new CornerRadii(5), Insets.EMPTY)));
-        pane.setBorder(new Border(new BorderStroke(Color.DARKGREY, 
-                BorderStrokeStyle.SOLID, new CornerRadii(6), new BorderWidths(2))));
-        
-        return pane;
-    }
-    
     private BorderPane createViewTitlePane(String viewName) {
         
         Label label = new Label(viewName);
@@ -591,7 +569,7 @@ public class Spectrum extends Application {
                 "-fx-text-fill: ", VIEW_LABEL_COLOR, ";"));
         label.setEffect(new Glow(1));
         
-        BorderPane pane = createUtilityPane(1.5, 4, 0.6);
+        BorderPane pane = createUtilityPane(currentView.getRoot(), 1.5, 4, 0.6);
         pane.setCenter(label);
         BorderPane.setAlignment(label, Pos.CENTER);
         
@@ -604,8 +582,7 @@ public class Spectrum extends Application {
     
     private BorderPane createPropertyPane(String name, Region control) {
         
-        BorderPane pane = createUtilityPane(2, 2, 1);
-        //pane.setOpacity(0.9);
+        BorderPane pane = createUtilityPane(currentView.getRoot(), 2, 2, 1);
 
         pane.setCenter(control);
         BorderPane.setAlignment(control, Pos.CENTER);
@@ -620,6 +597,19 @@ public class Spectrum extends Application {
                 "-fx-font-size: ", parent.widthProperty().divide(40), ";", 
                 "-fx-padding: ", parent.widthProperty().divide(50), ";"));
         pane.setTop(label);
+        
+        // TODO Create list of all properties
+        VBox box = new VBox();
+        for (ConfigurableProperty<? extends Object> prop : currentPropertyList) {
+            Text text = new Text(prop.getName());
+            box.getChildren().add(text);
+        }
+        
+        // TODO Highlight selected property
+        ((Text) box.getChildren().get(currentPropIdx)).setFont(Font.font(
+                Font.getDefault().getFamily(), FontWeight.BOLD, Font.getDefault().getSize() + 5));
+        
+        pane.setLeft(box);
         
         // Automatically resize the contained property control based on the pane size
         control.prefWidthProperty().bind(pane.widthProperty().divide(2));

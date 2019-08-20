@@ -20,12 +20,21 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.Property;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.Label;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundFill;
+import javafx.scene.layout.Border;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.BorderStroke;
+import javafx.scene.layout.BorderStrokeStyle;
+import javafx.scene.layout.BorderWidths;
+import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
@@ -257,4 +266,20 @@ public class UiUtils {
 		}
 		return confProp;
 	}
+	
+	public static BorderPane createUtilityPane(Pane parent, double widthRatio, double heightRatio, double opacity) {
+        BorderPane pane = new BorderPane();
+        
+        // Automatically resize pane based on the scene size
+        pane.prefWidthProperty().bind(parent.widthProperty().divide(widthRatio));
+        pane.prefHeightProperty().bind(parent.heightProperty().divide(heightRatio));
+        pane.layoutXProperty().bind(parent.widthProperty().subtract(pane.widthProperty()).divide(2));
+        pane.layoutYProperty().bind(parent.heightProperty().subtract(pane.heightProperty()).divide(2));
+        pane.setBackground(new Background(
+                new BackgroundFill(Color.rgb(140, 140, 140, opacity), new CornerRadii(5), Insets.EMPTY)));
+        pane.setBorder(new Border(new BorderStroke(Color.DARKGREY, 
+                BorderStrokeStyle.SOLID, new CornerRadii(6), new BorderWidths(2))));
+        
+        return pane;
+    }
 }
