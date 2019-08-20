@@ -42,16 +42,33 @@ import mb.spectrum.view.AnalogMeterView.Orientation;
 
 public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 	
+	private enum WindowSize {
+		SMALL(1), MEDIUM(2), LARGE(4);
+		
+		private int value;
+
+		private WindowSize(int value) {
+			this.value = value;
+		}
+		
+		public int getValue() {
+			return value;
+		}
+	}
+	
 	private static final double GRID_LABELS_MARGIN_RATIO = 0.1;
 	private static final double PIP_MARGIN_RATIO = 0.05;
+	private static final int LABEL_SIZE_RATIO = 8;
 	
 	private static final int SAMPLING_RATE = Integer.valueOf(
 			ConfigService.getInstance().getProperty("mb.sampling-rate"));
 	private static final int BUFFER_SIZE = Integer.valueOf(
 			ConfigService.getInstance().getProperty("mb.buffer-size"));
+	private static final int DEFAULT_BUFFER_SIZE_MULTIPLIER = 2;
 	
 	/* Configuration properties */
 	protected ConfigurableIntegerProperty propMinDbValue;
+	private ConfigurableChoiceProperty propWindowSize;
 	private ConfigurableDoubleProperty propSensitivity;
 	private ConfigurableDoubleProperty propTrailStayFactor;
 	private ConfigurableDoubleProperty propTrailAccelerationFactor;
@@ -75,6 +92,8 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 	private double[] bandValuesDB, trailValuesDB;
 	private double[] trailOpValues;
 	private Timeline[] timelines;
+	private int buffFramesCounter;
+	private float[] buffer;
 	
 	private Map<String, View> subViews;
 	
@@ -83,6 +102,7 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 		createSubViews();
 		bandValues = new ArrayList<>();
 		trailValues = new ArrayList<>();
+		buffFramesCounter = 0;
 		init();
 		startAnimation();
 	}
@@ -101,6 +121,7 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 	@Override
 	public List<ConfigurableProperty<? extends Object>> getProperties() {
 		return Arrays.asList(propMinDbValue, 
+				propWindowSize,
 				propSensitivity,
 				propTrailStayFactor,
 				propTrailAccelerationFactor,
@@ -118,6 +139,13 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 		/* Configuration Properties */
 		propMinDbValue = createConfigurableIntegerProperty(
 				getBasePropertyKey() + ".minDbValue", "Min. DB Value", -100, 0, -60, 1);
+		propWindowSize = UiUtils.createConfigurableChoiceProperty(
+				getBasePropertyKey() + ".windowSize", "FFT Window Size", WindowSize.class);
+		propWindowSize.getProp().addListener((obs, oldVal, newVal) -> {
+			if(!newVal.equals(oldVal)) {
+				reset();
+			}
+		});
 		propSensitivity = createConfigurableDoubleProperty(
 				getBasePropertyKey() + ".sensitivity", "Sensitivity", 1.0, 5.0, 1.0, 0.1);
 		propTrailStayFactor = createConfigurableDoubleProperty(
@@ -158,11 +186,13 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 		hLabels = new ArrayList<>();
 		
 		// Get number of bands
-		fft = new FFT(BUFFER_SIZE, SAMPLING_RATE);
+		fft = new FFT(BUFFER_SIZE * getBufferSizeMultiplier(), SAMPLING_RATE);
 		fft.window(FourierTransform.BLACKMAN);
+		buffer = new float[BUFFER_SIZE * getBufferSizeMultiplier()];
 		
 		// For 44100 the values should be 22, 3
-		fft.logAverages(24, 4);
+		// TODO bandsPerOctave should be configurable
+		fft.logAverages(24, getBufferSizeMultiplier() * 4);
 				
 		bandCount = fft.avgSize();
 				
@@ -240,16 +270,27 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 	@Override
 	public void dataAvailable(float[] data) {
 		
-		// Perform forward FFT
-		fft.forward(data);
+		if(buffFramesCounter < getBufferSizeMultiplier()) {
+			
+			// Add a frame to the buffer
+			System.arraycopy(data, 0, buffer, BUFFER_SIZE * buffFramesCounter, data.length);
+			buffFramesCounter++;
+		} else {
 		
-		int minDbValue = propMinDbValue.getProp().get();
+			// Perform forward FFT
+			fft.forward(buffer);
 		
-		// Update band values
-		for (int i = 0; i < bandCount; i++) {
-			double bandDB = Utils.toDB(fft.getAvg(i), fft.timeSize());
-			bandDB = bandDB < minDbValue ? minDbValue : bandDB;
-			bandValuesDB[i] = bandDB;
+			int minDbValue = propMinDbValue.getProp().get();
+		
+			// Update band values
+			for (int i = 0; i < bandCount; i++) {
+				double bandDB = Utils.toDB(fft.getAvg(i), fft.timeSize());
+				bandDB = bandDB < minDbValue ? minDbValue : bandDB;
+				bandValuesDB[i] = bandDB;
+				
+				// Reset buffer
+				buffFramesCounter = 0;
+			}
 		}
 	}
 	
@@ -353,7 +394,7 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 		label.textFillProperty().bind(propGridColor.getProp());
 		label.styleProperty().bind(Bindings.concat(
 				"-fx-font-size: ", Bindings.createDoubleBinding(
-						() -> (getRoot().widthProperty().get() * SCENE_MARGIN_RATIO) / 4,
+						() -> (getRoot().widthProperty().get() * SCENE_MARGIN_RATIO) / LABEL_SIZE_RATIO,
 						getRoot().widthProperty())));
 	}
 	
@@ -396,6 +437,10 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 				"-fx-font-size: ", Bindings.createDoubleBinding(
 						() -> (getRoot().widthProperty().get() * SCENE_MARGIN_RATIO) / 4,
 						getRoot().widthProperty())));
+	}
+	
+	protected int getBufferSizeMultiplier() {
+		return WindowSize.valueOf(propWindowSize.get()).getValue();
 	}
 	
 	@Override
