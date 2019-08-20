@@ -5,7 +5,9 @@ import static mb.spectrum.UiUtils.createConfigurableIntegerProperty;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -65,145 +67,163 @@ import mb.spectrum.view.StereoLevelsView;
 import mb.spectrum.view.View;
 
 public class Spectrum extends Application {
-	
-	private static final int SAMPLING_RATE = Integer.valueOf(
-			ConfigService.getInstance().getProperty("mb.sampling-rate"));
-	private static final int BUFFER_SIZE = Integer.valueOf(
-			ConfigService.getInstance().getProperty("mb.buffer-size"));
-	
-	private static final int INIT_SCENE_WIDTH = 800;
-	private static final int INIT_SCENE_HEIGHT = 600;
-	private static final String VIEW_LABEL_COLOR = "#00aeff";
-	private static final double VIEW_LABEL_FADE_IN_MS = 1000;
-	private static final double VIEW_LABEL_LINGER_MS = 1000;
-	private static final double VIEW_LABEL_FADE_OUT_MS = 1000;
-	
-	private PlatformStrategy strategy;
-	private Scene scene;
-	private List<View> views = new ArrayList<>(
-			Arrays.asList(
-					new StereoGaugeView(),
-					new GaugeView("Analog Meter", "gaugeView", false),
-					new SoundWaveView(BUFFER_SIZE),
-					new StereoLevelsLedView3D(),
-					new AnalogMeterView("Analog Meter", "analogMeterView", "Peak", Orientation.HORIZONTAL),
-					new StereoLevelsLedView(),
-					new SpectrumBarView(),
-					new SpectrumAreaView(),
-					new StereoLevelsView()
-			)
-		);
-	private View currentView;
-	private int currentViewIdx;
-	private Timer viewRotateTimer;
-	
-	/* Property management */
-	private List<ConfigurableProperty<? extends Object>> currentPropertyList;
-	private int currentPropIdx;
-	private BorderPane currentPropertyNode;
-	private Transition currentPropertyTransition;
-	
-	/* Global Properties */
-	List<ConfigurableProperty<? extends Object>> globalPropertyList;
-	private ConfigurableIntegerProperty propGlobalGain;
-	private ConfigurableBooleanProperty propViewAutoRotate;
-	private ConfigurableIntegerProperty propViewAutoRotateInterval;
-	
-	public Spectrum() {
-		currentViewIdx = 0;
-		currentView = views.get(currentViewIdx);
-		strategy = StrategyLoader.getInstance().getStrategy();
-		
-		if(DesktopStrategy.class.equals(strategy.getClass())) {
-			views.add(new StereoAnalogMetersView());
-		}
-	}
+    
+    private static final int SAMPLING_RATE = Integer.valueOf(
+            ConfigService.getInstance().getProperty("mb.sampling-rate"));
+    private static final int BUFFER_SIZE = Integer.valueOf(
+            ConfigService.getInstance().getProperty("mb.buffer-size"));
+    
+    private static final int INIT_SCENE_WIDTH = 800;
+    private static final int INIT_SCENE_HEIGHT = 600;
+    private static final String VIEW_LABEL_COLOR = "#00aeff";
+    private static final double VIEW_LABEL_FADE_IN_MS = 1000;
+    private static final double VIEW_LABEL_LINGER_MS = 1000;
+    private static final double VIEW_LABEL_FADE_OUT_MS = 1000;
+    
+    private PlatformStrategy strategy;
+    private Scene scene;
+    private List<View> views = new ArrayList<>(
+            Arrays.asList(
+                    new SpectrumBarView(),
+                    new StereoGaugeView(),
+                    new GaugeView("Analog Meter", "gaugeView", false),
+                    new SoundWaveView(BUFFER_SIZE),
+                    new StereoLevelsLedView3D(),
+                    new AnalogMeterView("Analog Meter", "analogMeterView", "Peak", Orientation.HORIZONTAL),
+                    new StereoLevelsLedView(),
+                    new SpectrumBarView(),
+                    new SpectrumAreaView(),
+                    new StereoLevelsView()
+            )
+        );
+    private View currentView;
+    private int currentViewIdx;
+    private Timer viewRotateTimer;
+    
+    /* Property management */
+    private List<ConfigurableProperty<? extends Object>> currentPropertyList;
+    private int currentPropIdx;
+    private BorderPane currentPropertyNode;
+    private Transition currentPropertyTransition;
+    private Map<Integer, Integer> lastPropertyMap;
+    
+    /* Global Properties */
+    List<ConfigurableProperty<? extends Object>> globalPropertyList;
+    private ConfigurableIntegerProperty propGlobalGain;
+    private ConfigurableBooleanProperty propViewAutoRotate;
+    private ConfigurableIntegerProperty propViewAutoRotateInterval;
+    private ConfigurableBooleanProperty propEnableSmoothTransitions;
+    
+    public Spectrum() {
+        currentViewIdx = 0;
+        currentView = views.get(currentViewIdx);
+        initLastPropertyMap();
+        strategy = StrategyLoader.getInstance().getStrategy();
+        
+        if(DesktopStrategy.class.equals(strategy.getClass())) {
+            views.add(new StereoAnalogMetersView());
+        }
+    }
 
-	@Override
-	public void start(Stage stage) throws Exception {
-		strategy.initialize(stage);
-		initGlobalProperties();
-		startAudio();
+    @Override
+    public void start(Stage stage) throws Exception {
+        strategy.initialize(stage);
+        initGlobalProperties();
+        startAudio();
         setupStage(stage);
-		startFrameListener();
-	}
+        startFrameListener();
+    }
 
-	@Override
-	public void stop() throws Exception {
-		stopAudio();
-		strategy.close();
-	}
-	
-	public boolean isPropertiesVisible() {
-		return currentPropertyList != null;
-	}
-	
-	private void initGlobalProperties() {
-		final String keyPrefix = "global.";
-		propGlobalGain = createConfigurableIntegerProperty(
-				keyPrefix + "gain", "Global Gain (%)", 10, 400, 100, 10);
-		propViewAutoRotate = createConfigurableBooleanProperty(
-				keyPrefix + "viewAutoRotate", "Auto Rotate Views", false);
-		propViewAutoRotate.getProp().addListener((obs, oldVal, newVal) -> {
-			if(newVal != oldVal) {
-				if(newVal) {
-					scheduleViewRotateTimer();
-				} else {
-					cancelViewRotateTimer();
-				}
-			}
-		});
-		propViewAutoRotateInterval = createConfigurableIntegerProperty(
-				keyPrefix + "viewAutoRotateInterval", "View Rotate Int. (S)", 5, 6000, 60, 5);
-		globalPropertyList = new ArrayList<>(Arrays.asList(
-				propGlobalGain, propViewAutoRotate, propViewAutoRotateInterval));
-	}
+    @Override
+    public void stop() throws Exception {
+        stopAudio();
+        strategy.close();
+    }
+    
+    public boolean isPropertiesVisible() {
+        return currentPropertyList != null;
+    }
+    
+    private void initLastPropertyMap() {
+        lastPropertyMap = new HashMap<>(views.size());
+        
+        // -1 is used for the global property list
+        for (int i = -1; i < views.size(); i++) {
+            lastPropertyMap.put(i, 0);
+        }
+        
+    }
+    
+    private void initGlobalProperties() {
+        final String keyPrefix = "global.";
+        propGlobalGain = createConfigurableIntegerProperty(
+                keyPrefix + "gain", "Global Gain (%)", 10, 400, 100, 10);
+        propViewAutoRotate = createConfigurableBooleanProperty(
+                keyPrefix + "viewAutoRotate", "Auto Rotate Views", false);
+        propViewAutoRotate.getProp().addListener((obs, oldVal, newVal) -> {
+            if(newVal != oldVal) {
+                if(newVal) {
+                    scheduleViewRotateTimer();
+                } else {
+                    cancelViewRotateTimer();
+                }
+            }
+        });
+        propViewAutoRotateInterval = createConfigurableIntegerProperty(
+                keyPrefix + "viewAutoRotateInterval", "View Rotate Int. (S)", 5, 6000, 60, 5);
+        propEnableSmoothTransitions = createConfigurableBooleanProperty(
+                keyPrefix + "enableSmoothTransitions", "Enable Smooth Transitions", true);
+        globalPropertyList = new ArrayList<>(Arrays.asList(
+                propGlobalGain, propViewAutoRotate, propViewAutoRotateInterval, propEnableSmoothTransitions));
+    }
 
-	private void startAudio() {
-		
-		Parameters params = getParameters();
-		String path = params.getNamed().get("file");
-		
-		if(path != null) {
-			strategy.startAudio(path, BUFFER_SIZE);
-		} else {
-			strategy.startAudio(true, BUFFER_SIZE, SAMPLING_RATE, 16);
-		}
-		
-		strategy.setListener(new AudioListener() {
-			public void samples(float[] left, float[] right) {
-				
-				// Global gain
-				float gain = propGlobalGain.getProp().get() / 100f;
-				for (int i = 0; i < left.length; i++) {
-					left[i] = left[i] * gain;
-				}
-				for (int i = 0; i < right.length; i++) {
-					right[i] = right[i] * gain;
-				}
-				
-				currentView.dataAvailable(left, right);
-				
-			}
-		});
-	}
-	
-	private void stopAudio() {
-		strategy.stopAudio();
-	}
-	
-	private void setupStage(Stage stage) {
-		
-		// This is necessary for the fade out/in transitions when switching views 
-		for (int i = 0; i < views.size(); i++) {
-			if(i != currentViewIdx) {
-				views.get(i).getRoot().setOpacity(0);
-			}
-		}
-		
-		// Create scene
+    private void startAudio() {
+        
+        Parameters params = getParameters();
+        String path = params.getNamed().get("file");
+        
+        if(path != null) {
+            strategy.startAudio(path, BUFFER_SIZE);
+        } else {
+            strategy.startAudio(true, BUFFER_SIZE, SAMPLING_RATE, 16);
+        }
+        
+        strategy.setListener(new AudioListener() {
+            public void samples(float[] left, float[] right) {
+                
+                // Global gain
+                float gain = propGlobalGain.getProp().get() / 100f;
+                for (int i = 0; i < left.length; i++) {
+                    left[i] = left[i] * gain;
+                }
+                for (int i = 0; i < right.length; i++) {
+                    right[i] = right[i] * gain;
+                }
+                
+                currentView.dataAvailable(left, right);
+                
+            }
+        });
+    }
+    
+    private void stopAudio() {
+        strategy.stopAudio();
+    }
+    
+    private void setupStage(Stage stage) {
+        
+        // This is necessary for the fade out/in transitions when switching views 
+        if(isSmoothTransitionsEnabled()) {
+            for (int i = 0; i < views.size(); i++) {
+                if(i != currentViewIdx) {
+                    views.get(i).getRoot().setOpacity(0);
+                }
+            }
+        }
+        
+        // Create scene
         stage.setScene(scene = new Scene(currentView.getRoot(), 
-        		INIT_SCENE_WIDTH, INIT_SCENE_HEIGHT, false, SceneAntialiasing.BALANCED));
+                INIT_SCENE_WIDTH, INIT_SCENE_HEIGHT, false, SceneAntialiasing.BALANCED));
         scene.setFill(Color.BLACK);
         
         currentView.onShow();
@@ -213,446 +233,480 @@ public class Spectrum extends Application {
         
         // Event handlers
         stage.addEventFilter(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
-			public void handle(KeyEvent event) {
-				onKey(event);
-			}
-		});
+            public void handle(KeyEvent event) {
+                onKey(event);
+            }
+        });
         
         // View rotate timer
         if(propViewAutoRotate.getProp().get()) {
-        	scheduleViewRotateTimer();
+            scheduleViewRotateTimer();
         }
-	}
-	
-	private void startFrameListener() {
-		new AnimationTimer() {
-			public void handle(long now) {
-				currentView.nextFrame();
-			}
-		}.start();
-	}
-	
-	private void onKey(KeyEvent event) {
-		
-		switch (event.getCode()) {
-		case RIGHT:
-			if(isPropertiesVisible()) {
-				if(!isPropertySliderInFocusAndNotLast()) {
-					nextProperty();
-				} else {
-					cancelPropertyFadeOut();
-					schedulePropertyFadeOut();
-				}
-			} else {
-				nextView();
-			}
-			break;
-			
-		case LEFT:
-			if(isPropertiesVisible()) {
-				if(!isPropertySliderInFocusAndNotFirst()) {
-					prevProperty();
-				} else {
-					cancelPropertyFadeOut();
-					schedulePropertyFadeOut();
-				}
-			} else {
-				prevView();
-			}
-			break;
-		
-		case SPACE:
-			if(event.isControlDown()) {
-				toggleGlobalPropertiesOn();
-			} else {
-				if(isPropertiesVisible()) {
-					togglePropertiesOff();
-				} else {
-					toggleCurrentViewPropertiesOn();
-				}
-			}
-			
-			// Prevents checkbox selection if the currently visible property is a boolean
-			event.consume();
-			break;
-			
-		case ENTER:
-			if(isPropertiesVisible()) {
-				firePropertyButtonIfInFocus();
-			}
-			break;
-			
-		case UP:
-			changeCurrentPropertyValue(true);
-			break;
-			
-		case DOWN:
-			changeCurrentPropertyValue(false);
-			break;
-			
-		case C:
-			if(event.isControlDown()) {
-				Platform.exit();
-			}
-			break;
-			
-		case F:
-			if(event.isControlDown()) {
-				Stage stage = (Stage) scene.getWindow();
-				stage.setFullScreen(true);
-			}
-			break;
-			
-		default:
-			break;
-		}
-	}
-	
-	/**
-	 * Triggers the current property pane fade out after two seconds
-	 */
-	private void schedulePropertyFadeOut() {
-		if(isPropertiesVisible()) {
-			currentPropertyTransition = new SequentialTransition(
-					new PauseTransition(Duration.seconds(2)), 
-					UiUtils.createFadeOutTransition(currentPropertyNode, 1000, 0.5, null));
-			currentPropertyTransition.play();
-		}
-	}
-	
-	/**
-	 * Cancels the current property's transition
-	 */
-	private void cancelPropertyFadeOut() {
-		if(isPropertiesVisible()) {
-			currentPropertyTransition.stop();
-			currentPropertyNode.setOpacity(1);
-		}
-	}
-	
-	/**
-	 * Toggles on the global properties pane
-	 */
-	private void toggleGlobalPropertiesOn() {
-		if(!isPropertiesVisible()) {
-			currentPropertyList = globalPropertyList;
-			currentPropIdx = 0;
-			showProperty(currentPropIdx);
-		}
-	}
-	
-	/**
-	 * Resets the property index and shows first property of current view
-	 */
-	private void toggleCurrentViewPropertiesOn() {
-		if(!isPropertiesVisible() && !currentView.getProperties().isEmpty()) {
-			currentPropertyList = currentView.getProperties();
-			currentPropIdx = 0;
-			showProperty(currentPropIdx);
-		}
-	}
-	
-	/**
-	 * If properties are currently shown, hides the current property
-	 */
-	private void togglePropertiesOff() {
-		if(isPropertiesVisible()) {
-			hideProperty(currentPropertyNode);
-			currentPropertyNode = null;
-			currentPropertyList = null;
-		}
-	}
-	
-	/**
-	 * Switch to the next view from the list.
-	 */
-	private void nextView() {
-		int idx = currentViewIdx + 1;
-		if(idx > views.size() - 1) {
-			idx = views.size() - 1;
-		}
-		switchView(idx);
-	}
-	
-	/**
-	 * Switch to the previous view from the list.
-	 */
-	private void prevView() {
-		int idx = currentViewIdx - 1;
-		if(idx < 0) {
-			idx = 0;
-		}
-		switchView(idx);
-	}
-	
-	private void switchView(int idx) {
-		if(idx != currentViewIdx) {
-			currentViewIdx = idx;
-			
-			// Reset properties
-			togglePropertiesOff();
-			
-			UiUtils.createFadeOutTransition(currentView.getRoot(), 500, new EventHandler<ActionEvent>() {
-				public void handle(ActionEvent event) {
-					
-					// Trigger "hide" of current view
-					currentView.onHide();
-					
-					// Set new current view and add to scene
-					currentView = views.get(currentViewIdx);
-					scene.setRoot(currentView.getRoot());
-					
-					UiUtils.createFadeInTransition(currentView.getRoot(), 500, new EventHandler<ActionEvent>() {
-						public void handle(ActionEvent event) {
-							
-							// Trigger "show" of new view
-							currentView.onShow();
-							
-							// Show view label with animation
-							Pane parent = currentView.getRoot();
-							
-							BorderPane title = createViewTitlePane(currentView.getName());
-							parent.getChildren().add(title);
-							
-							Transition trans = UiUtils.createFadeInOutTransition(
-									title, VIEW_LABEL_FADE_IN_MS, VIEW_LABEL_LINGER_MS, VIEW_LABEL_FADE_OUT_MS, 
-									new EventHandler<ActionEvent>() {
-								public void handle(ActionEvent event) {
-									parent.getChildren().remove(title);
-								}
-							});
-							trans.play();
-							
-						}
-					}).play();
-					
-				}
-			}).play();
-		}
-	}
-	
-	private void nextProperty() {
-		if(currentPropertyNode != null) {
-			hideProperty(currentPropertyNode);
-			currentPropertyNode = null;
-		}
-		
-		currentPropIdx++;
-		if(currentPropIdx > currentPropertyList.size() - 1) {
-			currentPropIdx = currentPropertyList.size() - 1;
-		}
-		showProperty(currentPropIdx);
-	}
-	
-	private void prevProperty() {
-		if(currentPropertyNode != null) {
-			hideProperty(currentPropertyNode);
-			currentPropertyNode = null;
-		}
-		
-		currentPropIdx--;
-		if(currentPropIdx < 0) {
-			currentPropIdx = 0;
-		}
-		showProperty(currentPropIdx);
-	}
-	
-	@SuppressWarnings("unchecked")
-	private void showProperty(int idx) {
+    }
+    
+    private void startFrameListener() {
+        new AnimationTimer() {
+            public void handle(long now) {
+                currentView.nextFrame();
+            }
+        }.start();
+    }
+    
+    private void onKey(KeyEvent event) {
+        
+        switch (event.getCode()) {
+        case RIGHT:
+            if(isPropertiesVisible()) {
+                if(!isPropertySliderInFocusAndNotLast()) {
+                    nextProperty();
+                } else {
+                    cancelPropertyFadeOut();
+                    schedulePropertyFadeOut();
+                }
+            } else {
+                nextView();
+            }
+            break;
+            
+        case LEFT:
+            if(isPropertiesVisible()) {
+                if(!isPropertySliderInFocusAndNotFirst()) {
+                    prevProperty();
+                } else {
+                    cancelPropertyFadeOut();
+                    schedulePropertyFadeOut();
+                }
+            } else {
+                prevView();
+            }
+            break;
+        
+        case SPACE:
+            if(event.isControlDown()) {
+                toggleGlobalPropertiesOn();
+            } else {
+                if(isPropertiesVisible()) {
+                    togglePropertiesOff();
+                } else {
+                    toggleCurrentViewPropertiesOn();
+                }
+            }
+            
+            // Prevents checkbox selection if the currently visible property is a boolean
+            event.consume();
+            break;
+            
+        case ENTER:
+            if(isPropertiesVisible()) {
+                firePropertyButtonIfInFocus();
+            }
+            break;
+            
+        case UP:
+            changeCurrentPropertyValue(true);
+            break;
+            
+        case DOWN:
+            changeCurrentPropertyValue(false);
+            break;
+            
+        case C:
+            if(event.isControlDown()) {
+                Platform.exit();
+            }
+            break;
+            
+        case F:
+            if(event.isControlDown()) {
+                Stage stage = (Stage) scene.getWindow();
+                stage.setFullScreen(true);
+            }
+            break;
+            
+        default:
+            break;
+        }
+    }
+    
+    /**
+     * Triggers the current property pane fade out after two seconds
+     */
+    private void schedulePropertyFadeOut() {
+        if(isPropertiesVisible() && isSmoothTransitionsEnabled()) {
+            currentPropertyTransition = new SequentialTransition(
+                    new PauseTransition(Duration.seconds(2)), 
+                    UiUtils.createFadeOutTransition(currentPropertyNode, 1000, 0.5, null));
+            currentPropertyTransition.play();
+        }
+    }
+    
+    /**
+     * Cancels the current property's transition
+     */
+    private void cancelPropertyFadeOut() {
+        if(isPropertiesVisible() && isSmoothTransitionsEnabled()) {
+            currentPropertyTransition.stop();
+            currentPropertyNode.setOpacity(1);
+        }
+    }
+    
+    /**
+     * Toggles on the global properties pane
+     */
+    private void toggleGlobalPropertiesOn() {
+        if(!isPropertiesVisible()) {
+            currentPropertyList = globalPropertyList;
+            currentPropIdx = 0;
+            showProperty(currentPropIdx);
+        }
+    }
+    
+    /**
+     * Resets the property index and shows first property of current view
+     */
+    private void toggleCurrentViewPropertiesOn() {
+        if(!isPropertiesVisible() && !currentView.getProperties().isEmpty()) {
+            currentPropertyList = currentView.getProperties();
+            currentPropIdx = lastPropertyMap.get(currentViewIdx);
+            showProperty(currentPropIdx);
+        }
+    }
+    
+    /**
+     * If properties are currently shown, hides the current property
+     */
+    private void togglePropertiesOff() {
+        if(isPropertiesVisible()) {
+            hideProperty(currentPropertyNode);
+            currentPropertyNode = null;
+            currentPropertyList = null;
+        }
+    }
+    
+    /**
+     * Switch to the next view from the list.
+     */
+    private void nextView() {
+        int idx = currentViewIdx + 1;
+        if(idx > views.size() - 1) {
+            idx = views.size() - 1;
+        }
+        switchView(idx);
+    }
+    
+    /**
+     * Switch to the previous view from the list.
+     */
+    private void prevView() {
+        int idx = currentViewIdx - 1;
+        if(idx < 0) {
+            idx = 0;
+        }
+        switchView(idx);
+    }
+    
+    private void switchView(int idx) {
+        if(idx != currentViewIdx) {
+            currentViewIdx = idx;
+            
+            // Reset properties
+            togglePropertiesOff();
+            
+            if(isSmoothTransitionsEnabled()) {
+            
+                UiUtils.createFadeOutTransition(currentView.getRoot(), 500, new EventHandler<ActionEvent>() {
+                    public void handle(ActionEvent event) {
+                    
+                        // Trigger "hide" of current view
+                        currentView.onHide();
+                    
+                        // Set new current view and add to scene
+                        currentView = views.get(currentViewIdx);
+                        scene.setRoot(currentView.getRoot());
+                    
+                        UiUtils.createFadeInTransition(currentView.getRoot(), 500, new EventHandler<ActionEvent>() {
+                            public void handle(ActionEvent event) {
+                            
+                                // Trigger "show" of new view
+                                currentView.onShow();
+                                
+                                // Show view label with animation
+                                Pane parent = currentView.getRoot();
+                            
+                                BorderPane title = createViewTitlePane(currentView.getName());
+                                parent.getChildren().add(title);
+                            
+                                Transition trans = UiUtils.createFadeInOutTransition(
+                                        title, VIEW_LABEL_FADE_IN_MS, VIEW_LABEL_LINGER_MS, VIEW_LABEL_FADE_OUT_MS, 
+                                        new EventHandler<ActionEvent>() {
+                                            public void handle(ActionEvent event) {
+                                                parent.getChildren().remove(title);
+                                            }
+                                        });
+                                trans.play();
+                            
+                            }
+                        }).play();
+                    
+                    }
+                }).play();
+            } else {
+                
+                // Trigger "hide" of current view
+                //currentView.onHide();
+            
+                // Set new current view and add to scene
+                currentView = views.get(currentViewIdx);
+                currentView.getRoot().setOpacity(1);
+                scene.setRoot(currentView.getRoot());
+                
+                // Trigger "show" of new view
+                //currentView.onShow();
+            }
+        }
+    }
+    
+    private void nextProperty() {
+        if(currentPropertyNode != null) {
+            hideProperty(currentPropertyNode);
+            currentPropertyNode = null;
+        }
+        
+        currentPropIdx++;
+        if(currentPropIdx > currentPropertyList.size() - 1) {
+            currentPropIdx = currentPropertyList.size() - 1;
+        }
+        showProperty(currentPropIdx);
+        updateLastPropertyMap();
+    }
+    
+    private void prevProperty() {
+        if(currentPropertyNode != null) {
+            hideProperty(currentPropertyNode);
+            currentPropertyNode = null;
+        }
+        
+        currentPropIdx--;
+        if(currentPropIdx < 0) {
+            currentPropIdx = 0;
+        }
+        showProperty(currentPropIdx);
+        updateLastPropertyMap();
+    }
+    
+    @SuppressWarnings("unchecked")
+    private void showProperty(int idx) {
 
-		if(!currentPropertyList.isEmpty()) {
-			ConfigurableProperty<? extends Object> prop = currentPropertyList.get(idx);
-			Region control = null;
-			if(prop instanceof ConfigurableColorProperty) {
-				ObjectProperty<Color> p = (ObjectProperty<Color>) prop.getProp();
-				ColorControl picker = new ColorControl(p.getValue());
-				p.bind(picker.colorProperty());
-				control = picker;
-				
-			} else if(prop instanceof ConfigurableDoubleProperty || 
-					prop instanceof ConfigurableIntegerProperty || 
-					prop instanceof ConfigurableChoiceProperty) {
-				Label label = UiUtils.createNumberPropertyLabel(
-						String.valueOf(prop.getProp().getValue()), currentView.getRoot());
-				label.textProperty().bind(Bindings.createStringBinding(
-						() -> {
-							return String.valueOf(prop.getProp().get());
-						}, prop.getProp()));
-				control = label;
-					
-			} else if(prop instanceof ConfigurableBooleanProperty) {
-				ObjectProperty<Boolean> p = (ObjectProperty<Boolean>) prop.getProp();
-				CheckBox box = UiUtils.createBooleanPropertyCheckBox(
-						p.getValue(), prop.getName(), currentView.getRoot());
-				box.selectedProperty().bind(p);
-				control = box;
-			} else if(prop instanceof ActionProperty) {
-				Button button = UiUtils.createActionPropertyButton(prop.getName());
-				button.setOnAction(new EventHandler<ActionEvent>() {
-					public void handle(ActionEvent event) {
-						((ActionProperty) prop).trigger();
-					}
-				});
-				control = button;
-			}
-			
-			currentView.getRoot().getChildren().add(
-					currentPropertyNode = createPropertyPane(prop.getName(), control));
-			UiUtils.createFadeInTransition(currentPropertyNode, 1000, null).play();
-			schedulePropertyFadeOut();
-		}
-	}
-	
-	private void hideProperty(Pane node) {
-		currentPropertyList.get(currentPropIdx).getProp().unbind();
-		UiUtils.createFadeOutTransition(node, 1000, new EventHandler<ActionEvent>() {
-			public void handle(ActionEvent event) {
-				currentView.getRoot().getChildren().remove(node);
-				node.getChildren().clear();
-			}
-		}).play();
-	}
-	
-	private BorderPane createUtilityPane(double widthRatio, double heightRatio, double opacity) {
+        if(!currentPropertyList.isEmpty()) {
+            ConfigurableProperty<? extends Object> prop = currentPropertyList.get(idx);
+            Region control = null;
+            if(prop instanceof ConfigurableColorProperty) {
+                ObjectProperty<Color> p = (ObjectProperty<Color>) prop.getProp();
+                ColorControl picker = new ColorControl(p.getValue());
+                p.bind(picker.colorProperty());
+                control = picker;
+                
+            } else if(prop instanceof ConfigurableDoubleProperty || 
+                    prop instanceof ConfigurableIntegerProperty || 
+                    prop instanceof ConfigurableChoiceProperty) {
+                Label label = UiUtils.createNumberPropertyLabel(
+                        String.valueOf(prop.getProp().getValue()), currentView.getRoot());
+                label.textProperty().bind(Bindings.createStringBinding(
+                        () -> {
+                            return String.valueOf(prop.getProp().get());
+                        }, prop.getProp()));
+                control = label;
+                    
+            } else if(prop instanceof ConfigurableBooleanProperty) {
+                ObjectProperty<Boolean> p = (ObjectProperty<Boolean>) prop.getProp();
+                CheckBox box = UiUtils.createBooleanPropertyCheckBox(
+                        p.getValue(), prop.getName(), currentView.getRoot());
+                box.selectedProperty().bind(p);
+                control = box;
+            } else if(prop instanceof ActionProperty) {
+                Button button = UiUtils.createActionPropertyButton(prop.getName());
+                button.setOnAction(new EventHandler<ActionEvent>() {
+                    public void handle(ActionEvent event) {
+                        ((ActionProperty) prop).trigger();
+                    }
+                });
+                control = button;
+            }
+            
+            currentView.getRoot().getChildren().add(
+                    currentPropertyNode = createPropertyPane(prop.getName(), control));
+            
+            if(isSmoothTransitionsEnabled()) {
+                UiUtils.createFadeInTransition(currentPropertyNode, 1000, null).play();
+                schedulePropertyFadeOut();
+            }
+        }
+    }
+    
+    private void hideProperty(Pane node) {
+        currentPropertyList.get(currentPropIdx).getProp().unbind();
+        
+        if(isSmoothTransitionsEnabled()) {
+            UiUtils.createFadeOutTransition(node, 1000, new EventHandler<ActionEvent>() {
+                public void handle(ActionEvent event) {
+                    currentView.getRoot().getChildren().remove(node);
+                    node.getChildren().clear();
+                }
+            }).play();
+        } else {
+            currentView.getRoot().getChildren().remove(node);
+            node.getChildren().clear();
+        }
+    }
+    
+    private void updateLastPropertyMap() {
+        lastPropertyMap.put(currentViewIdx, currentPropIdx);
+    }
+    
+    private BorderPane createUtilityPane(double widthRatio, double heightRatio, double opacity) {
 
-		BorderPane pane = new BorderPane();
-		Pane parent = currentView.getRoot();
-		
-		// Automatically resize pane based on the scene size
-		pane.prefWidthProperty().bind(parent.widthProperty().divide(widthRatio));
-		pane.prefHeightProperty().bind(parent.heightProperty().divide(heightRatio));
-		pane.layoutXProperty().bind(parent.widthProperty().subtract(pane.widthProperty()).divide(2));
-		pane.layoutYProperty().bind(parent.heightProperty().subtract(pane.heightProperty()).divide(2));
-		pane.setBackground(new Background(
-				new BackgroundFill(Color.rgb(140, 140, 140, opacity), new CornerRadii(5), Insets.EMPTY)));
-		pane.setBorder(new Border(new BorderStroke(Color.DARKGREY, 
-	            BorderStrokeStyle.SOLID, new CornerRadii(6), new BorderWidths(2))));
-		
-		return pane;
-	}
-	
-	private BorderPane createViewTitlePane(String viewName) {
-		
-		Label label = new Label(viewName);
-		Pane parent = currentView.getRoot();
-		label.styleProperty().bind(Bindings.concat(
-				"-fx-font-size: ", parent.widthProperty().divide(20), ";",
-				"-fx-font-family: 'Alex Brush';",
-				"-fx-text-fill: ", VIEW_LABEL_COLOR, ";"));
-		label.setEffect(new Glow(1));
-		
-		BorderPane pane = createUtilityPane(1.5, 4, 0.6);
-		pane.setCenter(label);
-		BorderPane.setAlignment(label, Pos.CENTER);
-		
-		return pane;
-	}
-	
-	private BorderPane createPropertyPane(String name, Region control) {
-		
-		BorderPane pane = createUtilityPane(2, 2, 1);
-		//pane.setOpacity(0.9);
+        BorderPane pane = new BorderPane();
+        Pane parent = currentView.getRoot();
+        
+        // Automatically resize pane based on the scene size
+        pane.prefWidthProperty().bind(parent.widthProperty().divide(widthRatio));
+        pane.prefHeightProperty().bind(parent.heightProperty().divide(heightRatio));
+        pane.layoutXProperty().bind(parent.widthProperty().subtract(pane.widthProperty()).divide(2));
+        pane.layoutYProperty().bind(parent.heightProperty().subtract(pane.heightProperty()).divide(2));
+        pane.setBackground(new Background(
+                new BackgroundFill(Color.rgb(140, 140, 140, opacity), new CornerRadii(5), Insets.EMPTY)));
+        pane.setBorder(new Border(new BorderStroke(Color.DARKGREY, 
+                BorderStrokeStyle.SOLID, new CornerRadii(6), new BorderWidths(2))));
+        
+        return pane;
+    }
+    
+    private BorderPane createViewTitlePane(String viewName) {
+        
+        Label label = new Label(viewName);
+        Pane parent = currentView.getRoot();
+        label.styleProperty().bind(Bindings.concat(
+                "-fx-font-size: ", parent.widthProperty().divide(20), ";",
+                "-fx-font-family: 'Alex Brush';",
+                "-fx-text-fill: ", VIEW_LABEL_COLOR, ";"));
+        label.setEffect(new Glow(1));
+        
+        BorderPane pane = createUtilityPane(1.5, 4, 0.6);
+        pane.setCenter(label);
+        BorderPane.setAlignment(label, Pos.CENTER);
+        
+        return pane;
+    }
+    
+    private boolean isSmoothTransitionsEnabled() {
+        return propEnableSmoothTransitions.get();
+    }
+    
+    private BorderPane createPropertyPane(String name, Region control) {
+        
+        BorderPane pane = createUtilityPane(2, 2, 1);
+        //pane.setOpacity(0.9);
 
-		pane.setCenter(control);
-		BorderPane.setAlignment(control, Pos.CENTER);
-		
-		// This can be used to identify the control
-		pane.setUserData("Property Control");
+        pane.setCenter(control);
+        BorderPane.setAlignment(control, Pos.CENTER);
+        
+        // This can be used to identify the control
+        pane.setUserData("Property Control");
 
-		// Create top label
-		Label label = new Label(name);
-		Pane parent = currentView.getRoot();
-		label.styleProperty().bind(Bindings.concat(
-				"-fx-font-size: ", parent.widthProperty().divide(40), ";", 
-				"-fx-padding: ", parent.widthProperty().divide(50), ";"));
-		pane.setTop(label);
-		
-		// Automatically resize the contained property control based on the pane size
-		control.prefWidthProperty().bind(pane.widthProperty().divide(2));
-		control.prefHeightProperty().bind(pane.heightProperty().divide(4));
-		
-		return pane;
-	}
-	
-	private void changeCurrentPropertyValue(boolean increment) {
-		if(isPropertiesVisible()) {
-			cancelPropertyFadeOut();
-			ConfigurableProperty<? extends Object> prop = 
-					currentPropertyList.get(currentPropIdx);
-			if (increment) {
-				prop.increment();
-			} else {
-				prop.decrement();
-			}
-			schedulePropertyFadeOut();
-		}
-	}
-	
-	private void scheduleViewRotateTimer() {
-		int interval = propViewAutoRotateInterval.getProp().get() * 1000;
-		viewRotateTimer = new Timer(true);
-		viewRotateTimer.schedule(new TimerTask() {
-			public void run() {
-				
-				// Don't switch views if a property is currently visible
-				if(currentPropertyNode == null) {
-					final int idx;
-					if(currentViewIdx + 1 > views.size() - 1) {
-						idx = 0;
-					} else {
-						idx = currentViewIdx + 1;
-					}
-					Platform.runLater(new Runnable() {
-						public void run() {
-							switchView(idx);
-						}
-					});
-				}
-			}
-		}, interval, interval);
-	}
-	
-	private void cancelViewRotateTimer() {
-		if(viewRotateTimer != null) {
-			viewRotateTimer.cancel();
-			viewRotateTimer = null;
-		}
-	}
-	
-	private boolean isPropertySliderInFocusAndNotLast() {
-		boolean isVisible = false;
-		Node focusOwner = currentView.getRoot().getScene().getFocusOwner();
-		if(focusOwner instanceof Slider && isPropertiesVisible()) {
-			Node control = currentPropertyNode.getCenter();
-			if(control instanceof ColorControl) {
-				isVisible = ((ColorControl) control).hasMoreSlidersToTheRight((Slider) focusOwner);
-			}
-		}
-		return isVisible;
-	}
-	
-	private boolean isPropertySliderInFocusAndNotFirst() {
-		boolean isVisible = false;
-		Node focusOwner = currentView.getRoot().getScene().getFocusOwner();
-		if(focusOwner instanceof Slider && isPropertiesVisible()) {
-			Node control = currentPropertyNode.getCenter();
-			if(control instanceof ColorControl) {
-				isVisible = ((ColorControl) control).hasMoreSlidersToTheLeft((Slider) focusOwner);
-			}
-		}
-		return isVisible;
-	}
-	
-	private void firePropertyButtonIfInFocus() {
-		Node focusOwner = currentView.getRoot().getScene().getFocusOwner();
-		if(focusOwner instanceof Button && isPropertiesVisible()) {
-			cancelPropertyFadeOut();
-			((Button) focusOwner).fire();
-			schedulePropertyFadeOut();
-		}
-	}
-	
-	public static void main(String[] args) {
-		launch(args);
-	}
+        // Create top label
+        Label label = new Label(name);
+        Pane parent = currentView.getRoot();
+        label.styleProperty().bind(Bindings.concat(
+                "-fx-font-size: ", parent.widthProperty().divide(40), ";", 
+                "-fx-padding: ", parent.widthProperty().divide(50), ";"));
+        pane.setTop(label);
+        
+        // Automatically resize the contained property control based on the pane size
+        control.prefWidthProperty().bind(pane.widthProperty().divide(2));
+        control.prefHeightProperty().bind(pane.heightProperty().divide(4));
+        
+        return pane;
+    }
+    
+    private void changeCurrentPropertyValue(boolean increment) {
+        if(isPropertiesVisible()) {
+            cancelPropertyFadeOut();
+            ConfigurableProperty<? extends Object> prop = 
+                    currentPropertyList.get(currentPropIdx);
+            if (increment) {
+                prop.increment();
+            } else {
+                prop.decrement();
+            }
+            schedulePropertyFadeOut();
+        }
+    }
+    
+    private void scheduleViewRotateTimer() {
+        int interval = propViewAutoRotateInterval.getProp().get() * 1000;
+        viewRotateTimer = new Timer(true);
+        viewRotateTimer.schedule(new TimerTask() {
+            public void run() {
+                
+                // Don't switch views if a property is currently visible
+                if(currentPropertyNode == null) {
+                    final int idx;
+                    if(currentViewIdx + 1 > views.size() - 1) {
+                        idx = 0;
+                    } else {
+                        idx = currentViewIdx + 1;
+                    }
+                    Platform.runLater(new Runnable() {
+                        public void run() {
+                            switchView(idx);
+                        }
+                    });
+                }
+            }
+        }, interval, interval);
+    }
+    
+    private void cancelViewRotateTimer() {
+        if(viewRotateTimer != null) {
+            viewRotateTimer.cancel();
+            viewRotateTimer = null;
+        }
+    }
+    
+    private boolean isPropertySliderInFocusAndNotLast() {
+        boolean isVisible = false;
+        Node focusOwner = currentView.getRoot().getScene().getFocusOwner();
+        if(focusOwner instanceof Slider && isPropertiesVisible()) {
+            Node control = currentPropertyNode.getCenter();
+            if(control instanceof ColorControl) {
+                isVisible = ((ColorControl) control).hasMoreSlidersToTheRight((Slider) focusOwner);
+            }
+        }
+        return isVisible;
+    }
+    
+    private boolean isPropertySliderInFocusAndNotFirst() {
+        boolean isVisible = false;
+        Node focusOwner = currentView.getRoot().getScene().getFocusOwner();
+        if(focusOwner instanceof Slider && isPropertiesVisible()) {
+            Node control = currentPropertyNode.getCenter();
+            if(control instanceof ColorControl) {
+                isVisible = ((ColorControl) control).hasMoreSlidersToTheLeft((Slider) focusOwner);
+            }
+        }
+        return isVisible;
+    }
+    
+    private void firePropertyButtonIfInFocus() {
+        Node focusOwner = currentView.getRoot().getScene().getFocusOwner();
+        if(focusOwner instanceof Button && isPropertiesVisible()) {
+            cancelPropertyFadeOut();
+            ((Button) focusOwner).fire();
+            schedulePropertyFadeOut();
+        }
+    }
+    
+    public static void main(String[] args) {
+        launch(args);
+    }
 }
