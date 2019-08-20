@@ -593,21 +593,37 @@ public class Spectrum extends Application {
         // Create top label
         Label label = new Label(name);
         Pane parent = currentView.getRoot();
+        
+        /*
         label.styleProperty().bind(Bindings.concat(
                 "-fx-font-size: ", parent.widthProperty().divide(40), ";", 
                 "-fx-padding: ", parent.widthProperty().divide(50), ";"));
         pane.setTop(label);
+        */
         
         // TODO Create list of all properties
         VBox box = new VBox();
+        box.setStyle("-fx-padding: 10");
         for (ConfigurableProperty<? extends Object> prop : currentPropertyList) {
             Text text = new Text(prop.getName());
+            text.setFill(Color.DARKGRAY);
+            
+            text.fontProperty().bind(Bindings.createObjectBinding(
+            		() -> {
+            			return Font.font(parent.widthProperty().get() / 80);
+            		}, parent.widthProperty()));
+            
             box.getChildren().add(text);
         }
         
         // TODO Highlight selected property
-        ((Text) box.getChildren().get(currentPropIdx)).setFont(Font.font(
-                Font.getDefault().getFamily(), FontWeight.BOLD, Font.getDefault().getSize() + 5));
+        ((Text) box.getChildren().get(currentPropIdx)).fontProperty().bind(Bindings.createObjectBinding(
+        		() -> {
+        			return Font.font(Font.getDefault().getFamily(), FontWeight.BOLD, 
+        					parent.widthProperty().get() / 50);
+        		}, parent.widthProperty()));
+        ((Text) box.getChildren().get(currentPropIdx)).setFill(Color.BLACK);
+        
         
         pane.setLeft(box);
         
