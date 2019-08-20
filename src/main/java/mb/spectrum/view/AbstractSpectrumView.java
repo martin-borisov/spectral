@@ -64,7 +64,6 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 			ConfigService.getInstance().getProperty("mb.sampling-rate"));
 	private static final int BUFFER_SIZE = Integer.valueOf(
 			ConfigService.getInstance().getProperty("mb.buffer-size"));
-	private static final int DEFAULT_BUFFER_SIZE_MULTIPLIER = 2;
 	
 	/* Configuration properties */
 	protected ConfigurableIntegerProperty propMinDbValue;
@@ -91,6 +90,7 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 	protected int bandCount;
 	private double[] bandValuesDB, trailValuesDB;
 	private double[] trailOpValues;
+	private Timeline mainAnimationTimeline;
 	private Timeline[] timelines;
 	private int buffFramesCounter;
 	private float[] buffer;
@@ -104,7 +104,6 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 		trailValues = new ArrayList<>();
 		buffFramesCounter = 0;
 		init();
-		startAnimation();
 	}
 	
 	protected abstract String getBasePropertyKey();
@@ -257,6 +256,9 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 			pip.opacityProperty().bind(propPipOpacity.getProp());
 		}
 		
+		// This should happen here
+		startAnimation();
+		
 		List<Node> shapes = new ArrayList<>();
 		shapes.addAll(vLines);
 		shapes.addAll(vLabels);
@@ -295,8 +297,15 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
 	}
 	
     private void startAnimation() {
+        
+        // Make sure the original timer is stopped when the view is reset
+        if(mainAnimationTimeline != null) {
+            mainAnimationTimeline.stop();
+        }
+        
+        final int duration = 60 * getBufferSizeMultiplier();
 
-        KeyFrame frame = new KeyFrame(Duration.millis(60), new EventHandler<ActionEvent>() {
+        KeyFrame frame = new KeyFrame(Duration.millis(duration), new EventHandler<ActionEvent>() {
             public void handle(ActionEvent event) {
                 
                 for (int i = 0; i < bandValuesDB.length; i++) {
@@ -305,16 +314,16 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
                     tl.stop();
                     tl.getKeyFrames().clear();
                     KeyValue kv = new KeyValue(bandValues.get(i), bandValuesDB[i]);
-                    KeyFrame kf = new KeyFrame(Duration.millis(60), kv);
+                    KeyFrame kf = new KeyFrame(Duration.millis(duration), kv);
                     tl.getKeyFrames().add(kf);
                     tl.playFromStart();
                 }
             }
         });
         
-        Timeline timeline = new Timeline(frame);
-        timeline.setCycleCount(Animation.INDEFINITE);
-        timeline.play();
+        mainAnimationTimeline = new Timeline(frame);
+        mainAnimationTimeline.setCycleCount(Animation.INDEFINITE);
+        mainAnimationTimeline.play();
     }
 	
 	@Override

@@ -73,7 +73,7 @@ public abstract class AbstractView implements View {
 	}
 	
 	/**
-	 * Called when the view should be reset, i.e. when there are drastic changes in the node structure of teh view.
+	 * Called when the view should be reset, i.e. when there are drastic changes in the node structure of the view.
 	 */
 	protected void reset() {
 		
