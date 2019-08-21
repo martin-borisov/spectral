@@ -37,8 +37,6 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
-import javafx.scene.text.Font;
-import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.util.Duration;
@@ -76,6 +74,7 @@ public class Spectrum extends Application {
     private static final double VIEW_LABEL_FADE_IN_MS = 1000;
     private static final double VIEW_LABEL_LINGER_MS = 1000;
     private static final double VIEW_LABEL_FADE_OUT_MS = 1000;
+    private static final int PROPS_BEFORE_AND_AFTER = 3;
     
     private PlatformStrategy strategy;
     private Scene scene;
@@ -256,7 +255,7 @@ public class Spectrum extends Application {
                 if(!isPropertySliderInFocusAndNotLast()) {
                     nextProperty();
                 } else {
-                    cancelPropertyFadeOut();
+                    cancelPropertyFadeOutIfPlaying();
                     schedulePropertyFadeOut();
                 }
             } else {
@@ -269,7 +268,7 @@ public class Spectrum extends Application {
                 if(!isPropertySliderInFocusAndNotFirst()) {
                     prevProperty();
                 } else {
-                    cancelPropertyFadeOut();
+                    cancelPropertyFadeOutIfPlaying();
                     schedulePropertyFadeOut();
                 }
             } else {
@@ -299,11 +298,15 @@ public class Spectrum extends Application {
             break;
             
         case UP:
-            changeCurrentPropertyValue(true);
+            if(isPropertiesVisible()) { 
+                changeCurrentPropertyValue(true);
+            }
             break;
             
         case DOWN:
-            changeCurrentPropertyValue(false);
+            if(isPropertiesVisible()) {
+                changeCurrentPropertyValue(false);
+            }
             break;
             
         case C:
@@ -339,7 +342,7 @@ public class Spectrum extends Application {
     /**
      * Cancels the current property's transition
      */
-    private void cancelPropertyFadeOut() {
+    private void cancelPropertyFadeOutIfPlaying() {
         if(isPropertiesVisible() && isSmoothTransitionsEnabled()) {
             currentPropertyTransition.stop();
             currentPropertyNode.setOpacity(1);
@@ -590,40 +593,29 @@ public class Spectrum extends Application {
         // This can be used to identify the control
         pane.setUserData("Property Control");
 
-        // Create top label
-        Label label = new Label(name);
-        Pane parent = currentView.getRoot();
-        
-        /*
-        label.styleProperty().bind(Bindings.concat(
-                "-fx-font-size: ", parent.widthProperty().divide(40), ";", 
-                "-fx-padding: ", parent.widthProperty().divide(50), ";"));
-        pane.setTop(label);
-        */
-        
-        // TODO Create list of all properties
+        // Show a few properties before and after the current one
         VBox box = new VBox();
         box.setStyle("-fx-padding: 10");
-        for (ConfigurableProperty<? extends Object> prop : currentPropertyList) {
-            Text text = new Text(prop.getName());
-            text.setFill(Color.DARKGRAY);
+        
+        int startIdx = Math.min(currentPropIdx - PROPS_BEFORE_AND_AFTER, 
+                currentPropertyList.size() - 1 - PROPS_BEFORE_AND_AFTER * 2);
+        startIdx = startIdx < 0 ? 0 : startIdx;
+        
+        int endIdx = Math.max(currentPropIdx + PROPS_BEFORE_AND_AFTER, PROPS_BEFORE_AND_AFTER * 2);
+        endIdx = endIdx > currentPropertyList.size() - 1 ? currentPropertyList.size() - 1 : endIdx;
+        
+        for (int i = startIdx; i < endIdx + 1; i++) {
+            Text text = new Text(currentPropertyList.get(i).getName());
             
-            text.fontProperty().bind(Bindings.createObjectBinding(
-            		() -> {
-            			return Font.font(parent.widthProperty().get() / 80);
-            		}, parent.widthProperty()));
-            
+            if(i == currentPropIdx) {
+                text.setFill(Color.BLACK);
+                text.setUnderline(true);
+            } else {
+                text.setFill(Color.DIMGRAY);
+            }
+
             box.getChildren().add(text);
         }
-        
-        // TODO Highlight selected property
-        ((Text) box.getChildren().get(currentPropIdx)).fontProperty().bind(Bindings.createObjectBinding(
-        		() -> {
-        			return Font.font(Font.getDefault().getFamily(), FontWeight.BOLD, 
-        					parent.widthProperty().get() / 50);
-        		}, parent.widthProperty()));
-        ((Text) box.getChildren().get(currentPropIdx)).setFill(Color.BLACK);
-        
         
         pane.setLeft(box);
         
@@ -635,17 +627,14 @@ public class Spectrum extends Application {
     }
     
     private void changeCurrentPropertyValue(boolean increment) {
-        if(isPropertiesVisible()) {
-            cancelPropertyFadeOut();
-            ConfigurableProperty<? extends Object> prop = 
-                    currentPropertyList.get(currentPropIdx);
-            if (increment) {
-                prop.increment();
-            } else {
-                prop.decrement();
-            }
-            schedulePropertyFadeOut();
+        cancelPropertyFadeOutIfPlaying();
+        ConfigurableProperty<? extends Object> prop = currentPropertyList.get(currentPropIdx);
+        if (increment) {
+            prop.increment();
+        } else {
+            prop.decrement();
         }
+        schedulePropertyFadeOut();
     }
     
     private void scheduleViewRotateTimer() {
@@ -706,7 +695,7 @@ public class Spectrum extends Application {
     private void firePropertyButtonIfInFocus() {
         Node focusOwner = currentView.getRoot().getScene().getFocusOwner();
         if(focusOwner instanceof Button && isPropertiesVisible()) {
-            cancelPropertyFadeOut();
+            cancelPropertyFadeOutIfPlaying();
             ((Button) focusOwner).fire();
             schedulePropertyFadeOut();
         }
