@@ -37,6 +37,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.util.Duration;
@@ -74,7 +75,7 @@ public class Spectrum extends Application {
     private static final double VIEW_LABEL_FADE_IN_MS = 1000;
     private static final double VIEW_LABEL_LINGER_MS = 1000;
     private static final double VIEW_LABEL_FADE_OUT_MS = 1000;
-    private static final int PROPS_BEFORE_AND_AFTER = 3;
+    private static final int PROPS_BEFORE_AND_AFTER = 4;
     
     private PlatformStrategy strategy;
     private Scene scene;
@@ -613,10 +614,16 @@ public class Spectrum extends Application {
             } else {
                 text.setFill(Color.DIMGRAY);
             }
+            
+            text.fontProperty().bind(Bindings.createObjectBinding(
+                    () -> {
+                        return Font.font(currentView.getRoot().widthProperty().get() / 50);
+                    }, currentView.getRoot().widthProperty()));
 
             box.getChildren().add(text);
         }
         
+        box.setAlignment(Pos.CENTER_LEFT);
         pane.setLeft(box);
         
         // Automatically resize the contained property control based on the pane size
