@@ -12,6 +12,9 @@ import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import org.kordamp.ikonli.dashicons.Dashicons;
+import org.kordamp.ikonli.javafx.FontIcon;
+
 import javafx.animation.AnimationTimer;
 import javafx.animation.PauseTransition;
 import javafx.animation.SequentialTransition;
@@ -623,6 +626,19 @@ public class Spectrum extends Application {
             box.getChildren().add(text);
         }
         
+        // Show arrows if there are more properties above/below
+        FontIcon iconUp = FontIcon.of(Dashicons.ARROW_UP);
+        iconUp.setVisible(startIdx > 0);
+        iconUp.iconSizeProperty().bind(currentView.getRoot().widthProperty().divide(30));
+        
+        FontIcon iconDown = FontIcon.of(Dashicons.ARROW_DOWN);
+        iconDown.setVisible(endIdx < currentPropertyList.size() - 1);
+        iconDown.iconSizeProperty().bind(iconUp.iconSizeProperty());
+        
+        box.getChildren().add(0, iconUp);
+        box.getChildren().add(iconDown);
+        
+        // Align and add property list to pane
         box.setAlignment(Pos.CENTER_LEFT);
         pane.setLeft(box);
         
