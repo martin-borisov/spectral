@@ -68,9 +68,9 @@ import mb.spectrum.view.View;
 public class Spectrum extends Application {
     
     private static final int SAMPLING_RATE = Integer.valueOf(
-            ConfigService.getInstance().getProperty("mb.sampling-rate"));
+            ConfigService.getInstance().getOrCreateProperty("mb.sampling-rate", String.valueOf(48000)));
     private static final int BUFFER_SIZE = Integer.valueOf(
-            ConfigService.getInstance().getProperty("mb.buffer-size"));
+            ConfigService.getInstance().getOrCreateProperty("mb.buffer-size", String.valueOf(2048)));
     
     private static final int INIT_SCENE_WIDTH = 800;
     private static final int INIT_SCENE_HEIGHT = 600;
