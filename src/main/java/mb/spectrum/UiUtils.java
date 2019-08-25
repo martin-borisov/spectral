@@ -18,6 +18,7 @@ import javafx.beans.binding.Bindings;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.Property;
+import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
@@ -36,8 +37,11 @@ import javafx.scene.layout.BorderStrokeStyle;
 import javafx.scene.layout.BorderWidths;
 import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
 import javafx.scene.shape.Line;
+import javafx.scene.shape.SVGPath;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.util.Duration;
 import mb.spectrum.prop.ConfigurableBooleanProperty;
@@ -282,4 +286,20 @@ public class UiUtils {
         
         return pane;
     }
+	
+	public static Region createSVGRegion(String content, ReadOnlyDoubleProperty reference, int factor, Paint color) {
+        SVGPath svg = new SVGPath();
+        svg.setContent(content);
+        
+        Region region = new Region();
+        region.setShape(svg);
+        region.maxWidthProperty().bind(reference.divide(factor));
+        region.maxHeightProperty().bind(region.maxWidthProperty());
+        region.minWidthProperty().bind(region.maxWidthProperty());
+        region.minHeightProperty().bind(region.maxHeightProperty());
+        region.setBackground(new Background(new BackgroundFill(
+        		color, CornerRadii.EMPTY, Insets.EMPTY)));
+        
+        return region;
+	}
 }

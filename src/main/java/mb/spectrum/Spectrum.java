@@ -12,9 +12,6 @@ import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import org.kordamp.ikonli.dashicons.Dashicons;
-import org.kordamp.ikonli.javafx.FontIcon;
-
 import javafx.animation.AnimationTimer;
 import javafx.animation.PauseTransition;
 import javafx.animation.SequentialTransition;
@@ -627,15 +624,14 @@ public class Spectrum extends Application {
         }
         
         // Show arrows if there are more properties above/below
-        FontIcon iconUp = FontIcon.of(Dashicons.ARROW_UP);
+        Region iconUp = UiUtils.createSVGRegion("M11 7l-4 6h8", // Dashicons "arrow-up"
+        		currentView.getRoot().widthProperty(), 70, Color.BLACK);
         iconUp.setVisible(startIdx > 0);
-        iconUp.iconSizeProperty().bind(currentView.getRoot().widthProperty().divide(30));
-        
-        FontIcon iconDown = FontIcon.of(Dashicons.ARROW_DOWN);
-        iconDown.setVisible(endIdx < currentPropertyList.size() - 1);
-        iconDown.iconSizeProperty().bind(iconUp.iconSizeProperty());
-        
         box.getChildren().add(0, iconUp);
+        
+        Region iconDown = UiUtils.createSVGRegion("M15 8l-4.03 6L7 8h8z", // Dashicons "arrow-down" 
+        		currentView.getRoot().widthProperty(), 70, Color.BLACK);
+        iconDown.setVisible(endIdx < currentPropertyList.size() - 1);
         box.getChildren().add(iconDown);
         
         // Align and add property list to pane
