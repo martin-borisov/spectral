@@ -10,6 +10,9 @@ import java.util.TimerTask;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import eu.hansolo.medusa.Gauge;
+import eu.hansolo.medusa.Gauge.SkinType;
+import eu.hansolo.medusa.GaugeBuilder;
 import javafx.animation.FadeTransition;
 import javafx.animation.SequentialTransition;
 import javafx.animation.Transition;
@@ -148,6 +151,24 @@ public class UiUtils {
 		return label;
 	}
 	
+	public static Gauge createNumberPropertyGauge(ConfigurableIntegerProperty prop) {
+	    Gauge gauge = GaugeBuilder.create()
+	        .minValue(prop.getMinValue())
+	        .maxValue(prop.getMaxValue())
+	        .startFromZero(false)
+	        .skinType(SkinType.DASHBOARD)
+	        .barColor(Color.CYAN)
+	        .majorTickMarksVisible(true)
+	        .build();
+	    gauge.valueProperty().bind(prop.getProp());
+	    
+	    if(prop.getUnit() != null) {
+	        gauge.setUnit(prop.getUnit());
+	    }
+	    
+	    return gauge;
+	}
+	
 	public static Line createThickRoundedLine(Color color) {
 		Line line = new Line();
 		line.setStroke(color);
@@ -206,16 +227,24 @@ public class UiUtils {
 	}
 	
 	public static ConfigurableIntegerProperty createConfigurableIntegerProperty(String key, String name, 
-			Integer minValue, Integer maxValue, Integer defaultValue, Integer increment) {
-		ConfigService cs = ConfigService.getInstance();
-		ConfigurableIntegerProperty prop = 
-				new ConfigurableIntegerProperty(name, minValue, maxValue, 
-						Integer.valueOf(cs.getOrCreateProperty(key, String.valueOf(defaultValue))), increment);
-		prop.getProp().addListener((obs, oldVal, newVal) -> {
-			cs.setProperty(key, String.valueOf(newVal));
-		});
+			Integer minValue, Integer maxValue, Integer defaultValue, Integer increment, String unit) {
+	    ConfigurableIntegerProperty prop = createConfigurableIntegerProperty(
+	            key, name, minValue, maxValue, defaultValue, increment);
+	    prop.setUnit(unit);
 		return prop;
 	}
+	
+	   public static ConfigurableIntegerProperty createConfigurableIntegerProperty(String key, String name, 
+	            Integer minValue, Integer maxValue, Integer defaultValue, Integer increment) {
+	        ConfigService cs = ConfigService.getInstance();
+	        ConfigurableIntegerProperty prop = 
+	                new ConfigurableIntegerProperty(name, minValue, maxValue, 
+	                        Integer.valueOf(cs.getOrCreateProperty(key, String.valueOf(defaultValue))), increment);
+	        prop.getProp().addListener((obs, oldVal, newVal) -> {
+	            cs.setProperty(key, String.valueOf(newVal));
+	        });
+	        return prop;
+	    }
 	
 	public static <T extends Enum<T>> ConfigurableChoiceProperty createConfigurableChoiceProperty(
 			String key, String name, Class<T> enumType) {

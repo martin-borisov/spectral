@@ -138,7 +138,7 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
         
         /* Configuration Properties */
         propMinDbValue = createConfigurableIntegerProperty(
-                getBasePropertyKey() + ".minDbValue", "Min. DB Value", -100, 0, -60, 1);
+                getBasePropertyKey() + ".minDbValue", "Min. DB Value", -100, 0, -60, 1, "dB");
         propWindowSize = UiUtils.createConfigurableChoiceProperty(
                 getBasePropertyKey() + ".windowSize", "FFT Window Size", WindowSize.class);
         propWindowSize.getProp().addListener((obs, oldVal, newVal) -> {

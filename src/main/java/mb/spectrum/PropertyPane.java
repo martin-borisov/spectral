@@ -103,10 +103,6 @@ public class PropertyPane extends BorderPane {
     private void addPropertyControl(Region control) {
         setCenter(control);
         BorderPane.setAlignment(control, Pos.CENTER);
-        
-        // TODO Revisit: Automatically resize the contained property control based on the pane size
-        control.prefWidthProperty().bind(widthProperty().divide(2));
-        control.prefHeightProperty().bind(heightProperty().divide(4));
     }
 
 }

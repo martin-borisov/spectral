@@ -8,6 +8,7 @@ public abstract class ConfigurableProperty<T> {
 	protected String name;
 	protected ObjectProperty<T> prop;
 	protected T minValue, maxValue, initValue, increment;
+	protected String unit;
 	
 	public ConfigurableProperty(String name, T minValue, T maxValue, T initValue, T increment) {
 		this.name = name;
@@ -18,7 +19,13 @@ public abstract class ConfigurableProperty<T> {
 		this.prop = new SimpleObjectProperty<>(null, name, initValue);
 	}
 	
-	public abstract T increment();
+	public ConfigurableProperty(String name, ObjectProperty<T> prop, T minValue, T maxValue, T initValue, T increment,
+            String unit) {
+	    this(name, minValue, maxValue, initValue, increment);
+        this.unit = unit;
+    }
+
+    public abstract T increment();
 	public abstract T decrement();
 	
 	public String getName() {
@@ -45,7 +52,15 @@ public abstract class ConfigurableProperty<T> {
 		return increment;
 	}
 	
-	public T get() {
+	public String getUnit() {
+        return unit;
+    }
+
+    public void setUnit(String unit) {
+        this.unit = unit;
+    }
+
+    public T get() {
 		return prop.get();
 	}
 }

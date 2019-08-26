@@ -149,7 +149,7 @@ public class Spectrum extends Application {
     private void initGlobalProperties() {
         final String keyPrefix = "global.";
         propGlobalGain = createConfigurableIntegerProperty(
-                keyPrefix + "gain", "Global Gain (%)", 10, 400, 100, 10);
+                keyPrefix + "gain", "Global Gain", 10, 400, 100, 10, "%");
         propViewAutoRotate = createConfigurableBooleanProperty(
                 keyPrefix + "viewAutoRotate", "Auto Rotate Views", false);
         propViewAutoRotate.getProp().addListener((obs, oldVal, newVal) -> {
@@ -162,7 +162,7 @@ public class Spectrum extends Application {
             }
         });
         propViewAutoRotateInterval = createConfigurableIntegerProperty(
-                keyPrefix + "viewAutoRotateInterval", "View Rotate Int. (S)", 5, 6000, 60, 5);
+                keyPrefix + "viewAutoRotateInterval", "View Rotate Interval", 5, 6000, 60, 5, "sec");
         propEnableSmoothTransitions = createConfigurableBooleanProperty(
                 keyPrefix + "enableSmoothTransitions", "Enable Smooth Transitions", true);
         globalPropertyList = new ArrayList<>(Arrays.asList(
@@ -447,7 +447,7 @@ public class Spectrum extends Application {
             } else {
                 
                 // Trigger "hide" of current view
-                //currentView.onHide();
+                currentView.onHide();
             
                 // Set new current view and add to scene
                 currentView = views.get(currentViewIdx);
@@ -455,7 +455,7 @@ public class Spectrum extends Application {
                 scene.setRoot(currentView.getRoot());
                 
                 // Trigger "show" of new view
-                //currentView.onShow();
+                currentView.onShow();
             }
         }
     }
@@ -500,8 +500,9 @@ public class Spectrum extends Application {
                 p.bind(picker.colorProperty());
                 control = picker;
                 
-            } else if(prop instanceof ConfigurableDoubleProperty || 
-                    prop instanceof ConfigurableIntegerProperty || 
+            } else if(prop instanceof ConfigurableIntegerProperty) {
+                control = UiUtils.createNumberPropertyGauge((ConfigurableIntegerProperty) prop);
+            } else if(prop instanceof ConfigurableDoubleProperty ||  
                     prop instanceof ConfigurableChoiceProperty) {
                 Label label = UiUtils.createNumberPropertyLabel(
                         String.valueOf(prop.getProp().getValue()), currentView.getRoot());
@@ -510,7 +511,6 @@ public class Spectrum extends Application {
                             return String.valueOf(prop.getProp().get());
                         }, prop.getProp()));
                 control = label;
-                    
             } else if(prop instanceof ConfigurableBooleanProperty) {
                 ObjectProperty<Boolean> p = (ObjectProperty<Boolean>) prop.getProp();
                 CheckBox box = UiUtils.createBooleanPropertyCheckBox(

@@ -112,11 +112,11 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 		
 		// Not requiring reset
 		propReactionTime = createConfigurableIntegerProperty(
-				keyPrefix + "reactionTime", "Reaction Time", 100, 1000, 320, 10);
+				keyPrefix + "reactionTime", "Reaction Time", 100, 1000, 320, 10, "ms");
 		propMinDbValue = createConfigurableIntegerProperty(
-				keyPrefix + "minDbValue", "Min. DB Value", -100, -10, -24, 1);
+				keyPrefix + "minDbValue", "Min. DB Value", -100, -10, -24, 1, "dB");
 		propMaxDbuValue = createConfigurableIntegerProperty(
-				keyPrefix + "maxDBuValue", "Max. dBu Value", 0, 24, 6, 1);
+				keyPrefix + "maxDBuValue", "Max. dBu Value", 0, 24, 6, 1, "dB");
 		propBgColorA = createConfigurableColorProperty(
 				keyPrefix + "bgColorA", "Background Color A", Color.BLACK);
 		propBgColorB = createConfigurableColorProperty(

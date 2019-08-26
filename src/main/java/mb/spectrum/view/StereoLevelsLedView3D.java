@@ -133,11 +133,11 @@ public class StereoLevelsLedView3D extends AbstractView {
 		
 		// Not requiring reset
 		propMinDbValue = createConfigurableIntegerProperty(
-				keyPrefix + "minDbValue", "Min. dB Value", -100, -10, -60, 1);
+				keyPrefix + "minDbValue", "Min. dB Value", -100, -10, -60, 1, "dB");
 		propMidDbValue = createConfigurableIntegerProperty(
-				keyPrefix + "midDbValue", "Middle dB Value", -100, 0, -20, 1);
+				keyPrefix + "midDbValue", "Middle dB Value", -100, 0, -20, 1, "dB");
 		propClipDbValue = createConfigurableIntegerProperty(
-				keyPrefix + "clipDbValue", "Clip dB Value", -100, 0, -15, 1);
+				keyPrefix + "clipDbValue", "Clip dB Value", -100, 0, -15, 1, "dB");
 		propLedGapRatio = createConfigurableDoubleProperty(
 				keyPrefix + "ledGapRatio", "LED Gap Ratio", 0.01, 0.5, 0.2, 0.01);
 		propLedColorNormal = createConfigurableColorProperty(

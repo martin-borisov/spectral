@@ -71,12 +71,12 @@ public class GaugeView extends AbstractMixedChannelView {
 		final String keyPrefix = propKeyPrefix + ".";
 		
 		propMinDbValue = UiUtils.createConfigurableIntegerProperty(
-				keyPrefix + "minDbValue", "Min. DB Value", -100, -20, -60, 5);
+				keyPrefix + "minDbValue", "Min. DB Value", -100, -20, -60, 5, "dB");
 		propMinDbValue.getProp().addListener((obs, oldVal, newVal) -> {
 			reset();
 		});
 		propSensitivity = UiUtils.createConfigurableIntegerProperty(
-				keyPrefix + "sensitivity", "Sensitivity (ms)" , 100, 1000, 220, 10);
+				keyPrefix + "sensitivity", "Sensitivity" , 100, 1000, 220, 10, "ms");
 		propType = UiUtils.createConfigurableChoiceProperty(
 				keyPrefix + "type", "Type", 
 				Arrays.asList("HORIZONTAL", "VERTICAL", "QUARTER"), "HORIZONTAL");

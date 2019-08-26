@@ -80,11 +80,11 @@ public class StereoLevelsLedView extends AbstractView {
 		
 		// Not requiring reset
 		propMinDbValue = createConfigurableIntegerProperty(
-				keyPrefix + "minDbValue", "Min. dB Value", -100, -10, -24, 1);
+				keyPrefix + "minDbValue", "Min. dB Value", -100, -10, -24, 1, "dB");
 		propClipDbValue = createConfigurableIntegerProperty(
-				keyPrefix + "clipDbValue", "Clip dB Value", -100, 0, -10, 1);
+				keyPrefix + "clipDbValue", "Clip dB Value", -100, 0, -10, 1, "dB");
 		propMidDbValue = createConfigurableIntegerProperty(
-				keyPrefix + "midDbValue", "Middle dB Value", -100, 0, -20, 1);
+				keyPrefix + "midDbValue", "Middle dB Value", -100, 0, -20, 1, "dB");
 		propLedColorNormal = createConfigurableColorProperty(
 				keyPrefix + "normalLevelColor", "Normal Level Color", Color.LAWNGREEN);
 		propLedColorMid = createConfigurableColorProperty(
