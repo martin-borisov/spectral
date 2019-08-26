@@ -35,10 +35,7 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
-import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
-import javafx.scene.text.Font;
-import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import mb.spectrum.desktop.DesktopStrategy;
@@ -75,7 +72,6 @@ public class Spectrum extends Application {
     private static final double VIEW_LABEL_FADE_IN_MS = 1000;
     private static final double VIEW_LABEL_LINGER_MS = 1000;
     private static final double VIEW_LABEL_FADE_OUT_MS = 1000;
-    private static final int PROPS_BEFORE_AND_AFTER = 4;
     
     private PlatformStrategy strategy;
     private Scene scene;
@@ -532,7 +528,7 @@ public class Spectrum extends Application {
             }
             
             currentView.getRoot().getChildren().add(
-                    currentPropertyNode = createPropertyPane(prop.getName(), control));
+                    currentPropertyNode = createPropertyPane(control));
             
             if(isSmoothTransitionsEnabled()) {
                 UiUtils.createFadeInTransition(currentPropertyNode, 1000, null).play();
@@ -582,63 +578,13 @@ public class Spectrum extends Application {
         return propEnableSmoothTransitions.get();
     }
     
-    private BorderPane createPropertyPane(String name, Region control) {
+    private BorderPane createPropertyPane(Region control) {
         
-        BorderPane pane = createUtilityPane(currentView.getRoot(), 2, 2, 1);
-
-        pane.setCenter(control);
-        BorderPane.setAlignment(control, Pos.CENTER);
+        PropertyPane pane = new PropertyPane(currentView.getRoot(), 1.7, 2, 1, 
+                control, currentPropertyList, currentPropIdx);
         
         // This can be used to identify the control
         pane.setUserData("Property Control");
-
-        // Show a few properties before and after the current one
-        VBox box = new VBox();
-        box.setStyle("-fx-padding: 10");
-        
-        int startIdx = Math.min(currentPropIdx - PROPS_BEFORE_AND_AFTER, 
-                currentPropertyList.size() - 1 - PROPS_BEFORE_AND_AFTER * 2);
-        startIdx = startIdx < 0 ? 0 : startIdx;
-        
-        int endIdx = Math.max(currentPropIdx + PROPS_BEFORE_AND_AFTER, PROPS_BEFORE_AND_AFTER * 2);
-        endIdx = endIdx > currentPropertyList.size() - 1 ? currentPropertyList.size() - 1 : endIdx;
-        
-        for (int i = startIdx; i < endIdx + 1; i++) {
-            Text text = new Text(currentPropertyList.get(i).getName());
-            
-            if(i == currentPropIdx) {
-                text.setFill(Color.BLACK);
-                text.setUnderline(true);
-            } else {
-                text.setFill(Color.DIMGRAY);
-            }
-            
-            text.fontProperty().bind(Bindings.createObjectBinding(
-                    () -> {
-                        return Font.font(currentView.getRoot().widthProperty().get() / 50);
-                    }, currentView.getRoot().widthProperty()));
-
-            box.getChildren().add(text);
-        }
-        
-        // Show arrows if there are more properties above/below
-        Region iconUp = UiUtils.createSVGRegion("M11 7l-4 6h8", // Dashicons "arrow-up"
-        		currentView.getRoot().widthProperty(), 70, Color.BLACK);
-        iconUp.setVisible(startIdx > 0);
-        box.getChildren().add(0, iconUp);
-        
-        Region iconDown = UiUtils.createSVGRegion("M15 8l-4.03 6L7 8h8z", // Dashicons "arrow-down" 
-        		currentView.getRoot().widthProperty(), 70, Color.BLACK);
-        iconDown.setVisible(endIdx < currentPropertyList.size() - 1);
-        box.getChildren().add(iconDown);
-        
-        // Align and add property list to pane
-        box.setAlignment(Pos.CENTER_LEFT);
-        pane.setLeft(box);
-        
-        // Automatically resize the contained property control based on the pane size
-        control.prefWidthProperty().bind(pane.widthProperty().divide(2));
-        control.prefHeightProperty().bind(pane.heightProperty().divide(4));
         
         return pane;
     }
