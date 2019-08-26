@@ -24,6 +24,10 @@ import mb.spectrum.prop.ConfigurableProperty;
 public class PropertyPane extends BorderPane {
     
     private static final int PROPS_BEFORE_AND_AFTER = 4;
+    private static final String ARROW_UP_SVG = "M11 7l-4 6h8"; // Dashicons "arrow-up";
+    private static final String ARROW_DOWN_SVG = "M15 8l-4.03 6L7 8h8z"; // Dashicons "arrow-down"
+    private static final int FONT_WIDTH_FACTOR = 30;
+    private static final int ARROW_WIDTH_FACTOR = 50;
     
     public PropertyPane(Pane parent, double widthRatio, double heightRatio, double opacity, 
             Region control, List<ConfigurableProperty<? extends Object>> currentPropertyList, 
@@ -38,8 +42,8 @@ public class PropertyPane extends BorderPane {
         prefHeightProperty().bind(parent.heightProperty().divide(heightRatio));
         layoutXProperty().bind(parent.widthProperty().subtract(widthProperty()).divide(2));
         layoutYProperty().bind(parent.heightProperty().subtract(heightProperty()).divide(2));
-        setBackground(new Background(
-                new BackgroundFill(Color.rgb(140, 140, 140, opacity), new CornerRadii(5), Insets.EMPTY)));
+        setBackground(new Background(new BackgroundFill(
+                Color.rgb(140, 140, 140, opacity), new CornerRadii(5), Insets.EMPTY)));
         setBorder(new Border(new BorderStroke(Color.DARKGREY, 
                 BorderStrokeStyle.SOLID, new CornerRadii(6), new BorderWidths(2))));
     }
@@ -49,7 +53,12 @@ public class PropertyPane extends BorderPane {
         
         // Show a few properties before and after the current one
         VBox box = new VBox();
-        box.setStyle("-fx-padding: 10");
+        box.setStyle("-fx-padding: 10;");
+        box.setBackground(new Background(new BackgroundFill(
+                Color.rgb(130, 130, 130), new CornerRadii(5), Insets.EMPTY)));
+        
+        // Make the vbox wider than the potentially longest string in the list to avoid resizing the pane
+        box.prefWidthProperty().bind(widthProperty().divide(2.5));
         
         int startIdx = Math.min(currentPropIdx - PROPS_BEFORE_AND_AFTER, 
                 currentPropertyList.size() - 1 - PROPS_BEFORE_AND_AFTER * 2);
@@ -70,20 +79,18 @@ public class PropertyPane extends BorderPane {
             
             text.fontProperty().bind(Bindings.createObjectBinding(
                     () -> {
-                        return Font.font(widthProperty().get() / 50);
+                        return Font.font(widthProperty().get() / FONT_WIDTH_FACTOR);
                     }, widthProperty()));
 
             box.getChildren().add(text);
         }
         
         // Show arrows if there are more properties above/below
-        Region iconUp = UiUtils.createSVGRegion("M11 7l-4 6h8", // Dashicons "arrow-up"
-                widthProperty(), 70, Color.BLACK);
+        Region iconUp = UiUtils.createSVGRegion(ARROW_UP_SVG, widthProperty(), ARROW_WIDTH_FACTOR, Color.BLACK);
         iconUp.setVisible(startIdx > 0);
         box.getChildren().add(0, iconUp);
         
-        Region iconDown = UiUtils.createSVGRegion("M15 8l-4.03 6L7 8h8z", // Dashicons "arrow-down" 
-                widthProperty(), 70, Color.BLACK);
+        Region iconDown = UiUtils.createSVGRegion(ARROW_DOWN_SVG, widthProperty(), ARROW_WIDTH_FACTOR, Color.BLACK);
         iconDown.setVisible(endIdx < currentPropertyList.size() - 1);
         box.getChildren().add(iconDown);
         
