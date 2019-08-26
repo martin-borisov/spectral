@@ -175,9 +175,7 @@ public class Spectrum extends Application {
 
     private void startAudio() {
         
-        Parameters params = getParameters();
-        String path = params.getNamed().get("file");
-        
+        String path = getParameters().getNamed().get("file");
         if(path != null) {
             strategy.startAudio(path, BUFFER_SIZE);
         } else {
@@ -221,11 +219,11 @@ public class Spectrum extends Application {
         stage.setScene(scene = new Scene(currentView.getRoot(), 
                 INIT_SCENE_WIDTH, INIT_SCENE_HEIGHT, false, SceneAntialiasing.BALANCED));
         scene.setFill(Color.BLACK);
-        
         currentView.onShow();
-        stage.setMaximized(true);
-        stage.show();
         
+        stage.setMaximized(!Boolean.valueOf(
+                getParameters().getNamed().get("windowed")));
+        stage.show();
         
         // Event handlers
         stage.addEventFilter(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
