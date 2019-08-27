@@ -500,10 +500,10 @@ public class Spectrum extends Application {
                 p.bind(picker.colorProperty());
                 control = picker;
                 
-            } else if(prop instanceof ConfigurableIntegerProperty) {
-                control = UiUtils.createNumberPropertyGauge((ConfigurableIntegerProperty) prop);
-            } else if(prop instanceof ConfigurableDoubleProperty ||  
-                    prop instanceof ConfigurableChoiceProperty) {
+            } else if(prop instanceof ConfigurableIntegerProperty || 
+                    prop instanceof ConfigurableDoubleProperty) {
+                control = UiUtils.createNumberPropertyGauge(prop);
+            } else if(prop instanceof ConfigurableChoiceProperty) {
                 Label label = UiUtils.createNumberPropertyLabel(
                         String.valueOf(prop.getProp().getValue()), currentView.getRoot());
                 label.textProperty().bind(Bindings.createStringBinding(
@@ -580,7 +580,7 @@ public class Spectrum extends Application {
     
     private BorderPane createPropertyPane(Region control) {
         
-        PropertyPane pane = new PropertyPane(currentView.getRoot(), 1.7, 2, 1, 
+        PropertyPane pane = new PropertyPane(currentView.getRoot(), 1.4, 1.6, 1, 
                 control, currentPropertyList, currentPropIdx);
         
         // This can be used to identify the control

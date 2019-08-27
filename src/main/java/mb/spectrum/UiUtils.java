@@ -151,14 +151,24 @@ public class UiUtils {
 		return label;
 	}
 	
-	public static Gauge createNumberPropertyGauge(ConfigurableIntegerProperty prop) {
+	@SuppressWarnings({"rawtypes", "unchecked"})
+    public static Gauge createNumberPropertyGauge(ConfigurableProperty prop) {
+	    
+	    if(!(prop instanceof ConfigurableIntegerProperty || 
+	            prop instanceof ConfigurableDoubleProperty)) {
+	        throw new IllegalArgumentException("Wrong property type");
+	    }
+	    
 	    Gauge gauge = GaugeBuilder.create()
-	        .minValue(prop.getMinValue())
-	        .maxValue(prop.getMaxValue())
+	        .minValue(prop instanceof ConfigurableIntegerProperty ? 
+	                (Integer) prop.getMinValue() : (Double) prop.getMinValue())
+	        .maxValue(prop instanceof ConfigurableIntegerProperty ? 
+                    (Integer) prop.getMaxValue() : (Double) prop.getMaxValue())
 	        .startFromZero(false)
 	        .skinType(SkinType.DASHBOARD)
 	        .barColor(Color.CYAN)
 	        .majorTickMarksVisible(true)
+	        .decimals(prop instanceof ConfigurableIntegerProperty ? 0 : 1)
 	        .build();
 	    gauge.valueProperty().bind(prop.getProp());
 	    

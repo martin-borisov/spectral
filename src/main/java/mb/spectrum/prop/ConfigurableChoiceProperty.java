@@ -32,6 +32,10 @@ public class ConfigurableChoiceProperty extends ConfigurableProperty<String> {
 		return getPropValue();
 	}
 	
+	public List<String> getAllValues() {
+	    return values;
+	}
+	
 	private String getPropValue() {
 		prop.set(values.get(idx));
 		return prop.get();
