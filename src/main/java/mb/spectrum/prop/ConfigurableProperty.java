@@ -1,7 +1,11 @@
 package mb.spectrum.prop;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ChangeListener;
 
 public abstract class ConfigurableProperty<T> {
 	
@@ -9,6 +13,7 @@ public abstract class ConfigurableProperty<T> {
 	protected ObjectProperty<T> prop;
 	protected T minValue, maxValue, initValue, increment;
 	protected String unit;
+	private Map<String, ChangeListener<T>> listeners;
 	
 	public ConfigurableProperty(String name, T minValue, T maxValue, T initValue, T increment) {
 		this.name = name;
@@ -16,7 +21,8 @@ public abstract class ConfigurableProperty<T> {
 		this.maxValue = maxValue;
 		this.initValue = initValue;
 		this.increment = increment;
-		this.prop = new SimpleObjectProperty<>(null, name, initValue);
+		prop = new SimpleObjectProperty<>(null, name, initValue);
+		listeners = new HashMap<String, ChangeListener<T>>();
 	}
 	
 	public ConfigurableProperty(String name, ObjectProperty<T> prop, T minValue, T maxValue, T initValue, T increment,
@@ -63,4 +69,18 @@ public abstract class ConfigurableProperty<T> {
     public T get() {
 		return prop.get();
 	}
+
+    public void addListener(ChangeListener<T> listener, String key) {
+        if(!listeners.containsKey(key)) {
+            listeners.put(key, listener);
+            prop.addListener(listener);
+        }
+    }
+
+    public void removeListener(String key) {
+        ChangeListener<T> listener = listeners.remove(key);
+        if(listener != null) {
+            prop.removeListener(listener);
+        }
+    }
 }

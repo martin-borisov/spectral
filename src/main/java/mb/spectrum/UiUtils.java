@@ -4,6 +4,8 @@ import static mb.spectrum.Utils.map;
 import static org.apache.commons.lang3.math.NumberUtils.isCreatable;
 
 import java.text.MessageFormat;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -22,6 +24,7 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.Property;
 import javafx.beans.property.ReadOnlyDoubleProperty;
+import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
@@ -31,6 +34,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.Border;
@@ -177,6 +181,23 @@ public class UiUtils {
 	    }
 	    
 	    return gauge;
+	}
+	
+	public static ListView<String> createChoicePropertyListView(ConfigurableChoiceProperty prop, Pane parent) {
+	    
+	    // Reverse the items in the list, as the property value increase/decrease 
+	    // with arrow keys is done in reverse order
+	    ArrayList<String> items = new ArrayList<>(prop.getAllValues());
+	    Collections.reverse(items);
+	    
+	    ListView<String> list = new ListView<>(
+	            FXCollections.<String>observableArrayList(items));
+	    list.setMouseTransparent(true);
+	    list.setFocusTraversable(false);
+	    list.getSelectionModel().select(prop.get());
+	    list.styleProperty().bind(Bindings.concat(
+                "-fx-font-size: ", parent.widthProperty().divide(40), ";"));
+	    return list;
 	}
 	
 	public static Line createThickRoundedLine(Color color) {

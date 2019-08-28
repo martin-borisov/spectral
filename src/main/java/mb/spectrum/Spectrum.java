@@ -29,6 +29,7 @@ import javafx.scene.SceneAntialiasing;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
 import javafx.scene.control.Slider;
 import javafx.scene.effect.Glow;
 import javafx.scene.input.KeyEvent;
@@ -495,6 +496,7 @@ public class Spectrum extends Application {
             ConfigurableProperty<? extends Object> prop = currentPropertyList.get(idx);
             Region control = null;
             if(prop instanceof ConfigurableColorProperty) {
+                
                 ObjectProperty<Color> p = (ObjectProperty<Color>) prop.getProp();
                 ColorControl picker = new ColorControl(p.getValue());
                 p.bind(picker.colorProperty());
@@ -502,22 +504,32 @@ public class Spectrum extends Application {
                 
             } else if(prop instanceof ConfigurableIntegerProperty || 
                     prop instanceof ConfigurableDoubleProperty) {
+                
                 control = UiUtils.createNumberPropertyGauge(prop);
+                
             } else if(prop instanceof ConfigurableChoiceProperty) {
-                Label label = UiUtils.createNumberPropertyLabel(
-                        String.valueOf(prop.getProp().getValue()), currentView.getRoot());
-                label.textProperty().bind(Bindings.createStringBinding(
-                        () -> {
-                            return String.valueOf(prop.getProp().get());
-                        }, prop.getProp()));
-                control = label;
+                
+                ConfigurableChoiceProperty choiceProp = (ConfigurableChoiceProperty) prop;
+                ListView<String> list = UiUtils.createChoicePropertyListView(
+                        choiceProp, currentView.getRoot());
+                choiceProp.removeListener("listViewListener");
+                choiceProp.addListener((obs, oldValue, newValue) -> {
+                    list.getSelectionModel().clearSelection();
+                    list.getSelectionModel().select((String) newValue);
+                }, "listViewListener");
+                
+                control = list;
+                
             } else if(prop instanceof ConfigurableBooleanProperty) {
+                
                 ObjectProperty<Boolean> p = (ObjectProperty<Boolean>) prop.getProp();
                 CheckBox box = UiUtils.createBooleanPropertyCheckBox(
                         p.getValue(), prop.getName(), currentView.getRoot());
                 box.selectedProperty().bind(p);
                 control = box;
+                
             } else if(prop instanceof ActionProperty) {
+                
                 Button button = UiUtils.createActionPropertyButton(prop.getName());
                 button.setOnAction(new EventHandler<ActionEvent>() {
                     public void handle(ActionEvent event) {
@@ -525,6 +537,7 @@ public class Spectrum extends Application {
                     }
                 });
                 control = button;
+                
             }
             
             currentView.getRoot().getChildren().add(

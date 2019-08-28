@@ -12,6 +12,7 @@ public class ConfigurableChoiceProperty extends ConfigurableProperty<String> {
 	public ConfigurableChoiceProperty(String name, List<String> values, String initValue) {
 		super(name, StringUtils.EMPTY, StringUtils.EMPTY, initValue, null);
 		this.values = values;
+		idx = values.indexOf(initValue);
 	}
 
 	@Override
@@ -30,6 +31,10 @@ public class ConfigurableChoiceProperty extends ConfigurableProperty<String> {
 			idx = values.size() - 1;
 		}
 		return getPropValue();
+	}
+	
+	public int getCurrentIndex() {
+	    return idx;
 	}
 	
 	public List<String> getAllValues() {
