@@ -163,9 +163,13 @@ public class StageGpioController implements GpioPinListenerDigital {
 		bothButtonsHoldTimer = new Timer(true);
 		bothButtonsHoldTimer.schedule(new TimerTask() {
 			public void run() {
-			    UiUtils.createAndShowShutdownPrompt(stage, true);
+				Platform.runLater(new Runnable() {
+					public void run() {
+						UiUtils.createAndShowShutdownPrompt(stage, true);
+					}
+				});
 			}
-		}, 1000);
+		}, 3000);
 	}
 	
 	private void cancelBothButtonsPressedTimer() {

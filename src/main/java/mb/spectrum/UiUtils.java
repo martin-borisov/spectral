@@ -377,7 +377,6 @@ public class UiUtils {
 	    BorderPane pane = createUtilityPane(parent, 1.5, 2, 1);
 	    pane.setTop(createNumberPropertyLabel("Powering off in", parent));
 	    pane.setCenter(label);
-	    pane.setBottom(createNumberPropertyLabel("Press any button to cancel", parent));
 	    parent.getChildren().add(pane);
 	    
 	    
