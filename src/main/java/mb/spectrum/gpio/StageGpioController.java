@@ -17,7 +17,7 @@ import javafx.scene.Node;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.stage.Stage;
-import mb.spectrum.SystemUtils;
+import mb.spectrum.UiUtils;
 import mb.spectrum.gpio.RotaryEncoderHandler.Direction;
 
 public class StageGpioController implements GpioPinListenerDigital {
@@ -163,9 +163,9 @@ public class StageGpioController implements GpioPinListenerDigital {
 		bothButtonsHoldTimer = new Timer(true);
 		bothButtonsHoldTimer.schedule(new TimerTask() {
 			public void run() {
-				SystemUtils.shutdown();
+			    UiUtils.createAndShowShutdownPrompt(stage, true);
 			}
-		}, 5000);
+		}, 1000);
 	}
 	
 	private void cancelBothButtonsPressedTimer() {

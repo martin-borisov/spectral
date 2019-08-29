@@ -4,10 +4,14 @@ import ddf.minim.AudioPlayer;
 import ddf.minim.AudioSource;
 import ddf.minim.Minim;
 import ddf.minim.javasound.JSMinim;
+import javafx.event.EventHandler;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.stage.Stage;
 import mb.spectrum.AudioListener;
 import mb.spectrum.MinimInitializer;
 import mb.spectrum.PlatformStrategy;
+import mb.spectrum.UiUtils;
 
 public class DesktopStrategy implements PlatformStrategy {
 	
@@ -20,6 +24,20 @@ public class DesktopStrategy implements PlatformStrategy {
 	
 	@Override
 	public void initialize(Stage stage) {
+	    
+	    // Used only for troubleshooting purposes, not really needed functionally
+	    if(Boolean.getBoolean("spectrumDebug")) {
+	        stage.addEventFilter(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+	            public void handle(KeyEvent event) {
+	                if(KeyCode.D.equals(event.getCode()) && 
+	                        event.isControlDown() && 
+	                        event.isAltDown()) {
+	                    UiUtils.createAndShowShutdownPrompt(stage, false);
+	                    event.consume();
+	                }
+	            }
+	        });
+	    }
 	}
 
 	@Override

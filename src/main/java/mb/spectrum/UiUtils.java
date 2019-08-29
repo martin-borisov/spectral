@@ -16,7 +16,9 @@ import eu.hansolo.medusa.Gauge;
 import eu.hansolo.medusa.Gauge.SkinType;
 import eu.hansolo.medusa.GaugeBuilder;
 import javafx.animation.FadeTransition;
+import javafx.animation.KeyFrame;
 import javafx.animation.SequentialTransition;
+import javafx.animation.Timeline;
 import javafx.animation.Transition;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
@@ -50,6 +52,7 @@ import javafx.scene.paint.Paint;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.SVGPath;
 import javafx.scene.shape.StrokeLineCap;
+import javafx.stage.Stage;
 import javafx.util.Duration;
 import mb.spectrum.prop.ConfigurableBooleanProperty;
 import mb.spectrum.prop.ConfigurableChoiceProperty;
@@ -59,6 +62,8 @@ import mb.spectrum.prop.ConfigurableIntegerProperty;
 import mb.spectrum.prop.ConfigurableProperty;
 
 public class UiUtils {
+    
+    private static final int SHUTDOWN_COUNTDOWN_TIME_S = 10;
 	
 	public static Line createGridLine(double startX, double startY, double endX, double endY, Color color, List<Line> list) {
 		Line line = new Line(startX, startY, endX, endY);
@@ -361,5 +366,37 @@ public class UiUtils {
         		color, CornerRadii.EMPTY, Insets.EMPTY)));
         
         return region;
+	}
+	
+	public static void createAndShowShutdownPrompt(Stage stage, boolean shutdownForReal) {
+	    Pane parent = (Pane)stage.getScene().getRoot();
+	    
+	    Label label = createNumberPropertyLabel(
+	            String.valueOf(SHUTDOWN_COUNTDOWN_TIME_S), parent);
+	    
+	    BorderPane pane = createUtilityPane(parent, 1.5, 2, 1);
+	    pane.setTop(createNumberPropertyLabel("Powering off in", parent));
+	    pane.setCenter(label);
+	    pane.setBottom(createNumberPropertyLabel("Press any button to cancel", parent));
+	    parent.getChildren().add(pane);
+	    
+	    
+	    KeyFrame frame = new KeyFrame(Duration.seconds(1), (event) -> {
+	        int value = Integer.valueOf(label.getText()) - 1;
+	        if(value > 0) {
+	            label.setText(String.valueOf(value));
+	        } else {
+	            parent.getChildren().remove(pane);
+	            if(shutdownForReal) {
+	                SystemUtils.shutdown();
+	            } else {
+	                System.out.println("Fake shutdown");
+	            }
+	        }
+	    });
+	    
+        Timeline tl = new Timeline(frame);
+        tl.setCycleCount(SHUTDOWN_COUNTDOWN_TIME_S);
+        tl.play();
 	}
 }
