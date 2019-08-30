@@ -40,6 +40,7 @@ import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import mb.spectrum.desktop.DesktopStrategy;
+import mb.spectrum.gpio.StageGpioController;
 import mb.spectrum.prop.ActionProperty;
 import mb.spectrum.prop.ConfigurableBooleanProperty;
 import mb.spectrum.prop.ConfigurableChoiceProperty;
@@ -68,7 +69,7 @@ public class Spectrum extends Application {
             ConfigService.getInstance().getOrCreateProperty("mb.buffer-size", String.valueOf(2048)));
     
     private static final int INIT_SCENE_WIDTH = 800;
-    private static final int INIT_SCENE_HEIGHT = 600;
+    private static final int INIT_SCENE_HEIGHT = 480;
     private static final String VIEW_LABEL_COLOR = "#00aeff";
     private static final double VIEW_LABEL_FADE_IN_MS = 1000;
     private static final double VIEW_LABEL_LINGER_MS = 1000;
@@ -295,13 +296,15 @@ public class Spectrum extends Application {
             
         case UP:
             if(isPropertiesVisible()) { 
-                changeCurrentPropertyValue(true);
+                changeCurrentPropertyValue(true, 
+                        StageGpioController.EVENT_SOURCE_ID.equals(event.getSource()));
             }
             break;
             
         case DOWN:
             if(isPropertiesVisible()) {
-                changeCurrentPropertyValue(false);
+                changeCurrentPropertyValue(false, 
+                        StageGpioController.EVENT_SOURCE_ID.equals(event.getSource()));
             }
             break;
             
@@ -602,9 +605,14 @@ public class Spectrum extends Application {
         return pane;
     }
     
-    private void changeCurrentPropertyValue(boolean increment) {
+    private void changeCurrentPropertyValue(boolean increment, boolean reverseIfChoiceProp) {
         cancelPropertyFadeOutIfPlaying();
         ConfigurableProperty<? extends Object> prop = currentPropertyList.get(currentPropIdx);
+        
+        if(prop instanceof ConfigurableChoiceProperty && reverseIfChoiceProp) {
+            increment = !increment;
+        }
+        
         if (increment) {
             prop.increment();
         } else {

@@ -58,7 +58,7 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
     
     private static final double GRID_LABELS_MARGIN_RATIO = 0.1;
     private static final double PIP_MARGIN_RATIO = 0.05;
-    private static final int LABEL_SIZE_RATIO = 8;
+    private static final int LABEL_SIZE_RATIO = 4;
     
     private static final int SAMPLING_RATE = Integer.valueOf(
             ConfigService.getInstance().getProperty("mb.sampling-rate"));
@@ -438,7 +438,7 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
         label.textFillProperty().bind(propGridColor.getProp());
         label.styleProperty().bind(Bindings.concat(
                 "-fx-font-size: ", Bindings.createDoubleBinding(
-                        () -> (getRoot().widthProperty().get() * SCENE_MARGIN_RATIO) / 4,
+                        () -> (getRoot().widthProperty().get() * SCENE_MARGIN_RATIO) / LABEL_SIZE_RATIO,
                         getRoot().widthProperty())));
     }
     
