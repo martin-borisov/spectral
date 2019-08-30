@@ -62,11 +62,18 @@ public class SpectrumBarView extends AbstractSpectrumView {
 	protected List<Node> collectNodes() {
 		List<Node> parentShapes = super.collectNodes();
 		
+		// Bars
 		bars = new ArrayList<>();
-		trails = new ArrayList<>();
 		for (int i = 0; i < bandCount; i++) {
 			createBar(i);
-			createTrail(i);
+		}
+		
+		// Trails
+		trails = new ArrayList<>();
+		if(propShowTrails.getProp().get()) {
+		    for (int i = 0; i < bandCount; i++) {
+		        createTrail(i);
+		    }
 		}
 		
 		ArrayList<Node> shapes = new ArrayList<>(parentShapes);

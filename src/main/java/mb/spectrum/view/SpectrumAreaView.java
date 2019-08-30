@@ -63,21 +63,27 @@ public class SpectrumAreaView extends AbstractSpectrumView {
 		curvePath.fillProperty().bind(propAreaColor.getProp());
 		createStartingPoint(curvePath);
 		
-		// Trail
-		trailPath = new Path();
-		trailPath.strokeProperty().bind(propTrailColor.getProp());
-		trailPath.setStrokeWidth(2);
-		createStartingPoint(trailPath);
-		
 		// Paths
 		for (int i = 0; i < bandCount; i++) {
-			
-			// Create line segments
 			createFreqLineToSegment(i);
-			createTrailLineToSegment(i);
 		}
 		createLastLine(curvePath);
-		createLastLine(trailPath);
+		
+		
+	    // Trail
+        trailPath = new Path();
+        
+        if(propShowTrails.getProp().get()) {
+            trailPath.strokeProperty().bind(propTrailColor.getProp());
+            trailPath.setStrokeWidth(2);
+            createStartingPoint(trailPath);
+        
+            for (int i = 0; i < bandCount; i++) {
+                createTrailLineToSegment(i);
+            }
+        
+            createLastLine(trailPath);
+        }
 		
 		ArrayList<Node> shapes = new ArrayList<>(parentShapes);
 		shapes.add(curvePath);

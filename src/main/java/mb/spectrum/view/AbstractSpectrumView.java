@@ -77,6 +77,7 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
     private ConfigurableBooleanProperty propShowPip;
     private ConfigurableChoiceProperty propPipViewType;
     private ConfigurableDoubleProperty propPipOpacity;
+    protected ConfigurableBooleanProperty propShowTrails;
     
     /* Operational properties */
     protected List<SimpleDoubleProperty> bandValues;
@@ -130,7 +131,8 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
                 propShowPip,
                 propPipViewType,
                 propPipOpacity,
-                propGridColor);
+                propGridColor,
+                propShowTrails);
     }
     
     @Override
@@ -175,6 +177,13 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
                 getBasePropertyKey() + ".pipOpacity", "PIP Opacity", 0.0, 1.0, 0.8, 0.05);
         propGridColor = UiUtils.createConfigurableColorProperty(
                 getBasePropertyKey() + ".gridColor", "Grid Color", Color.web("#fd4a11"));
+        propShowTrails = createConfigurableBooleanProperty(
+                getBasePropertyKey() + ".showTrails", "Show Trails", true);
+        propShowTrails.getProp().addListener((obs, oldVal, newVal) -> {
+            if(!newVal.equals(oldVal)) {
+                reset();
+            }
+        });
     }
 
     @Override
@@ -343,22 +352,26 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
     @Override
     public void nextFrame() {
         
-        int minDbValue = propMinDbValue.getProp().get();
-        for (int i = 0; i < bandValuesDB.length; i++) {
+        if(propShowTrails.getProp().get()) {
+        
+            int minDbValue = propMinDbValue.getProp().get();
+            for (int i = 0; i < bandValuesDB.length; i++) {
             
-            // Trail drop           
-            trailValuesDB[i] = trailValuesDB[i] - trailOpValues[i];
-            trailOpValues[i] = trailOpValues[i] * propTrailAccelerationFactor.getProp().get();
+                // Trail drop           
+                trailValuesDB[i] = trailValuesDB[i] - trailOpValues[i];
+                trailOpValues[i] = trailOpValues[i] * propTrailAccelerationFactor.getProp().get();
             
-            Double bandValue = bandValues.get(i).getValue();
-            if(bandValue > trailValuesDB[i]) {
-                trailValuesDB[i] = bandValue;
-                trailOpValues[i] = propTrailStayFactor.getProp().get();
+                Double bandValue = bandValues.get(i).getValue();
+                if(bandValue > trailValuesDB[i]) {
+                    trailValuesDB[i] = bandValue;
+                    trailOpValues[i] = propTrailStayFactor.getProp().get();
+                }
+                if(trailValuesDB[i] < minDbValue) {
+                    trailValuesDB[i] = minDbValue;
+                }
+                trailValues.get(i).set(trailValuesDB[i]);
             }
-            if(trailValuesDB[i] < minDbValue) {
-                trailValuesDB[i] = minDbValue;
-            }
-            trailValues.get(i).set(trailValuesDB[i]);
+        
         }
         
         // Update the sub view
