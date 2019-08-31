@@ -22,8 +22,6 @@ import mb.spectrum.gpio.RotaryEncoderHandler.Direction;
 
 public class StageGpioController implements GpioPinListenerDigital {
     
-    public static final String EVENT_SOURCE_ID = StageGpioController.class.getName();
-	
 	public enum ButtonState {
 		PRESSED, RELEASED
 	}
@@ -195,8 +193,7 @@ public class StageGpioController implements GpioPinListenerDigital {
 	}
 	
 	private void triggerKeyPress(KeyCode code, boolean controlDown, boolean focused) {
-		KeyEvent event = new KeyEvent(EVENT_SOURCE_ID, null, 
-		        KeyEvent.KEY_PRESSED, null, null, code, false, controlDown, 
+		KeyEvent event = new KeyEvent(KeyEvent.KEY_PRESSED, null, null, code, false, controlDown, 
 		        false, false);
 		
 		// Check if a button is currently in focus
@@ -230,10 +227,9 @@ public class StageGpioController implements GpioPinListenerDigital {
 	}
 	
 	private void fireUpDownRotaryTurnEvent(Direction direction) {
-		KeyEvent event = new KeyEvent(EVENT_SOURCE_ID, null, 
-		        KeyEvent.KEY_PRESSED, null, null, 
+		KeyEvent event = new KeyEvent(KeyEvent.KEY_PRESSED, null, null, 
 				Direction.RIGHT.equals(direction) ? KeyCode.UP : KeyCode.DOWN, 
-				        false, false, false, false);
+				        true, false, false, false);
 		
 		// Check if a slider is currently in focus
 		// as we want to be able to dispatch the event directly to it and not the stage
@@ -246,8 +242,7 @@ public class StageGpioController implements GpioPinListenerDigital {
 	}
 	
 	private void fireLeftRightRotaryTurnEvent(Direction direction) {
-		KeyEvent event = new KeyEvent(EVENT_SOURCE_ID, null, 
-		        KeyEvent.KEY_PRESSED, null, null, 
+		KeyEvent event = new KeyEvent(KeyEvent.KEY_PRESSED, null, null, 
 				Direction.RIGHT.equals(direction) ? KeyCode.RIGHT : KeyCode.LEFT, 
 						false, false, false, false);
 		

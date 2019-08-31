@@ -296,15 +296,13 @@ public class Spectrum extends Application {
             
         case UP:
             if(isPropertiesVisible()) { 
-                changeCurrentPropertyValue(true, 
-                        StageGpioController.EVENT_SOURCE_ID.equals(event.getSource()));
+                changeCurrentPropertyValue(true, event.isShiftDown());
             }
             break;
             
         case DOWN:
             if(isPropertiesVisible()) {
-                changeCurrentPropertyValue(false, 
-                        StageGpioController.EVENT_SOURCE_ID.equals(event.getSource()));
+                changeCurrentPropertyValue(false, event.isShiftDown());
             }
             break;
             
