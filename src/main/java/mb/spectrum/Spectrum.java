@@ -40,7 +40,6 @@ import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import mb.spectrum.desktop.DesktopStrategy;
-import mb.spectrum.gpio.StageGpioController;
 import mb.spectrum.prop.ActionProperty;
 import mb.spectrum.prop.ConfigurableBooleanProperty;
 import mb.spectrum.prop.ConfigurableChoiceProperty;

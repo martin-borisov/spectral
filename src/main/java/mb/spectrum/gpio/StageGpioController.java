@@ -227,16 +227,23 @@ public class StageGpioController implements GpioPinListenerDigital {
 	}
 	
 	private void fireUpDownRotaryTurnEvent(Direction direction) {
-		KeyEvent event = new KeyEvent(KeyEvent.KEY_PRESSED, null, null, 
-				Direction.RIGHT.equals(direction) ? KeyCode.UP : KeyCode.DOWN, 
-				        true, false, false, false);
 		
 		// Check if a slider is currently in focus
 		// as we want to be able to dispatch the event directly to it and not the stage
 		Node focusNode = stage.getScene().focusOwnerProperty().get();
 		if(focusNode != null) {
+			KeyEvent event = new KeyEvent(KeyEvent.KEY_PRESSED, null, null, 
+					Direction.RIGHT.equals(direction) ? KeyCode.UP : KeyCode.DOWN, 
+					        false, false, false, false);
+			
 			fireFocusedControlEvent(event);
 		} else {
+			
+			// Shift down set for special list property handling
+			KeyEvent event = new KeyEvent(KeyEvent.KEY_PRESSED, null, null, 
+					Direction.RIGHT.equals(direction) ? KeyCode.UP : KeyCode.DOWN, 
+					        true, false, false, false);
+			
 			fireStageEvent(event);
 		}
 	}
