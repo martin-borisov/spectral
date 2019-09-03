@@ -94,15 +94,15 @@ public class ColorControl extends GridPane {
     
     public void incrementCurrent() {
         Gauge gauge = gauges.get(currentGaugeIdx);
-        final double step = gauge.getDecimals() > 0 ? 0.1 : 1;
-        double value = gauge.getValue() + step;
+        final double step = (gauge.getMaxValue() - gauge.getMinValue()) / 20;
+        final double value = gauge.getValue() + step;
         gauge.setValue(value > gauge.getMaxValue() ? gauge.getMaxValue() : value);
     }
     
     public void decrementCurrent() {
         Gauge gauge = gauges.get(currentGaugeIdx);
-        final double step = gauge.getDecimals() > 0 ? 0.1 : 1;
-        double value = gauge.getValue() - step;
+        final double step = (gauge.getMaxValue() - gauge.getMinValue()) / 20;
+        final double value = gauge.getValue() - step;
         gauge.setValue(value < gauge.getMinValue() ? gauge.getMinValue() : value);
     }
 
@@ -193,8 +193,8 @@ public class ColorControl extends GridPane {
 	            .skinType(SkinType.SPACE_X)
 	            .decimals(decimals)
 	            .title(label)
-	            .barBackgroundColor(Color.DIMGRAY)
-	            .thresholdColor(Color.TRANSPARENT) // Transparent threshold
+	            .barBackgroundColor(Color.gray(0.1))
+	            .thresholdVisible(false)
 	            .threshold(max)
 	            .interactive(true)
 	            .build();
@@ -212,6 +212,6 @@ public class ColorControl extends GridPane {
 	
 	private void markCurrentGaugeAsSelected() {
 	    Gauge gauge = gauges.get(currentGaugeIdx);
-	    gauge.setBackgroundPaint(Color.GRAY);
+	    gauge.setBackgroundPaint(Color.gray(0.4));
 	}
 }
