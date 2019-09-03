@@ -282,6 +282,10 @@ public class GaugeView extends AbstractMixedChannelView {
 			}
 		}
 		
+		// #
+		gauge.setMinorTickMarksVisible(false);
+		// #
+		
         
 		return Arrays.asList(gauge);
 	}

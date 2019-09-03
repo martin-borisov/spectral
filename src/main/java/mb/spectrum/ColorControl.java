@@ -1,15 +1,18 @@
 package mb.spectrum;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import eu.hansolo.medusa.Gauge;
+import eu.hansolo.medusa.Gauge.SkinType;
+import eu.hansolo.medusa.GaugeBuilder;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
-import javafx.scene.control.Label;
 import javafx.scene.control.Slider;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
@@ -23,12 +26,16 @@ import javafx.scene.paint.Color;
  */
 public class ColorControl extends GridPane {
 	
-	private static final int PARENT_TO_GAP_RATIO = 20;
+	private static final int PARENT_TO_GAP_RATIO = 60;
 	private static final int PARENT_TO_COLOR_RECT_SIZE_RATIO = 4;
 	
 	private ObjectProperty<Color> colorProperty;
 	private Slider hue, saturation, brightness, opacity;
+	private Gauge hueGauge, satGauge, brGauge, opGauge;
 	private Region transparentRect, colorRect;
+	
+	private int currentGaugeIdx;
+	private List<Gauge> gauges;
 	
 	public ColorControl(Color color) {
 		colorProperty = new SimpleObjectProperty<>(color != null ? color : Color.WHITE);
@@ -58,6 +65,46 @@ public class ColorControl extends GridPane {
 		int sliderIdx = sliders.indexOf(slider);
 		return (sliderIdx > 0);
 	}
+	
+    public void selectNextGauge() {
+        unmarkCurrentGauge();
+        currentGaugeIdx++;
+        if (currentGaugeIdx == gauges.size()) {
+            currentGaugeIdx = 0;
+        }
+        markCurrentGaugeAsSelected();
+    }
+	
+    public void selectPrevGauge() {
+        unmarkCurrentGauge();
+        currentGaugeIdx--;
+        if (currentGaugeIdx < 0) {
+            currentGaugeIdx = gauges.size() - 1;
+        }
+        markCurrentGaugeAsSelected();
+    }
+    
+    public boolean isFirstSelected() {
+        return currentGaugeIdx == 0;
+    }
+    
+    public boolean isLastSelected() {
+        return currentGaugeIdx == gauges.size() - 1;
+    }
+    
+    public void incrementCurrent() {
+        Gauge gauge = gauges.get(currentGaugeIdx);
+        final double step = gauge.getDecimals() > 0 ? 0.1 : 1;
+        double value = gauge.getValue() + step;
+        gauge.setValue(value > gauge.getMaxValue() ? gauge.getMaxValue() : value);
+    }
+    
+    public void decrementCurrent() {
+        Gauge gauge = gauges.get(currentGaugeIdx);
+        final double step = gauge.getDecimals() > 0 ? 0.1 : 1;
+        double value = gauge.getValue() - step;
+        gauge.setValue(value < gauge.getMinValue() ? gauge.getMinValue() : value);
+    }
 
 	private void createControls() {
 		hue = createSlider(0, 360, colorProperty.get().getHue());
@@ -66,6 +113,13 @@ public class ColorControl extends GridPane {
 		saturation = createSlider(0, 1, colorProperty.get().getSaturation());
 		brightness = createSlider(0, 1, colorProperty.get().getBrightness());
 		opacity = createSlider(0, 1, colorProperty.get().getOpacity());
+		
+		hueGauge = createGauge(0, 360, colorProperty.get().getHue(), "Hue", 0);
+		satGauge = createGauge(0, 1, colorProperty.get().getSaturation(), "Saturation", 2);
+		brGauge = createGauge(0, 1, colorProperty.get().getBrightness(), "Brightness", 2);
+		opGauge = createGauge(0, 1, colorProperty.get().getOpacity(), "Opacity", 2);
+		gauges = new ArrayList<>(Arrays.asList(hueGauge, brGauge, opGauge, satGauge));
+		markCurrentGaugeAsSelected();
 		
 		transparentRect = new Region();
 		transparentRect.prefWidthProperty().bind(widthProperty().divide(PARENT_TO_COLOR_RECT_SIZE_RATIO));
@@ -98,12 +152,14 @@ public class ColorControl extends GridPane {
         // Bind all controls to the main color property
         colorProperty.bind(Bindings.createObjectBinding(
         		() -> {
-        			return Color.hsb(hue.valueProperty().get(), saturation.valueProperty().get(), 
-        					brightness.valueProperty().get(), opacity.valueProperty().get());
-        		}, hue.valueProperty(), saturation.valueProperty(), brightness.valueProperty(), opacity.valueProperty()));
+        			return Color.hsb(hueGauge.valueProperty().get(), satGauge.valueProperty().get(), 
+        					brGauge.valueProperty().get(), opGauge.valueProperty().get());
+        		}, hueGauge.valueProperty(), satGauge.valueProperty(), brGauge.valueProperty(), opGauge.valueProperty()));
 	}
 	
 	private void layoutControls() {
+	    
+	    /*
 		add(hue, 0, 0);
 		add(new Label("H"), 0, 1);
 		add(saturation, 1, 0);
@@ -114,6 +170,12 @@ public class ColorControl extends GridPane {
 		add(new Label("O"), 3, 1);
 		add(transparentRect, 4, 0, 1, 2);
 		add(colorRect, 4, 0, 1, 2);
+		*/
+		
+		add(hueGauge, 0, 0);
+		add(satGauge, 0, 1);
+		add(brGauge, 1, 0);
+		add(opGauge, 1, 1);
 	}
 	
 	private Slider createSlider(double min, double max, double value) {
@@ -121,5 +183,35 @@ public class ColorControl extends GridPane {
 		slider.setOrientation(Orientation.VERTICAL);
 		slider.setBlockIncrement(0.05);
 		return slider;
+	}
+	
+	private Gauge createGauge(double min, double max, double value, String label, int decimals) {
+	    Gauge gauge = GaugeBuilder.create()
+	            .minValue(min)
+	            .maxValue(max)
+	            .value(value)
+	            .skinType(SkinType.SPACE_X)
+	            .decimals(decimals)
+	            .title(label)
+	            .barBackgroundColor(Color.DIMGRAY)
+	            .thresholdColor(Color.TRANSPARENT) // Transparent threshold
+	            .threshold(max)
+	            .interactive(true)
+	            .build();
+	    
+	    gauge.setBackground(new Background(new BackgroundFill(
+                Color.TRANSPARENT, new CornerRadii(20), Insets.EMPTY)));
+	    gauge.barColorProperty().bind(colorProperty);
+	    return gauge;
+	}
+	
+    private void unmarkCurrentGauge() {
+        Gauge gauge = gauges.get(currentGaugeIdx);
+        gauge.setBackgroundPaint(Color.TRANSPARENT);
+    }
+	
+	private void markCurrentGaugeAsSelected() {
+	    Gauge gauge = gauges.get(currentGaugeIdx);
+	    gauge.setBackgroundPaint(Color.GRAY);
 	}
 }

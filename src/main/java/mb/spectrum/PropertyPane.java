@@ -5,6 +5,7 @@ import java.util.List;
 import javafx.beans.binding.Bindings;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.Border;
@@ -35,6 +36,10 @@ public class PropertyPane extends BorderPane {
         setup(parent, widthRatio, heightRatio, opacity);
         createPropertyList(currentPropertyList, currentPropIdx);
         addPropertyControl(control);
+    }
+    
+    public Node getControl() {
+        return getCenter();
     }
     
     private void setup(Pane parent, double widthRatio, double heightRatio, double opacity) {

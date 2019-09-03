@@ -96,7 +96,7 @@ public class Spectrum extends Application {
     /* Property management */
     private List<ConfigurableProperty<? extends Object>> currentPropertyList;
     private int currentPropIdx;
-    private BorderPane currentPropertyNode;
+    private PropertyPane currentPropertyNode;
     private Transition currentPropertyTransition;
     private Map<Integer, Integer> lastPropertyMap;
     
@@ -462,6 +462,17 @@ public class Spectrum extends Application {
     }
     
     private void nextProperty() {
+        
+        // Special handling of color properties
+        if(currentPropertyNode != null && 
+                currentPropertyNode.getControl() instanceof ColorControl) {
+            ColorControl control = (ColorControl) currentPropertyNode.getControl();
+            if(!control.isLastSelected()) {
+                control.selectNextGauge();
+                return;
+            }
+        }
+        
         if(currentPropertyNode != null) {
             hideProperty(currentPropertyNode);
             currentPropertyNode = null;
@@ -476,6 +487,17 @@ public class Spectrum extends Application {
     }
     
     private void prevProperty() {
+        
+        // Special handling of color properties
+        if(currentPropertyNode != null && 
+                currentPropertyNode.getControl() instanceof ColorControl) {
+            ColorControl control = (ColorControl) currentPropertyNode.getControl();
+            if(!control.isFirstSelected()) {
+                control.selectPrevGauge();
+                return;
+            }
+        }
+        
         if(currentPropertyNode != null) {
             hideProperty(currentPropertyNode);
             currentPropertyNode = null;
@@ -591,7 +613,7 @@ public class Spectrum extends Application {
         return propEnableSmoothTransitions.get();
     }
     
-    private BorderPane createPropertyPane(Region control) {
+    private PropertyPane createPropertyPane(Region control) {
         
         PropertyPane pane = new PropertyPane(currentView.getRoot(), 1.4, 1.6, 1, 
                 control, currentPropertyList, currentPropIdx);
@@ -606,8 +628,20 @@ public class Spectrum extends Application {
         cancelPropertyFadeOutIfPlaying();
         ConfigurableProperty<? extends Object> prop = currentPropertyList.get(currentPropIdx);
         
+        // Special handling of choice properties
         if(prop instanceof ConfigurableChoiceProperty && reverseIfChoiceProp) {
             increment = !increment;
+        }
+        
+        // Special handling of color properties
+        if(prop instanceof ConfigurableColorProperty) {
+            ColorControl control = (ColorControl) currentPropertyNode.getControl();
+            if(increment) {
+                control.incrementCurrent();
+            } else {
+                control.decrementCurrent();
+            }
+            return;
         }
         
         if (increment) {
