@@ -30,7 +30,6 @@ import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
-import javafx.scene.control.Slider;
 import javafx.scene.effect.Glow;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
@@ -248,7 +247,7 @@ public class Spectrum extends Application {
         switch (event.getCode()) {
         case RIGHT:
             if(isPropertiesVisible()) {
-                if(!isPropertySliderInFocusAndNotLast()) {
+                if(!isSmoothTransitionsEnabled()) {
                     nextProperty();
                 } else {
                     cancelPropertyFadeOutIfPlaying();
@@ -261,7 +260,7 @@ public class Spectrum extends Application {
             
         case LEFT:
             if(isPropertiesVisible()) {
-                if(!isPropertySliderInFocusAndNotFirst()) {
+                if(!isSmoothTransitionsEnabled()) {
                     prevProperty();
                 } else {
                     cancelPropertyFadeOutIfPlaying();
@@ -681,30 +680,6 @@ public class Spectrum extends Application {
             viewRotateTimer.cancel();
             viewRotateTimer = null;
         }
-    }
-    
-    private boolean isPropertySliderInFocusAndNotLast() {
-        boolean isVisible = false;
-        Node focusOwner = currentView.getRoot().getScene().getFocusOwner();
-        if(focusOwner instanceof Slider && isPropertiesVisible()) {
-            Node control = currentPropertyNode.getCenter();
-            if(control instanceof ColorControl) {
-                isVisible = ((ColorControl) control).hasMoreSlidersToTheRight((Slider) focusOwner);
-            }
-        }
-        return isVisible;
-    }
-    
-    private boolean isPropertySliderInFocusAndNotFirst() {
-        boolean isVisible = false;
-        Node focusOwner = currentView.getRoot().getScene().getFocusOwner();
-        if(focusOwner instanceof Slider && isPropertiesVisible()) {
-            Node control = currentPropertyNode.getCenter();
-            if(control instanceof ColorControl) {
-                isVisible = ((ColorControl) control).hasMoreSlidersToTheLeft((Slider) focusOwner);
-            }
-        }
-        return isVisible;
     }
     
     private void firePropertyButtonIfInFocus() {
