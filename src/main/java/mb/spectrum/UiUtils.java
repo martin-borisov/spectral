@@ -12,6 +12,8 @@ import java.util.TimerTask;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.controlsfx.control.ToggleSwitch;
+
 import eu.hansolo.medusa.Gauge;
 import eu.hansolo.medusa.Gauge.SkinType;
 import eu.hansolo.medusa.GaugeBuilder;
@@ -147,6 +149,16 @@ public class UiUtils {
 		box.styleProperty().bind(Bindings.concat(
 				"-fx-font-size: ", parent.widthProperty().divide(40), ";"));
 		return box;
+	}
+	
+	public static ToggleSwitch createBooleanPropertyToggleSwitch(Boolean value, String label, Pane parent) {
+	    ToggleSwitch toggle = new ToggleSwitch(label);
+	    toggle.setSelected(value);
+	    toggle.styleProperty().bind(Bindings.concat(
+	                "-fx-font-size: ", parent.widthProperty().divide(50), ";"));
+	    toggle.setMouseTransparent(true);
+	    toggle.setFocusTraversable(false);
+	    return toggle;
 	}
 	
 	public static Label createNumberPropertyLabel(String initValue, Pane parent) {

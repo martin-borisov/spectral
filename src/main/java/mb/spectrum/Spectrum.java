@@ -12,6 +12,8 @@ import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import org.controlsfx.control.ToggleSwitch;
+
 import javafx.animation.AnimationTimer;
 import javafx.animation.PauseTransition;
 import javafx.animation.SequentialTransition;
@@ -27,7 +29,6 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.SceneAntialiasing;
 import javafx.scene.control.Button;
-import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.effect.Glow;
@@ -544,10 +545,10 @@ public class Spectrum extends Application {
             } else if(prop instanceof ConfigurableBooleanProperty) {
                 
                 ObjectProperty<Boolean> p = (ObjectProperty<Boolean>) prop.getProp();
-                CheckBox box = UiUtils.createBooleanPropertyCheckBox(
+                ToggleSwitch toggle = UiUtils.createBooleanPropertyToggleSwitch(
                         p.getValue(), prop.getName(), currentView.getRoot());
-                box.selectedProperty().bind(p);
-                control = box;
+                toggle.selectedProperty().bind(p);
+                control = toggle;
                 
             } else if(prop instanceof ActionProperty) {
                 
