@@ -87,7 +87,7 @@ public class StereoLevelsView extends AbstractView {
 		// Requiring reset
 		propMinDbValue = createConfigurableIntegerProperty(
 				keyPrefix + "minDbValue", "Min. DB Value", -100, -10, INIT_MIN_DB_VALUE, 1, "dB");
-		propMinDbValue.getProp().addListener((obs, oldVal, newVal) -> {
+		propMinDbValue.addUpdateFinishedListener((obs, oldVal, newVal) -> {
 			if(newVal != oldVal) {
 				reset();
 			}

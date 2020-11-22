@@ -38,6 +38,13 @@ public class GpioModule {
     	return createDigitalSoftwareDebouncedInputPin(pin, name, 200, listener);
     }
     
+    /**
+     * Creates a pin and sets a debounce delay for a specific rotary encoder
+     * @param pin {@link Pin} instance
+     * @param name Name of the pin
+     * @param listener {@link GpioPinListenerDigital} listsner for pin changes
+     * @return {@link GpioPinDigitalInput}
+     */
     public GpioPinDigitalInput createDigitalSoftwareDebouncedInputPinForRotary(Pin pin, String name, GpioPinListenerDigital listener) {
     	return createDigitalSoftwareDebouncedInputPin(pin, name, 10, listener);
     }

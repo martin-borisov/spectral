@@ -33,6 +33,7 @@ public class StereoLevelsLedView extends AbstractView {
 	}
 	
 	private static final double LABEL_WIDTH_RATIO = 0.05;
+	private static final Color OFF_COLOR = Color.rgb(15, 15, 20);
 	
 	/* Configuration Properties */
 	
@@ -72,7 +73,7 @@ public class StereoLevelsLedView extends AbstractView {
 		// Requiring reset
 		propLedCount = createConfigurableIntegerProperty(
 				keyPrefix + "ledCount", "Led Count", 2, 1000, 10, 1);
-		propLedCount.getProp().addListener((obs, oldVal, newVal) -> {
+		propLedCount.addUpdateFinishedListener((obs, oldVal, newVal) -> {
 			if(newVal != oldVal) {
 				reset();
 			}
@@ -187,7 +188,7 @@ public class StereoLevelsLedView extends AbstractView {
 						(parentHeight - ledGap - ledHalfHeight - labelHalfHeight);
 				}, getRoot().heightProperty(), propVGapLedRatio.getProp(), label.heightProperty()));
 		
-		bindFontSizeToParentWidth(label, LABEL_WIDTH_RATIO, "Alex Brush");
+		bindFontSizeToParentWidth(label, LABEL_WIDTH_RATIO, "Helvetica");
 		label.setCache(true);
 		return label;
 	}
@@ -200,7 +201,7 @@ public class StereoLevelsLedView extends AbstractView {
 				() -> {
 					int ledCount = propLedCount.getProp().get();
 					double parentWidth = getRoot().widthProperty().get();
-					double ledAreaWidth = parentWidth - parentWidth * LABEL_WIDTH_RATIO;
+					double ledAreaWidth = parentWidth - parentWidth * LABEL_WIDTH_RATIO * 2;
 					double ledGap = (ledAreaWidth / ledCount) * propHGapLedRatio.getProp().get();
 					return ledAreaWidth / ledCount - ledGap - ledGap / ledCount;
 				}, propLedCount.getProp(), getRoot().widthProperty(), propHGapLedRatio.getProp()));
@@ -210,7 +211,7 @@ public class StereoLevelsLedView extends AbstractView {
 					int ledCount = propLedCount.getProp().get();
 					double parentWidth = getRoot().widthProperty().get();
 					double labelAreaWidth = parentWidth * LABEL_WIDTH_RATIO;
-					double ledAreaWidth = parentWidth - labelAreaWidth;
+					double ledAreaWidth = parentWidth - labelAreaWidth * 2;
 					double ledGap = (ledAreaWidth / ledCount) * propHGapLedRatio.getProp().get();
 					return labelAreaWidth + ledGap + col * (ledGap + led.widthProperty().get());
 				}, propLedCount.getProp(), getRoot().widthProperty(), propHGapLedRatio.getProp(), led.widthProperty()));
@@ -239,13 +240,6 @@ public class StereoLevelsLedView extends AbstractView {
 		
 		DoubleProperty currentDbProp = 
 				Channel.LEFT.equals(channel) ? currentDbLProp : currentDbRProp;
-		led.visibleProperty().bind(Bindings.createBooleanBinding(
-				() -> {
-					double range = Math.abs(propMinDbValue.getProp().get() / propLedCount.getProp().get());
-					double min = propMinDbValue.getProp().get() + range * col;
-					return currentDbProp.get() > min;
-				}, propMinDbValue.getProp(), propLedCount.getProp(), currentDbProp));
-		
 		
 		led.fillProperty().bind(Bindings.createObjectBinding(
 				() -> {
@@ -261,10 +255,10 @@ public class StereoLevelsLedView extends AbstractView {
 						color = propLedColorNormal.getProp().get();
 					}
 					
-					return color;
+					return currentDbProp.get() > min ? color : OFF_COLOR;
 				}, propLedColorNormal.getProp(), propLedColorMid.getProp(), 
 				propLedColorClip.getProp(), propMinDbValue.getProp(), 
-				propLedCount.getProp(), propClipDbValue.getProp(), propMidDbValue.getProp()));
+				propLedCount.getProp(), propClipDbValue.getProp(), propMidDbValue.getProp(), currentDbProp));
 		return led;
 	}
 	

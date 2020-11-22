@@ -2,6 +2,7 @@ package mb.spectrum.view;
 
 import static mb.spectrum.UiUtils.createConfigurableBooleanProperty;
 import static mb.spectrum.UiUtils.createConfigurableColorProperty;
+import static mb.spectrum.UiUtils.createConfigurableDoubleProperty;
 import static mb.spectrum.UiUtils.createConfigurableIntegerProperty;
 import static mb.spectrum.Utils.map;
 import static mb.spectrum.Utils.peakLevel;
@@ -41,14 +42,16 @@ import mb.spectrum.prop.ConfigurableProperty;
 
 public class AnalogMeterView extends AbstractMixedChannelView {
 	
-	private static final int MIN_DB_ANGLE_DEGREES = 130;
-	private static final int MAX_DB_ANGLE_DEGREES = 50;
+	private static final int MIN_DB_ANGLE_DEGREES = 140;
+	private static final int MAX_DB_ANGLE_DEGREES = 40;
 	private static final double MIN_DB_ANGLE_RAD = Math.toRadians(MIN_DB_ANGLE_DEGREES);
 	private static final double MAX_DB_ANGLE_RAD = Math.toRadians(MAX_DB_ANGLE_DEGREES);
 	private static final double DIV_LENGTH_RATIO_BIG = 0.02;
 	private static final double DIV_LENGTH_RATIO_SMALL = DIV_LENGTH_RATIO_BIG / 3;
 	private static final double BACK_CIRCLE_RADIUS_TO_SCENE_WIDTH_RATIO = 0.05;
 	private static final double ELEMENT_WIDTH_TO_CIRCLE_RADIUS_RATIO = 2.5;
+	private static final double DB_LABEL_RADIUS_RATIO = 1.1;
+	private static final double PERCENTAGE_LABEL_RADIUS_RATIO = 0.9;
 	
 	public enum Orientation {
 		HORIZONTAL, VERTICAL
@@ -65,7 +68,7 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 		propLightXPosition, propLightYPosition;
 	private ConfigurableColorProperty propBgColorA, propBgColorB, propLightColor, 
 		propIndicatorColor, propNormalLevelDigitsColor, propHighLevelDigitsColor, propPeakColor, propRotorColor, propRotorPlateColor;
-	private ConfigurableDoubleProperty propLightSurfaceScale, propLightDiffuseConstant, 
+	private ConfigurableDoubleProperty propLabelSizeRatio, propLightSurfaceScale, propLightDiffuseConstant, 
 		propLightSpecularConstant, propLightSpecularExponent, propLightZPosition, 
 		propIndicatorWidthRatio, propDivisionWidthRatio;
 	private ConfigurableBooleanProperty propVisualEnableExtras;
@@ -104,7 +107,7 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 		// Requiring reset
 		propDivCount = createConfigurableIntegerProperty(
 				keyPrefix + "divisionsCount", "Divisions Count", 4, 41, 21, 1);
-		propDivCount.getProp().addListener((obs, oldVal, newVal) -> {
+		propDivCount.addUpdateFinishedListener((obs, oldVal, newVal) -> {
 			if(newVal != oldVal) {
 				reset();
 			}
@@ -113,6 +116,8 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 		// Not requiring reset
 		propReactionTime = createConfigurableIntegerProperty(
 				keyPrefix + "reactionTime", "Reaction Time", 100, 1000, 320, 10, "ms");
+		propLabelSizeRatio = createConfigurableDoubleProperty(
+		        keyPrefix + "labelsizeRatio", "Label Size", 0.8, 2.0, 1.0, 0.1);
 		propMinDbValue = createConfigurableIntegerProperty(
 				keyPrefix + "minDbValue", "Min. DB Value", -100, -10, -24, 1, "dB");
 		propMaxDbuValue = createConfigurableIntegerProperty(
@@ -129,25 +134,25 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 				keyPrefix + "normLevelDigitsColor", "Normal Level Digits Color", Color.WHITE);
 		propHighLevelDigitsColor = createConfigurableColorProperty(
 				keyPrefix + "highLevelDigitsColor", "High Level Digits Color", Color.RED);
-		propLightSurfaceScale = UiUtils.createConfigurableDoubleProperty(
+		propLightSurfaceScale = createConfigurableDoubleProperty(
 				keyPrefix + "lightSurfaceScale", "Light Surface Scale", 0.0, 10.0, 0.5, 0.5);
-		propLightDiffuseConstant = UiUtils.createConfigurableDoubleProperty(
+		propLightDiffuseConstant = createConfigurableDoubleProperty(
 				keyPrefix + "lightDiffuseConstant", "Light Diffuse Constant", 0.0, 2.0, 1.8, 0.1);
-		propLightSpecularConstant = UiUtils.createConfigurableDoubleProperty(
+		propLightSpecularConstant = createConfigurableDoubleProperty(
 				keyPrefix + "lightSpecularConstant", "Light Specular Constant", 0.0, 2.0, 0.3, 0.1);
-		propLightSpecularExponent = UiUtils.createConfigurableDoubleProperty(
+		propLightSpecularExponent = createConfigurableDoubleProperty(
 				keyPrefix + "lightSpecularExponent", "Light Specular Exponent", 0.0, 40.0, 20.0, 2.0);
 		propLightXPosition = createConfigurableIntegerProperty(
 				keyPrefix + "lightXPosition", "Light X Position", 1, 4, 2, 1);
 		propLightYPosition = createConfigurableIntegerProperty(
 				keyPrefix + "lightYPosition", "Light Y Position", 1, 20, 16, 1);
-		propLightZPosition = UiUtils.createConfigurableDoubleProperty(
+		propLightZPosition = createConfigurableDoubleProperty(
 				keyPrefix + "lightZPosition", "Light Z Position", 1.0, 10.0, 6.0, 0.2);
 		propVisualEnableExtras = createConfigurableBooleanProperty(
 				keyPrefix + "enableExtras", "Enable Visual Extras", false);
-		propIndicatorWidthRatio = UiUtils.createConfigurableDoubleProperty(
+		propIndicatorWidthRatio = createConfigurableDoubleProperty(
 				keyPrefix + "indicatorWidthRatio", "Indicator Width", 0.001, 0.1, 0.002, 0.001);
-		propDivisionWidthRatio = UiUtils.createConfigurableDoubleProperty(
+		propDivisionWidthRatio = createConfigurableDoubleProperty(
 				keyPrefix + "divisionWidthRatio", "Division Width", 0.001, 0.1, 0.003, 0.001);
 		propPeakColor = createConfigurableColorProperty(
 				keyPrefix + "peakColor", "Peak LED Color", Color.RED);
@@ -173,7 +178,7 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 		radiusProp = new SimpleDoubleProperty();
 		radiusProp.bind(Bindings.createDoubleBinding(
 				() -> {
-					return getRoot().widthProperty().get() / 2;
+					return getRoot().widthProperty().get() * 0.51;
 				}, getRoot().widthProperty()));
 		
 		centerXProp = new SimpleDoubleProperty();
@@ -189,7 +194,7 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 							MIN_DB_ANGLE_RAD, MAX_DB_ANGLE_RAD);
 				}, lingerLevelDbProp, propMinDbValue.getProp()));
 		
-		// This property is used for optimization
+		// This property is used just for optimization
 		darkerPeakColorProp = new SimpleObjectProperty<>();
 		darkerPeakColorProp.bind(Bindings.createObjectBinding(
 				() -> {
@@ -204,6 +209,7 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 	public List<ConfigurableProperty<? extends Object>> getProperties() {
 		return Arrays.asList(
 				propReactionTime,
+				propLabelSizeRatio,
 				propMinDbValue, 
 				propMaxDbuValue,
 				propBgColorA,
@@ -250,17 +256,19 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 		// Divisions and labels
 		for (int i = 0; i < propDivCount.getProp().get(); i++) {
 		    
+		    double angleRad = map(i, 0, propDivCount.getProp().get() - 1, MIN_DB_ANGLE_RAD, MAX_DB_ANGLE_RAD);
+		    
 			Line line;
 		    if(i % 2 == 0) {
-				line = createDivisionLine(i, lighting, DIV_LENGTH_RATIO_BIG);
-		    	nodes.add(createDbLabel(i, line, lighting));
+				line = createDivisionLine(i, angleRad, lighting, DIV_LENGTH_RATIO_BIG);
+		    	nodes.add(createDbLabel(i, angleRad, line, lighting));
 		    } else {
-		    	line = createDivisionLine(i, lighting, DIV_LENGTH_RATIO_SMALL);
+		    	line = createDivisionLine(i, angleRad, lighting, DIV_LENGTH_RATIO_SMALL);
 		    }
 		    nodes.add(line);
 		    
 		    if(i % 4 == 0) {
-		    	nodes.add(createPercentageLabel(i, line, lighting));
+		    	nodes.add(createPercentageLabel(i, angleRad, line, lighting));
 		    }
 		}
 		
@@ -281,6 +289,8 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 	@Override
 	public void dataAvailable(float[] data) {
 		Integer minDbValue = propMinDbValue.getProp().get();
+		
+		// TODO Looks like RMS is not taken into account at all. Is it really needed?
 		currentDbRms = Utils.toDB(peakLevel(data));
 		currentDbRms = currentDbRms < minDbValue ? minDbValue : currentDbRms;
 		currentDbPeak = Utils.toDB(peakLevel(data));
@@ -300,7 +310,6 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 				currentDbPeakProp.set(currentDbPeak);
 			}
 		});
-		
 	}
 
 	@Override
@@ -394,7 +403,7 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 		peakLabel.textFillProperty().bind(propNormalLevelDigitsColor.getProp());
 		peakLabel.layoutXProperty().bind(peak.centerXProperty().add(peak.radiusProperty()));
 		peakLabel.layoutYProperty().bind(peak.centerYProperty());
-		bindFontSizeToParentWidth(peakLabel, 1.2, "Alex Brush");
+		bindFontSizeToParentWidth(peakLabel, 1.3, "Alex Brush");
 		peakLabel.setCache(true);
 		
 		if(orientation == Orientation.VERTICAL) {
@@ -417,7 +426,7 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 		centerLabel.layoutXProperty().bind(getRoot().widthProperty().divide(2).subtract(
 				centerLabel.widthProperty().divide(2)));
 		centerLabel.layoutYProperty().bind(getRoot().heightProperty().divide(2).subtract(centerLabel.heightProperty().divide(2)));
-		bindFontSizeToParentWidth(centerLabel, 1.2, "Alex Brush");
+		bindFontSizeToParentWidth(centerLabel, 0.8, "Alex Brush");
 		centerLabel.setCache(true);
 		
 		if(orientation == Orientation.VERTICAL) {
@@ -481,10 +490,8 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 		return background;
 	}
 	
-	private Line createDivisionLine(int idx, Effect effect, double divLengthRatio) {
+	private Line createDivisionLine(int idx, double angleRad, Effect effect, double divLengthRatio) {
 		
-		double angleRad = map(idx, 0, propDivCount.getProp().get() - 1, MIN_DB_ANGLE_RAD, MAX_DB_ANGLE_RAD);
-
 	    Line line = new Line();
 	    
 	    line.startXProperty().bind(Bindings.createDoubleBinding(
@@ -541,11 +548,15 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 	    return line;
 	}
 	
-	private Label createDbLabel(int idx, Line line, Effect effect) {
+	private Label createDbLabel(int idx, double angleRad, Line line, Effect effect) {
 
 		Label label = new Label();
-	    label.layoutXProperty().bind(line.startXProperty().subtract(label.widthProperty().divide(2)));
-	    label.layoutYProperty().bind(line.startYProperty().subtract(label.heightProperty().multiply(1.5)));
+	    label.layoutXProperty().bind(Bindings.createDoubleBinding(() -> {
+	        return centerXProp.get() + Math.cos(angleRad) * radiusProp.get() * DB_LABEL_RADIUS_RATIO - label.widthProperty().get() / 2;
+	    }, radiusProp, centerXProp, label.widthProperty()));
+	    label.layoutYProperty().bind(Bindings.createDoubleBinding(() -> {
+	        return getRoot().heightProperty().get() - Math.sin(angleRad) * radiusProp.get() * DB_LABEL_RADIUS_RATIO - label.heightProperty().get() / 2;
+	    }, radiusProp, getRoot().heightProperty(), label.heightProperty()));
 	    
 	    // Bind the text to the minimum dB value and the max dBu value
 	    label.textProperty().bind(Bindings.createStringBinding(
@@ -575,7 +586,7 @@ public class AnalogMeterView extends AbstractMixedChannelView {
  	    		}, propMinDbValue.getProp(), propMaxDbuValue.getProp(), 
 	    			propNormalLevelDigitsColor.getProp(), propHighLevelDigitsColor.getProp()));
 	    
-		bindFontSizeToParentWidth(label, 2.5, null);
+		bindFontSizeToParentWidth(label, 1.7, null);
 		label.setCache(true);
 		
 		if(orientation == Orientation.VERTICAL) {
@@ -590,12 +601,16 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 	    return label;
 	}
 	
-	private Label createPercentageLabel(int idx, Line line, Effect effect) {
+	private Label createPercentageLabel(int idx, double angleRad, Line line, Effect effect) {
 		long percentageValue = Math.round(map(idx, 0, propDivCount.getProp().get() - 1, 0, 100));
 		
 	    Label label = new Label(String.valueOf(percentageValue) + "%");
-	    label.layoutXProperty().bind(line.endXProperty().subtract(label.widthProperty().divide(2)));
-	    label.layoutYProperty().bind(line.endYProperty().add(label.heightProperty().divide(3)));
+        label.layoutXProperty().bind(Bindings.createDoubleBinding(() -> {
+            return centerXProp.get() + Math.cos(angleRad) * radiusProp.get() * PERCENTAGE_LABEL_RADIUS_RATIO - label.widthProperty().get() / 2;
+        }, radiusProp, centerXProp, label.widthProperty()));
+        label.layoutYProperty().bind(Bindings.createDoubleBinding(() -> {
+            return getRoot().heightProperty().get() - Math.sin(angleRad) * radiusProp.get() * PERCENTAGE_LABEL_RADIUS_RATIO - label.heightProperty().get() / 2;
+        }, radiusProp, getRoot().heightProperty(), label.heightProperty()));
 	    
 	    // Bind the text color to the minimum dB value and the max dBu value,
 	    // as well as normal level and high level colors
@@ -616,7 +631,7 @@ public class AnalogMeterView extends AbstractMixedChannelView {
  	    		}, propMinDbValue.getProp(), propMaxDbuValue.getProp(), 
 	    			propNormalLevelDigitsColor.getProp(), propHighLevelDigitsColor.getProp()));
 		
-		bindFontSizeToParentWidth(label, 3.5, null);
+		bindFontSizeToParentWidth(label, 2.3, null);
 		label.setCache(true);
 		
 		if(orientation == Orientation.VERTICAL) {
@@ -635,8 +650,8 @@ public class AnalogMeterView extends AbstractMixedChannelView {
 	private void bindFontSizeToParentWidth(Label label, double ratio, String family) {
 		label.fontProperty().bind(Bindings.createObjectBinding(
 				() -> {
-					return Font.font(family, (getRoot().widthProperty().get() * SCENE_MARGIN_RATIO) / ratio);
-				}, getRoot().widthProperty()));
+					return Font.font(family, (getRoot().widthProperty().get() * SCENE_MARGIN_RATIO) / (ratio * propLabelSizeRatio.get()));
+				}, getRoot().widthProperty(), propLabelSizeRatio.getProp()));
 	}
 
 }

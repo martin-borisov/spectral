@@ -17,6 +17,7 @@ public class DesktopStrategy implements PlatformStrategy {
 	
 	private Minim minim;
 	private AudioSource in;
+	private Stage stage;
 	
 	public DesktopStrategy() {
 		minim = new Minim(new JSMinim(new MinimInitializer()));
@@ -24,6 +25,8 @@ public class DesktopStrategy implements PlatformStrategy {
 	
 	@Override
 	public void initialize(Stage stage) {
+	    
+	    this.stage = stage;
 	    
 	    // Used only for troubleshooting purposes, not really needed functionally
 	    if(Boolean.getBoolean("spectrumDebug")) {
@@ -39,8 +42,13 @@ public class DesktopStrategy implements PlatformStrategy {
 	        });
 	    }
 	}
-
+	
 	@Override
+    public Stage getStage() {
+        return stage;
+    }
+
+    @Override
 	public void startAudio(boolean stereo, int bufferSize, int samplingRate, int bitRate) {
 		in = minim.getLineIn(stereo ? Minim.STEREO : Minim.MONO, bufferSize, samplingRate, bitRate);
 		if(in == null) {

@@ -14,12 +14,12 @@ import java.util.Map;
 
 import ddf.minim.analysis.FFT;
 import ddf.minim.analysis.FourierTransform;
-import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
@@ -92,7 +92,6 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
     private double[] bandValuesDB, trailValuesDB;
     private double[] trailOpValues;
     private Timeline mainAnimationTimeline;
-    private Timeline[] timelines;
     private int buffFramesCounter;
     private float[] buffer;
     private boolean resetting;
@@ -220,11 +219,6 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
         trailOpValues = new double[bandCount];
         Arrays.fill(trailOpValues, propTrailStayFactor.getProp().get());
         
-        timelines = new Timeline[bandCount];
-        for (int i = 0; i < bandValuesDB.length; i++) {
-            timelines[i] = new Timeline();
-        }
-        
         for (int i = 0; i < bandCount; i++) {
             
             // Create grid lines and labels
@@ -310,31 +304,38 @@ public abstract class AbstractSpectrumView extends AbstractMixedChannelView {
     
     private void startAnimation() {
         
+        // TODO These should be tweaked for maximum performance
+        final int animationTimeMs = 100;
+        final int frameRate = 60;
+        
         // Make sure the original timer is stopped when the view is reset
         if(mainAnimationTimeline != null) {
             mainAnimationTimeline.stop();
         }
         
-        final int duration = 60 * getBufferSizeMultiplier();
+        final int duration = animationTimeMs * getBufferSizeMultiplier();
 
         KeyFrame frame = new KeyFrame(Duration.millis(duration), new EventHandler<ActionEvent>() {
             public void handle(ActionEvent event) {
                 
+                // Clear all key frames but the first one
+                ObservableList<KeyFrame> keyFrames = mainAnimationTimeline.getKeyFrames();
+                keyFrames.remove(1, keyFrames.size());
+                
+                // Add a new key frame per band
                 for (int i = 0; i < bandValuesDB.length; i++) {
-
-                    Timeline tl = timelines[i];
-                    tl.stop();
-                    tl.getKeyFrames().clear();
+                    
                     KeyValue kv = new KeyValue(bandValues.get(i), bandValuesDB[i]);
                     KeyFrame kf = new KeyFrame(Duration.millis(duration), kv);
-                    tl.getKeyFrames().add(kf);
-                    tl.playFromStart();
+                    keyFrames.add(kf);
                 }
+                
+                // Restart timeline
+                mainAnimationTimeline.playFromStart();
             }
         });
         
-        mainAnimationTimeline = new Timeline(frame);
-        mainAnimationTimeline.setCycleCount(Animation.INDEFINITE);
+        mainAnimationTimeline = new Timeline(frameRate, frame);
         mainAnimationTimeline.play();
     }
     

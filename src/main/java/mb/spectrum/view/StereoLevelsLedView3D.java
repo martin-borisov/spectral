@@ -125,7 +125,7 @@ public class StereoLevelsLedView3D extends AbstractView {
 		// Requiring reset
 		propLedCount = createConfigurableIntegerProperty(
 				keyPrefix + "ledCount", "Led Count", 2, 1000, 18, 1);
-		propLedCount.getProp().addListener((obs, oldVal, newVal) -> {
+		propLedCount.addUpdateFinishedListener((obs, oldVal, newVal) -> {
 			if(newVal != oldVal) {
 				reset();
 			}

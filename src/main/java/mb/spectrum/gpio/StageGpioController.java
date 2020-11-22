@@ -38,15 +38,17 @@ public class StageGpioController implements GpioPinListenerDigital {
 		bothButtonsHoldTimer = null;
 		setupPins();
 		setupRotaryEncoder();
-		setupRotaryEncoderPollThread();
+		//setupRotaryEncoderPollThread();
 	}
 	
 	private void setupPins() {
-		gpio.createDigitalSoftwareDebouncedInputPin(RaspiPin.GPIO_23, "Button A", this);
+		gpio.createDigitalSoftwareDebouncedInputPin(RaspiPin.GPIO_09, "Button A", this);
 		gpio.createDigitalSoftwareDebouncedInputPin(RaspiPin.GPIO_00, "Button B", this);
 	}
 	
 	private void setupRotaryEncoder() {
+	    
+	    /*
 		new RotaryEncoderHandler(RaspiPin.GPIO_25, RaspiPin.GPIO_27, 
 				new RotaryEncoderHandler.RotationListener() {
 			public void rotated(Direction direction) {
@@ -59,6 +61,15 @@ public class StageGpioController implements GpioPinListenerDigital {
 				rotaryBDirectionFlag = direction;
 			}
 		});
+		*/
+	    
+        new RotaryEncoderHandler(RaspiPin.GPIO_25, RaspiPin.GPIO_27, 
+                new RotaryEncoderHandler.RotationListener() {
+            public void rotated(Direction direction) {
+                fireLeftRightRotaryTurnEvent(direction);
+                //rotaryBDirectionFlag = direction;
+            }
+        });
 	}
 	
 	private void setupRotaryEncoderPollThread() {
@@ -95,6 +106,8 @@ public class StageGpioController implements GpioPinListenerDigital {
 	}
 	
 	private void handleHighEvent(GpioPin pin) {
+	    
+	    /*
 		if(RaspiPin.GPIO_23.equals(pin.getPin())) {
 			
 			buttonAState = RELEASED;
@@ -110,9 +123,28 @@ public class StageGpioController implements GpioPinListenerDigital {
 			}
 			cancelBothButtonsPressedTimer();
 		}
+		*/
+	    
+        if (RaspiPin.GPIO_00.equals(pin.getPin())) {
+
+            buttonAState = RELEASED;
+            if (buttonBState == RELEASED) {
+                onButtonAReleased();
+            }
+            cancelBothButtonsPressedTimer();
+        } else if (RaspiPin.GPIO_09.equals(pin.getPin())) {
+
+            buttonBState = RELEASED;
+            if (buttonAState == RELEASED) {
+                onButtonBReleased();
+            }
+            cancelBothButtonsPressedTimer();
+        }
 	}
 
 	private void handleLowEvent(GpioPin pin) {
+	    
+	    /*
 		if(RaspiPin.GPIO_23.equals(pin.getPin())) {
 			
 			buttonAState = PRESSED;
@@ -121,7 +153,7 @@ public class StageGpioController implements GpioPinListenerDigital {
 			} else {
 				onBothButtonsPressed();
 			}
-		} else if (RaspiPin.GPIO_00.equals(pin.getPin())) {
+		} else if(RaspiPin.GPIO_00.equals(pin.getPin())) {
 			
 			buttonBState = PRESSED;
 			if(buttonAState == RELEASED) {
@@ -130,6 +162,25 @@ public class StageGpioController implements GpioPinListenerDigital {
 				onBothButtonsPressed();
 			}
 		}
+		*/
+	    
+        if(RaspiPin.GPIO_00.equals(pin.getPin())) {
+            
+            buttonAState = PRESSED;
+            if(buttonBState == RELEASED) {
+                onButtonAPressed();
+            } else {
+                onBothButtonsPressed();
+            }
+        } else if(RaspiPin.GPIO_09.equals(pin.getPin())) {
+            
+            buttonBState = PRESSED;
+            if(buttonAState == RELEASED) {
+                onButtonBPressed();
+            } else {
+                onBothButtonsPressed();
+            }
+        }
 	}
 	
 	private void onButtonAPressed() {

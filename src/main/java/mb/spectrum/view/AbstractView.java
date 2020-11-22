@@ -76,23 +76,8 @@ public abstract class AbstractView implements View {
 	 * Called when the view should be reset, i.e. when there are drastic changes in the node structure of the view.
 	 */
 	protected void reset() {
-		
-		// TODO: This is currently a bit of a hack to preserve the currently shown property,
-		// but is bad design and should be replaced by a different solution
-		Node property = null;
-		for (Node node : pane.getChildren()) {
-			if("Property Control".equals(node.getUserData())) {
-				property = node;
-				break;
-			}
-		}
-
 		pane.getChildren().clear();
 		pane.getChildren().addAll(collectNodes());
-		
-		if(property != null) {
-			pane.getChildren().add(property);
-		}
 	}
 
 	@Override

@@ -5,6 +5,7 @@ import static org.apache.commons.lang3.math.NumberUtils.isCreatable;
 
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Timer;
@@ -12,11 +13,10 @@ import java.util.TimerTask;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.controlsfx.control.ToggleSwitch;
-
 import eu.hansolo.medusa.Gauge;
 import eu.hansolo.medusa.Gauge.SkinType;
 import eu.hansolo.medusa.GaugeBuilder;
+import eu.hansolo.medusa.Section;
 import javafx.animation.FadeTransition;
 import javafx.animation.KeyFrame;
 import javafx.animation.SequentialTransition;
@@ -62,6 +62,7 @@ import mb.spectrum.prop.ConfigurableColorProperty;
 import mb.spectrum.prop.ConfigurableDoubleProperty;
 import mb.spectrum.prop.ConfigurableIntegerProperty;
 import mb.spectrum.prop.ConfigurableProperty;
+import mb.spectrum.prop.IncrementalActionProperty;
 
 public class UiUtils {
     
@@ -143,6 +144,28 @@ public class UiUtils {
 		return button;
 	}
 	
+    @SuppressWarnings("unchecked")
+    public static Gauge createIncrementalActionPropertyGauge(IncrementalActionProperty prop) {
+        Gauge gauge = GaugeBuilder.create()
+                .minValue(prop.getMinValue())
+                .maxValue(prop.getMaxValue())
+                .skinType(SkinType.SIMPLE)
+                .valueVisible(false)
+                .borderPaint(Color.TRANSPARENT) // Border
+                .tickLabelColor(Color.TRANSPARENT) // Hide min and max value labels
+                .sections(Arrays.asList(
+                        new Section(0, 2, "On", Color.rgb(255, 0, 0), Color.WHITE), 
+                        new Section(2, 4, Color.rgb(200, 0, 0)), 
+                        new Section(4, 6, Color.rgb(150, 0, 0)),
+                        new Section(6, 8, "Off", Color.BLACK, Color.WHITE)))
+                .sectionTextVisible(true)
+                .animated(true)
+                .animationDuration(100)
+                .build();
+        gauge.valueProperty().bind(prop.getProp());
+        return gauge;
+    }
+	
 	public static CheckBox createBooleanPropertyCheckBox(Boolean value, String label, Pane parent) {
 		CheckBox box = new CheckBox(label);
 		box.setSelected(value);
@@ -151,6 +174,7 @@ public class UiUtils {
 		return box;
 	}
 	
+	/*
 	public static ToggleSwitch createBooleanPropertyToggleSwitch(Boolean value, String label, Pane parent) {
 	    ToggleSwitch toggle = new ToggleSwitch(label);
 	    toggle.setSelected(value);
@@ -159,6 +183,29 @@ public class UiUtils {
 	    toggle.setMouseTransparent(true);
 	    toggle.setFocusTraversable(false);
 	    return toggle;
+	}
+	*/
+	
+	@SuppressWarnings("unchecked")
+    public static Region createBooleanPropertyGauge(ConfigurableBooleanProperty prop) {
+	    Gauge gauge = GaugeBuilder.create()
+	            .minValue(0)
+	            .maxValue(4)
+	            .skinType(SkinType.SIMPLE)
+	            .valueVisible(false)
+	            .borderPaint(Color.TRANSPARENT) // Border
+	            .tickLabelColor(Color.TRANSPARENT) // Hide min and max value labels
+	            .sections(Arrays.asList(
+	                    new Section(0, 2, "No", Color.GRAY), 
+	                    new Section(2, 4, "Yes", Color.LIME)))
+	            .sectionTextVisible(true)
+	            .animated(true)
+	            .animationDuration(300)
+	            .build();
+	    gauge.valueProperty().bind(Bindings.createDoubleBinding(() -> {
+	        return prop.get() ? 3d : 1d;
+        }, prop.getProp()));
+	    return gauge;
 	}
 	
 	public static Label createNumberPropertyLabel(String initValue, Pane parent) {
@@ -192,6 +239,7 @@ public class UiUtils {
 	        .decimals(prop instanceof ConfigurableIntegerProperty ? 0 : 1)
 	        .build();
 	    gauge.valueProperty().bind(prop.getProp());
+
 	    
 	    if(prop.getUnit() != null) {
 	        gauge.setUnit(prop.getUnit());
@@ -352,10 +400,10 @@ public class UiUtils {
         BorderPane pane = new BorderPane();
         
         // Automatically resize pane based on the scene size
-        pane.prefWidthProperty().bind(parent.widthProperty().divide(widthRatio));
-        pane.prefHeightProperty().bind(parent.heightProperty().divide(heightRatio));
-        pane.layoutXProperty().bind(parent.widthProperty().subtract(pane.widthProperty()).divide(2));
-        pane.layoutYProperty().bind(parent.heightProperty().subtract(pane.heightProperty()).divide(2));
+        pane.minWidthProperty().bind(parent.widthProperty().divide(widthRatio));
+        pane.minHeightProperty().bind(parent.heightProperty().divide(heightRatio));
+        pane.maxWidthProperty().bind(pane.minWidthProperty());
+        pane.maxHeightProperty().bind(pane.minHeightProperty());
         pane.setBackground(new Background(
                 new BackgroundFill(Color.rgb(140, 140, 140, opacity), new CornerRadii(5), Insets.EMPTY)));
         pane.setBorder(new Border(new BorderStroke(Color.DARKGREY, 
@@ -387,7 +435,7 @@ public class UiUtils {
 	            String.valueOf(SHUTDOWN_COUNTDOWN_TIME_S), parent);
 	    
 	    BorderPane pane = createUtilityPane(parent, 1.5, 2, 1);
-	    pane.setTop(createNumberPropertyLabel("Powering off in", parent));
+	    pane.setTop(createNumberPropertyLabel("Power off in", parent));
 	    pane.setCenter(label);
 	    parent.getChildren().add(pane);
 	    

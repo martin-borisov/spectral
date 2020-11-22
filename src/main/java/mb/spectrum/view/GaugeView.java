@@ -72,7 +72,7 @@ public class GaugeView extends AbstractMixedChannelView {
 		
 		propMinDbValue = UiUtils.createConfigurableIntegerProperty(
 				keyPrefix + "minDbValue", "Min. DB Value", -100, -20, -60, 5, "dB");
-		propMinDbValue.getProp().addListener((obs, oldVal, newVal) -> {
+		propMinDbValue.addUpdateFinishedListener((obs, oldVal, newVal) -> {
 			reset();
 		});
 		propSensitivity = UiUtils.createConfigurableIntegerProperty(
@@ -80,7 +80,7 @@ public class GaugeView extends AbstractMixedChannelView {
 		propType = UiUtils.createConfigurableChoiceProperty(
 				keyPrefix + "type", "Type", 
 				Arrays.asList("HORIZONTAL", "VERTICAL", "QUARTER"), "HORIZONTAL");
-		propType.getProp().addListener((obs, oldVal, newVal) -> {
+		propType.addUpdateFinishedListener((obs, oldVal, newVal) -> {
 			reset();
 		});
 		propNeedleSize = UiUtils.createConfigurableChoiceProperty(

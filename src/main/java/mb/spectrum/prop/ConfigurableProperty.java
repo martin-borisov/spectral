@@ -2,7 +2,10 @@ package mb.spectrum.prop;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 
+import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
@@ -15,6 +18,10 @@ public abstract class ConfigurableProperty<T> {
 	protected String unit;
 	private Map<String, ChangeListener<T>> listeners;
 	
+    private static final int UPDATE_FINISHED_INTERVAL_MS = 1000;
+    private Timer updateFinishedTimer;
+    private TimerTask updateFinishedTask;
+	
 	public ConfigurableProperty(String name, T minValue, T maxValue, T initValue, T increment) {
 		this.name = name;
 		this.minValue = minValue;
@@ -23,13 +30,8 @@ public abstract class ConfigurableProperty<T> {
 		this.increment = increment;
 		prop = new SimpleObjectProperty<>(null, name, initValue);
 		listeners = new HashMap<String, ChangeListener<T>>();
+		initTimer();
 	}
-	
-	public ConfigurableProperty(String name, ObjectProperty<T> prop, T minValue, T maxValue, T initValue, T increment,
-            String unit) {
-	    this(name, minValue, maxValue, initValue, increment);
-        this.unit = unit;
-    }
 
     public abstract T increment();
 	public abstract T decrement();
@@ -69,6 +71,14 @@ public abstract class ConfigurableProperty<T> {
     public T get() {
 		return prop.get();
 	}
+    
+    public void addListener(ChangeListener<? super T> listener) {
+        prop.addListener(listener);
+    }
+
+    public void removeListener(ChangeListener<? super T> listener) {
+        prop.removeListener(listener);
+    }
 
     public void addListener(ChangeListener<T> listener, String key) {
         if(!listeners.containsKey(key)) {
@@ -82,5 +92,37 @@ public abstract class ConfigurableProperty<T> {
         if(listener != null) {
             prop.removeListener(listener);
         }
+    }
+    
+    public void addUpdateFinishedListener(ChangeListener<? super T> listener) {
+        prop.addListener((obs, oldVal, newVal) -> {
+            
+            // Create a timer on the fly to avoid redundant threads
+            if(updateFinishedTimer == null) {
+                updateFinishedTimer = new Timer("Property Timer"); 
+            }
+
+            updateFinishedTask.cancel();
+            updateFinishedTimer.schedule(updateFinishedTask = new TimerTask() {
+                public void run() {
+                    Platform.runLater(new Runnable() {
+                        public void run() {
+                            listener.changed(obs, oldVal, newVal);
+                            
+                            // When the task is done kill the timer thread
+                            updateFinishedTimer.cancel();
+                            updateFinishedTimer = null;
+                        }
+                    });
+                }
+            }, UPDATE_FINISHED_INTERVAL_MS);
+        });
+    }
+    
+    private void initTimer() {
+        updateFinishedTask = new TimerTask() {
+            public void run() {
+            }
+        };
     }
 }

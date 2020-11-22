@@ -12,8 +12,6 @@ import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import org.controlsfx.control.ToggleSwitch;
-
 import javafx.animation.AnimationTimer;
 import javafx.animation.PauseTransition;
 import javafx.animation.SequentialTransition;
@@ -21,43 +19,34 @@ import javafx.animation.Transition;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
-import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.BooleanProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.SceneAntialiasing;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.ListView;
 import javafx.scene.effect.Glow;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.Pane;
-import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-import mb.spectrum.desktop.DesktopStrategy;
-import mb.spectrum.prop.ActionProperty;
+import mb.spectrum.embedded.EmbeddedStrategy;
 import mb.spectrum.prop.ConfigurableBooleanProperty;
 import mb.spectrum.prop.ConfigurableChoiceProperty;
 import mb.spectrum.prop.ConfigurableColorProperty;
-import mb.spectrum.prop.ConfigurableDoubleProperty;
 import mb.spectrum.prop.ConfigurableIntegerProperty;
 import mb.spectrum.prop.ConfigurableProperty;
-import mb.spectrum.view.AnalogMeterView;
-import mb.spectrum.view.AnalogMeterView.Orientation;
-import mb.spectrum.view.GaugeView;
-import mb.spectrum.view.SoundWaveView;
-import mb.spectrum.view.SpectrumAreaView;
-import mb.spectrum.view.SpectrumBarView;
-import mb.spectrum.view.StereoAnalogMetersView;
-import mb.spectrum.view.StereoGaugeView;
-import mb.spectrum.view.StereoLevelsLedView;
-import mb.spectrum.view.StereoLevelsLedView3D;
-import mb.spectrum.view.StereoLevelsView;
+import mb.spectrum.prop.IncrementalActionProperty;
 import mb.spectrum.view.View;
 
 public class Spectrum extends Application {
@@ -65,7 +54,7 @@ public class Spectrum extends Application {
     private static final int SAMPLING_RATE = Integer.valueOf(
             ConfigService.getInstance().getOrCreateProperty("mb.sampling-rate", String.valueOf(48000)));
     private static final int BUFFER_SIZE = Integer.valueOf(
-            ConfigService.getInstance().getOrCreateProperty("mb.buffer-size", String.valueOf(2048)));
+            ConfigService.getInstance().getOrCreateProperty("mb.buffer-size", String.valueOf(1024)));
     
     private static final int INIT_SCENE_WIDTH = 800;
     private static final int INIT_SCENE_HEIGHT = 480;
@@ -76,27 +65,16 @@ public class Spectrum extends Application {
     
     private PlatformStrategy strategy;
     private Scene scene;
-    private List<View> views = new ArrayList<>(
-            Arrays.asList(
-                    new StereoGaugeView(),
-                    new GaugeView("Analog Meter", "gaugeView", false),
-                    new SoundWaveView(BUFFER_SIZE),
-                    new StereoLevelsLedView3D(),
-                    new AnalogMeterView("Analog Meter", "analogMeterView", "Peak", Orientation.HORIZONTAL),
-                    new StereoLevelsLedView(),
-                    new SpectrumBarView(),
-                    new SpectrumAreaView(),
-                    new StereoLevelsView()
-            )
-        );
+    private StackPane stackPane;
+    
+    private List<View> views;
     private View currentView;
     private int currentViewIdx;
     private Timer viewRotateTimer;
+    private boolean viewTransitioning;
     
     /* Property management */
-    private List<ConfigurableProperty<? extends Object>> currentPropertyList;
-    private int currentPropIdx;
-    private PropertyPane currentPropertyNode;
+    private PropertyPane propertyPane;
     private Transition currentPropertyTransition;
     private Map<Integer, Integer> lastPropertyMap;
     
@@ -108,20 +86,23 @@ public class Spectrum extends Application {
     private ConfigurableBooleanProperty propEnableSmoothTransitions;
     
     public Spectrum() {
+        views = new ViewLazyList(BUFFER_SIZE);
         currentViewIdx = 0;
         currentView = views.get(currentViewIdx);
-        initLastPropertyMap();
-        strategy = StrategyLoader.getInstance().getStrategy();
         
+        strategy = StrategyLoader.getInstance().getStrategy();
+        /*
         if(DesktopStrategy.class.equals(strategy.getClass())) {
             views.add(new StereoAnalogMetersView());
         }
+        */
     }
 
     @Override
     public void start(Stage stage) throws Exception {
         strategy.initialize(stage);
-        initGlobalProperties();
+        createGlobalProperties();
+        initLastPropertyMap();
         startAudio();
         setupStage(stage);
         startFrameListener();
@@ -134,7 +115,11 @@ public class Spectrum extends Application {
     }
     
     public boolean isPropertiesVisible() {
-        return currentPropertyList != null;
+        return propertyPane.isVisible();
+    }
+    
+    private boolean isPropertySelected() {
+        return propertyPane.selectedProperty().get();
     }
     
     private void initLastPropertyMap() {
@@ -147,7 +132,7 @@ public class Spectrum extends Application {
         
     }
     
-    private void initGlobalProperties() {
+    private void createGlobalProperties() {
         final String keyPrefix = "global.";
         propGlobalGain = createConfigurableIntegerProperty(
                 keyPrefix + "gain", "Global Gain", 10, 400, 100, 10, "%");
@@ -166,8 +151,19 @@ public class Spectrum extends Application {
                 keyPrefix + "viewAutoRotateInterval", "View Rotate Interval", 5, 6000, 60, 5, "sec");
         propEnableSmoothTransitions = createConfigurableBooleanProperty(
                 keyPrefix + "enableSmoothTransitions", "Enable Smooth Transitions", true);
+        
         globalPropertyList = new ArrayList<>(Arrays.asList(
                 propGlobalGain, propViewAutoRotate, propViewAutoRotateInterval, propEnableSmoothTransitions));
+        
+        // Poweroff
+        if(strategy instanceof EmbeddedStrategy) {
+            IncrementalActionProperty propPoweroff = new IncrementalActionProperty("Power Off", 8);
+            propPoweroff.setOnAction((e) -> {
+                togglePropertiesOff();
+                UiUtils.createAndShowShutdownPrompt(strategy.getStage(), true);
+            });
+            globalPropertyList.add(propPoweroff);
+        }
     }
 
     private void startAudio() {
@@ -192,7 +188,6 @@ public class Spectrum extends Application {
                 }
                 
                 currentView.dataAvailable(left, right);
-                
             }
         });
     }
@@ -203,36 +198,39 @@ public class Spectrum extends Application {
     
     private void setupStage(Stage stage) {
         
-        // This is necessary for the fade out/in transitions when switching views 
-        if(isSmoothTransitionsEnabled()) {
-            for (int i = 0; i < views.size(); i++) {
-                if(i != currentViewIdx) {
-                    views.get(i).getRoot().setOpacity(0);
-                }
-            }
-        }
+        /* Create scene and root stack pane */
+        stackPane = new StackPane(currentView.getRoot());
         
-        // Create scene
-        stage.setScene(scene = new Scene(currentView.getRoot(), 
-                INIT_SCENE_WIDTH, INIT_SCENE_HEIGHT, false, SceneAntialiasing.BALANCED));
+        // This is needed for correct smooth transitions
+        stackPane.setBackground(new Background(new BackgroundFill(Color.TRANSPARENT, CornerRadii.EMPTY, Insets.EMPTY)));
+        stackPane.setAlignment(Pos.CENTER);
+        stage.setScene(scene = new Scene(stackPane, 
+                INIT_SCENE_WIDTH, INIT_SCENE_HEIGHT, false, 
+                strategy instanceof EmbeddedStrategy ? SceneAntialiasing.DISABLED : SceneAntialiasing.BALANCED));
         scene.setFill(Color.BLACK);
         currentView.onShow();
+        stackPane.prefWidthProperty().bind(scene.widthProperty());
         
         stage.setMaximized(!Boolean.valueOf(
                 getParameters().getNamed().get("windowed")));
         stage.show();
         
-        // Event handlers
+        /* Event handlers */
         stage.addEventFilter(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
             public void handle(KeyEvent event) {
                 onKey(event);
             }
         });
         
-        // View rotate timer
+        /* View rotate timer */
         if(propViewAutoRotate.getProp().get()) {
             scheduleViewRotateTimer();
         }
+        
+        /* Property pane */
+        propertyPane = createPropertyPane();
+        propertyPane.setProperties(currentView.getProperties());
+        stackPane.getChildren().add(propertyPane);
     }
     
     private void startFrameListener() {
@@ -248,12 +246,14 @@ public class Spectrum extends Application {
         switch (event.getCode()) {
         case RIGHT:
             if(isPropertiesVisible()) {
-                if(!isSmoothTransitionsEnabled()) {
-                    nextProperty();
+                
+                // Update the value if a property is currently selected, else move to the next property
+                if(isPropertySelected()) { 
+                    changeCurrentPropertyValue(true, event.isShiftDown());
                 } else {
-                    cancelPropertyFadeOutIfPlaying();
-                    schedulePropertyFadeOut();
+                    nextProperty();
                 }
+                
             } else {
                 nextView();
             }
@@ -261,11 +261,12 @@ public class Spectrum extends Application {
             
         case LEFT:
             if(isPropertiesVisible()) {
-                if(!isSmoothTransitionsEnabled()) {
-                    prevProperty();
+                
+                // Update the value if a property is currently selected, else move to the previous property
+                if(isPropertySelected()) {
+                    changeCurrentPropertyValue(false, event.isShiftDown());
                 } else {
-                    cancelPropertyFadeOutIfPlaying();
-                    schedulePropertyFadeOut();
+                    prevProperty();
                 }
             } else {
                 prevView();
@@ -274,10 +275,14 @@ public class Spectrum extends Application {
         
         case SPACE:
             if(event.isControlDown()) {
-                toggleGlobalPropertiesOn();
-            } else {
                 if(isPropertiesVisible()) {
                     togglePropertiesOff();
+                } else {
+                    toggleGlobalPropertiesOn();
+                }
+            } else {
+                if(isPropertiesVisible()) {
+                    selectOrDeselectCurrentProperty();
                 } else {
                     toggleCurrentViewPropertiesOn();
                 }
@@ -318,6 +323,13 @@ public class Spectrum extends Application {
             }
             break;
             
+        case ESCAPE:
+            if(isPropertiesVisible()) {
+                hideProperties();
+            }
+            break;
+            
+            
         default:
             break;
         }
@@ -330,7 +342,7 @@ public class Spectrum extends Application {
         if(isPropertiesVisible() && isSmoothTransitionsEnabled()) {
             currentPropertyTransition = new SequentialTransition(
                     new PauseTransition(Duration.seconds(2)), 
-                    UiUtils.createFadeOutTransition(currentPropertyNode, 1000, 0.5, null));
+                    UiUtils.createFadeOutTransition(propertyPane, 1000, 0.5, null));
             currentPropertyTransition.play();
         }
     }
@@ -340,8 +352,10 @@ public class Spectrum extends Application {
      */
     private void cancelPropertyFadeOutIfPlaying() {
         if(isPropertiesVisible() && isSmoothTransitionsEnabled()) {
-            currentPropertyTransition.stop();
-            currentPropertyNode.setOpacity(1);
+            if(currentPropertyTransition != null) {
+                currentPropertyTransition.stop();
+            }
+            propertyPane.setOpacity(1);
         }
     }
     
@@ -350,9 +364,9 @@ public class Spectrum extends Application {
      */
     private void toggleGlobalPropertiesOn() {
         if(!isPropertiesVisible()) {
-            currentPropertyList = globalPropertyList;
-            currentPropIdx = 0;
-            showProperty(currentPropIdx);
+            propertyPane.setProperties(globalPropertyList);
+            propertyPane.setCurrPropIdx(0);
+            showProperties();
         }
     }
     
@@ -361,9 +375,9 @@ public class Spectrum extends Application {
      */
     private void toggleCurrentViewPropertiesOn() {
         if(!isPropertiesVisible() && !currentView.getProperties().isEmpty()) {
-            currentPropertyList = currentView.getProperties();
-            currentPropIdx = lastPropertyMap.get(currentViewIdx);
-            showProperty(currentPropIdx);
+            propertyPane.setProperties(currentView.getProperties());
+            propertyPane.setCurrPropIdx(lastPropertyMap.get(currentViewIdx));
+            showProperties();
         }
     }
     
@@ -372,9 +386,7 @@ public class Spectrum extends Application {
      */
     private void togglePropertiesOff() {
         if(isPropertiesVisible()) {
-            hideProperty(currentPropertyNode);
-            currentPropertyNode = null;
-            currentPropertyList = null;
+            hideProperties();
         }
     }
     
@@ -382,22 +394,26 @@ public class Spectrum extends Application {
      * Switch to the next view from the list.
      */
     private void nextView() {
-        int idx = currentViewIdx + 1;
-        if(idx > views.size() - 1) {
-            idx = views.size() - 1;
+        if(!viewTransitioning) {
+            int idx = currentViewIdx + 1;
+            if(idx > views.size() - 1) {
+                idx = views.size() - 1;
+            }
+            switchView(idx);
         }
-        switchView(idx);
     }
     
     /**
      * Switch to the previous view from the list.
      */
     private void prevView() {
-        int idx = currentViewIdx - 1;
-        if(idx < 0) {
-            idx = 0;
+        if(!viewTransitioning) {
+            int idx = currentViewIdx - 1;
+            if(idx < 0) {
+                idx = 0;
+            }
+            switchView(idx);
         }
-        switchView(idx);
     }
     
     private void switchView(int idx) {
@@ -409,6 +425,7 @@ public class Spectrum extends Application {
             
             if(isSmoothTransitionsEnabled()) {
             
+                viewTransitioning = true;
                 UiUtils.createFadeOutTransition(currentView.getRoot(), 500, new EventHandler<ActionEvent>() {
                     public void handle(ActionEvent event) {
                     
@@ -417,7 +434,7 @@ public class Spectrum extends Application {
                     
                         // Set new current view and add to scene
                         currentView = views.get(currentViewIdx);
-                        scene.setRoot(currentView.getRoot());
+                        stackPane.getChildren().set(0, currentView.getRoot());
                     
                         UiUtils.createFadeInTransition(currentView.getRoot(), 500, new EventHandler<ActionEvent>() {
                             public void handle(ActionEvent event) {
@@ -426,6 +443,7 @@ public class Spectrum extends Application {
                                 currentView.onShow();
                                 
                                 // Show view label with animation
+                                /*
                                 Pane parent = currentView.getRoot();
                             
                                 BorderPane title = createViewTitlePane(currentView.getName());
@@ -439,6 +457,9 @@ public class Spectrum extends Application {
                                             }
                                         });
                                 trans.play();
+                                */
+                                
+                                viewTransitioning = false;
                             
                             }
                         }).play();
@@ -453,7 +474,7 @@ public class Spectrum extends Application {
                 // Set new current view and add to scene
                 currentView = views.get(currentViewIdx);
                 currentView.getRoot().setOpacity(1);
-                scene.setRoot(currentView.getRoot());
+                stackPane.getChildren().set(0, currentView.getRoot());
                 
                 // Trigger "show" of new view
                 currentView.onShow();
@@ -462,134 +483,95 @@ public class Spectrum extends Application {
     }
     
     private void nextProperty() {
+        cancelPropertyFadeOutIfPlaying();
         
         // Special handling of color properties
-        if(currentPropertyNode != null && 
-                currentPropertyNode.getControl() instanceof ColorControl) {
-            ColorControl control = (ColorControl) currentPropertyNode.getControl();
+        if(propertyPane.getControl() instanceof ColorControl) {
+            ColorControl control = (ColorControl) propertyPane.getControl();
             if(!control.isLastSelected()) {
                 control.selectNextGauge();
+                
+                // Resume fadeout
+                schedulePropertyFadeOut();
                 return;
             }
         }
         
-        if(currentPropertyNode != null) {
-            hideProperty(currentPropertyNode);
-            currentPropertyNode = null;
-        }
-        
-        currentPropIdx++;
-        if(currentPropIdx > currentPropertyList.size() - 1) {
-            currentPropIdx = currentPropertyList.size() - 1;
-        }
-        showProperty(currentPropIdx);
+        // Increment the current property
+        propertyPane.nextProperty();
         updateLastPropertyMap();
+        
+        // Resume fadeout
+        schedulePropertyFadeOut();
     }
     
     private void prevProperty() {
+        cancelPropertyFadeOutIfPlaying();
         
         // Special handling of color properties
-        if(currentPropertyNode != null && 
-                currentPropertyNode.getControl() instanceof ColorControl) {
-            ColorControl control = (ColorControl) currentPropertyNode.getControl();
+        if(propertyPane.getControl() instanceof ColorControl) {
+            ColorControl control = (ColorControl) propertyPane.getControl();
             if(!control.isFirstSelected()) {
                 control.selectPrevGauge();
+                
+                // Resume fadeout
+                schedulePropertyFadeOut();
                 return;
             }
         }
         
-        if(currentPropertyNode != null) {
-            hideProperty(currentPropertyNode);
-            currentPropertyNode = null;
-        }
-        
-        currentPropIdx--;
-        if(currentPropIdx < 0) {
-            currentPropIdx = 0;
-        }
-        showProperty(currentPropIdx);
+        // Decrement the current property
+        propertyPane.prevProperty();
         updateLastPropertyMap();
+        
+        // Resume fadeout
+        schedulePropertyFadeOut();
     }
     
-    @SuppressWarnings("unchecked")
-    private void showProperty(int idx) {
-
-        if(!currentPropertyList.isEmpty()) {
-            ConfigurableProperty<? extends Object> prop = currentPropertyList.get(idx);
-            Region control = null;
-            if(prop instanceof ConfigurableColorProperty) {
-                
-                ObjectProperty<Color> p = (ObjectProperty<Color>) prop.getProp();
-                ColorControl picker = new ColorControl(p.getValue());
-                p.bind(picker.colorProperty());
-                control = picker;
-                
-            } else if(prop instanceof ConfigurableIntegerProperty || 
-                    prop instanceof ConfigurableDoubleProperty) {
-                
-                control = UiUtils.createNumberPropertyGauge(prop);
-                
-            } else if(prop instanceof ConfigurableChoiceProperty) {
-                
-                ConfigurableChoiceProperty choiceProp = (ConfigurableChoiceProperty) prop;
-                ListView<String> list = UiUtils.createChoicePropertyListView(
-                        choiceProp, currentView.getRoot());
-                choiceProp.removeListener("listViewListener");
-                choiceProp.addListener((obs, oldValue, newValue) -> {
-                    list.getSelectionModel().clearSelection();
-                    list.getSelectionModel().select((String) newValue);
-                }, "listViewListener");
-                
-                control = list;
-                
-            } else if(prop instanceof ConfigurableBooleanProperty) {
-                
-                ObjectProperty<Boolean> p = (ObjectProperty<Boolean>) prop.getProp();
-                ToggleSwitch toggle = UiUtils.createBooleanPropertyToggleSwitch(
-                        p.getValue(), prop.getName(), currentView.getRoot());
-                toggle.selectedProperty().bind(p);
-                control = toggle;
-                
-            } else if(prop instanceof ActionProperty) {
-                
-                Button button = UiUtils.createActionPropertyButton(prop.getName());
-                button.setOnAction(new EventHandler<ActionEvent>() {
-                    public void handle(ActionEvent event) {
-                        ((ActionProperty) prop).trigger();
-                    }
-                });
-                control = button;
-                
-            }
+    private void selectOrDeselectCurrentProperty() {
+        cancelPropertyFadeOutIfPlaying();
+        
+        BooleanProperty selectedProperty = propertyPane.selectedProperty();
+        selectedProperty.set(!selectedProperty.get());
+        
+        // Resume fadeout
+        schedulePropertyFadeOut();
+    }
+    
+    private void showProperties() {
+        if(!propertyPane.getProperties().isEmpty()) {
             
-            currentView.getRoot().getChildren().add(
-                    currentPropertyNode = createPropertyPane(control));
+            propertyPane.setVisible(true);
             
             if(isSmoothTransitionsEnabled()) {
-                UiUtils.createFadeInTransition(currentPropertyNode, 1000, null).play();
-                schedulePropertyFadeOut();
+                UiUtils.createFadeInTransition(propertyPane, 1000, new EventHandler<ActionEvent>() {
+                    public void handle(ActionEvent event) {
+                        schedulePropertyFadeOut();
+                    }
+                }).play();
             }
         }
     }
     
-    private void hideProperty(Pane node) {
-        currentPropertyList.get(currentPropIdx).getProp().unbind();
+    private void hideProperties() {
+        
+        // Remove all bindings of current property and deselect
+        propertyPane.getCurrProperty().getProp().unbind();
+        propertyPane.selectedProperty().set(false);
         
         if(isSmoothTransitionsEnabled()) {
-            UiUtils.createFadeOutTransition(node, 1000, new EventHandler<ActionEvent>() {
+            UiUtils.createFadeOutTransition(propertyPane, 1000, new EventHandler<ActionEvent>() {
                 public void handle(ActionEvent event) {
-                    currentView.getRoot().getChildren().remove(node);
-                    node.getChildren().clear();
+                    propertyPane.setVisible(false);
                 }
             }).play();
         } else {
-            currentView.getRoot().getChildren().remove(node);
-            node.getChildren().clear();
+            propertyPane.setVisible(false);
         }
     }
     
     private void updateLastPropertyMap() {
-        lastPropertyMap.put(currentViewIdx, currentPropIdx);
+        lastPropertyMap.put(currentViewIdx, propertyPane.getCurrPropIdx());
     }
     
     private BorderPane createViewTitlePane(String viewName) {
@@ -613,11 +595,14 @@ public class Spectrum extends Application {
         return propEnableSmoothTransitions.get();
     }
     
-    private PropertyPane createPropertyPane(Region control) {
+    private PropertyPane createPropertyPane() {
         
-        PropertyPane pane = new PropertyPane(currentView.getRoot(), 1.4, 1.6, 1, 
-                control, currentPropertyList, currentPropIdx);
+        PropertyPane pane = new PropertyPane();
+        pane.widthRatioProperty().set(1.1);
+        pane.heightRatioProperty().set(1.2);
+        pane.setVisible(false);
         
+        // TODO Verify this is not necessary anymore
         // This can be used to identify the control
         pane.setUserData("Property Control");
         
@@ -626,7 +611,7 @@ public class Spectrum extends Application {
     
     private void changeCurrentPropertyValue(boolean increment, boolean reverseIfChoiceProp) {
         cancelPropertyFadeOutIfPlaying();
-        ConfigurableProperty<? extends Object> prop = currentPropertyList.get(currentPropIdx);
+        ConfigurableProperty<? extends Object> prop = propertyPane.getCurrProperty();
         
         // Special handling of choice properties
         if(prop instanceof ConfigurableChoiceProperty && reverseIfChoiceProp) {
@@ -635,7 +620,7 @@ public class Spectrum extends Application {
         
         // Special handling of color properties
         if(prop instanceof ConfigurableColorProperty) {
-            ColorControl control = (ColorControl) currentPropertyNode.getControl();
+            ColorControl control = (ColorControl) propertyPane.getControl();
             if(increment) {
                 control.incrementCurrent();
             } else {
@@ -659,7 +644,7 @@ public class Spectrum extends Application {
             public void run() {
                 
                 // Don't switch views if a property is currently visible
-                if(currentPropertyNode == null) {
+                if(isPropertiesVisible()) {
                     final int idx;
                     if(currentViewIdx + 1 > views.size() - 1) {
                         idx = 0;
@@ -693,6 +678,7 @@ public class Spectrum extends Application {
     }
     
     public static void main(String[] args) {
+//    	SvgImageLoaderFactory.install(new AttributeDimensionProvider());
         launch(args);
     }
 }
