@@ -644,7 +644,7 @@ public class Spectrum extends Application {
             public void run() {
                 
                 // Don't switch views if a property is currently visible
-                if(isPropertiesVisible()) {
+                if(!isPropertiesVisible()) {
                     final int idx;
                     if(currentViewIdx + 1 > views.size() - 1) {
                         idx = 0;
